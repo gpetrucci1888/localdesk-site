@@ -25,7 +25,9 @@ Tick these off in order. **Bold items** are things to send to Claude so it can f
 - [ ] Check the summary text, the email and the missed-call text-back all arrive
 
 ## 3. Getting paid (~30 minutes)
-- [ ] Stripe product: **Localdesk Starter, £397/month, no tax**
+- [ ] Stripe products (no tax): **Starter £199/month**, **Growth £397/month**, **Setup fee £497 one-off**
+- [ ] Extra minutes at **25p/minute**: add them to the next invoice by hand at first
+- [ ] Check each client's minutes weekly in Vapi, and text them when they reach **80%**
 - [ ] Payment link with **Card + Bacs Direct Debit**, asking for business name and phone
 - [ ] Customer portal on
 - [ ] Connect Stripe to FreeAgent

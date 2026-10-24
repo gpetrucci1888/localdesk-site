@@ -6,7 +6,7 @@ Plan: **£10 a day for 25 days (£250)**. Review on day 7 and day 14. Keep going
 
 ## 1. Accounts (about 45 minutes)
 
-1. **Facebook Page**: "Localdesk". Profile picture: the logo. Cover: a screenshot of the website hero. Add website, email and a short "About": *AI receptionist for local businesses. Answers your calls 24/7, takes the details and texts you. £397/month.*
+1. **Facebook Page**: "Localdesk". Profile picture: the logo. Cover: a screenshot of the website hero. Add website, email and a short "About": *AI receptionist for local businesses. Answers your calls 24/7, takes the details and texts you. From £199/month.*
 2. **Instagram business account** (optional but recommended), linked to the Page.
 3. **Business portfolio** at business.facebook.com. Add the Page and create an **ad account** (currency GBP, time zone London). Add a payment card.
 4. **Domain verification**: Business settings > Brand safety > Domains > Add `localdeskai.co.uk` > choose **Meta-tag**. Send the tag to Claude; it goes in the website `<head>` (placeholder is already there).
@@ -48,7 +48,7 @@ The URL parameters make each Calendly booking show which ad it came from.
 ## 4. Ads (run 3 at once, let Meta pick)
 
 **Ad A: "Up a ladder" (use the video)**
-- Primary text: *Up a ladder when the phone rings? Localdesk answers for you, takes the details and texts you the job, so you can ring back the ones worth winning. 24/7, £397 a month, no VAT, no per-call charges. Try it yourself: talk to our AI receptionist live on our website.*
+- Primary text: *Up a ladder when the phone rings? Localdesk answers for you, takes the details and texts you the job, so you can ring back the ones worth winning. 24/7, from £199 a month, no VAT. Try it yourself: talk to our AI receptionist live on our website.*
 - Headline: *Never miss another job*
 - Description: *AI receptionist for local businesses*
 
@@ -60,7 +60,7 @@ The URL parameters make each Calendly booking show which ad it came from.
 **Ad C: "Founding clients" (use the website hero screenshot)**
 - Primary text: *We're taking on 5 founding clients in Cornwall and Devon. You get an AI receptionist that answers your calls 24/7, plus a free professional website, with the £497 setup fee waived. Book a 15-minute demo and hear it answer calls for your business.*
 - Headline: *5 founding spots, setup fee waived*
-- Description: *£397/month, no VAT*
+- Description: *From £199/month, no VAT*
 
 Keep claims factual. Don't promise results ("double your jobs") and don't address personal traits.
 

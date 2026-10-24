@@ -43,7 +43,7 @@ Leave this (don't follow up by text unless they've said it's okay):
 
 ## Email (limited companies only) or a reply to a public post
 
-> Hi [name], I'm Gio, local to [town]. I've built an AI receptionist for trades: it answers calls you can't get to, takes the customer's details and texts them to you, 24/7. £397 a month, no VAT, and the first 5 local businesses get free setup and a free website. You can try it yourself on localdeskai.co.uk (press "Talk to it now"). Would a 15-minute demo be useful?
+> Hi [name], I'm Gio, local to [town]. I've built an AI receptionist for trades: it answers calls you can't get to, takes the customer's details and texts them to you, 24/7. Plans start at £199 a month, no VAT, and the first 5 local businesses on our Growth plan get free setup and a free website. You can try it yourself on localdeskai.co.uk (press "Talk to it now"). Would a 15-minute demo be useful?
 >
 > (If you'd rather not hear from me, just reply "no thanks" and I won't contact you again.)
 
@@ -53,7 +53,7 @@ Leave this (don't follow up by text unless they've said it's okay):
 |---|---|
 | "I don't miss many calls." | "Most people don't know. Callers who get voicemail usually just ring someone else. Try the calculator on the site: even one missed job a month usually covers it." |
 | "Customers want a real person." | "They want their problem sorted. It's honest that it's a virtual receptionist, takes everything down properly and you ring them back. Better than voicemail, which most people hang up on." |
-| "£397 is a lot." | "One job pays for it, and it includes a website. Compared with a receptionist at £20k+ a year, it's a fraction. And it's only a 3-month minimum." |
+| "That's a lot." | "Starter is £199 a month, and one job usually covers it. Growth at £397 includes a website. Compared with a receptionist at £20k+ a year, it's a fraction. And it's only a 3-month minimum." |
 | "What if it gets something wrong?" | "Every call is recorded and transcribed, and you get the details by text. It never promises times or prices. It just takes the details for you." |
 | "I'll think about it." | "Of course. Shall I book a quick 15-minute demo for later in the week, so you can hear it answer as your business?" |
 
