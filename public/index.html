@@ -58,6 +58,7 @@ html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--charcoal);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:18px;line-height:1.55;font-stretch:100%}
 a{color:inherit}
 a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .wrap{max-width:var(--max);margin:0 auto;padding-left:var(--pad);padding-right:var(--pad)}
 .display{font-family:'Archivo',Impact,'Arial Narrow',sans-serif;font-weight:900;font-stretch:68%;letter-spacing:-.005em;word-spacing:.1em;line-height:.94;margin:0}
 h1.display{font-size:clamp(3.4rem,9.2vw,7.6rem)}
@@ -161,6 +162,40 @@ section{scroll-margin-top:12px}
 @keyframes buzz{0%,100%{transform:rotate(3deg)}20%{transform:rotate(1.5deg) translateX(-3px)}40%{transform:rotate(4.5deg) translateX(3px)}60%{transform:rotate(2deg) translateX(-2px)}80%{transform:rotate(4deg) translateX(2px)}}
 @media(max-width:360px){.phone{zoom:1}}
 @media(max-width:900px){.phone{transform:none}.phone.buzz{animation:none}}
+
+/* live demo: talk to George */
+.live{background:var(--concrete);padding:clamp(64px,9vw,120px) 0}
+.live .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(28px,6vw,88px);align-items:center}
+.live .lede{margin-top:22px;color:#3B434B}
+.tries{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:10px}
+.tries li{background:var(--white);border-left:4px solid var(--yellow);padding:10px 14px;font-weight:600;font-size:1rem}
+.tries li::before{content:"Try: ";color:var(--steel);font-weight:500}
+.live .note{margin:18px 0 0;font-size:.88rem;color:var(--steel);max-width:34em}
+.talk{background:var(--charcoal);color:var(--white);padding:clamp(28px,4vw,48px) clamp(20px,3vw,40px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;box-shadow:12px 12px 0 var(--yellow)}
+.talk-who{display:flex;align-items:center;gap:10px;font-weight:700;font-size:.95rem;color:#C9CED3}
+.talk-who i{width:10px;height:10px;border-radius:50%;background:#3DDC84;box-shadow:0 0 0 4px rgba(61,220,132,.2)}
+.orb{--lvl:0;position:relative;width:176px;height:176px;border-radius:50%;border:0;padding:0;background:var(--yellow);color:var(--charcoal);cursor:pointer;display:grid;place-items:center;margin:36px 0;transition:transform .15s ease,background .2s}
+.orb:hover{transform:scale(1.03)}
+.orb::before,.orb::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px solid rgba(245,184,0,.45);transform:scale(calc(1 + var(--lvl) * .14));transition:transform .08s linear}
+.orb::after{inset:-30px;border-color:rgba(245,184,0,.2);transform:scale(calc(1 + var(--lvl) * .2))}
+.orb svg{width:58px;height:58px}
+.orb .ico-end{display:none}
+.talk[data-state="idle"] .orb::before,.talk[data-state="ended"] .orb::before{animation:breathe 2.4s ease-in-out infinite}
+.talk[data-state="connecting"] .orb{background:#C9CED3;cursor:progress}
+.talk[data-state="connecting"] .orb::before{border-color:rgba(255,255,255,.35);border-top-color:var(--yellow);animation:spin 1s linear infinite}
+.talk[data-state="live"] .orb{background:#E5484D;color:var(--white)}
+.talk[data-state="live"] .orb .ico-mic{display:none}
+.talk[data-state="live"] .orb .ico-end{display:block}
+.talk-status{margin:0;font-weight:900;font-stretch:76%;font-size:clamp(1.5rem,2.6vw,1.9rem);line-height:1.1;min-height:2.2em;display:flex;align-items:center}
+.talk-sub{margin:-8px 0 0;color:#C9CED3;font-size:.95rem;min-height:1.5em}
+.talk-time{font-variant-numeric:tabular-nums;color:var(--yellow);font-weight:700}
+.talk .after{display:none;color:var(--yellow);font-weight:700}
+.talk[data-state="ended"] .after{display:inline}
+.talk[data-state="error"] .talk-status{color:#FF8A8D}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.08);opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){.live .wrap{grid-template-columns:1fr}.talk{box-shadow:8px 8px 0 var(--yellow)}}
+@media(prefers-reduced-motion:reduce){.orb::before,.orb::after{animation:none!important;transition:none}}
 
 /* calculator */
 .loss{padding:clamp(64px,9vw,120px) 0}
@@ -356,7 +391,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <p class="lede">Localdesk answers every call for your business, takes the details and texts you a summary. You ring back the ones worth winning.</p>
       <div class="actions">
         <a class="btn btn-yellow js-book" href="#contact">Book a 15-minute demo</a>
-        <a class="btn btn-ghost" href="#call">See how a call goes</a>
+        <a class="btn btn-ghost js-live" href="#call">See how a call goes</a>
       </div>
       <p class="fine">£397 a month, no VAT to add. Website included. No call-by-call bills.</p>
     </div>
@@ -411,6 +446,33 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
   </div>
 </section>
 
+<section class="live" id="try" aria-labelledby="try-title" hidden>
+  <div class="wrap">
+    <div class="reveal">
+      <p class="kicker">Live demo</p>
+      <h2 class="display" id="try-title">Don't take our word for it. Talk to it.</h2>
+      <p class="lede">Press the button and talk to George, our AI receptionist, right here in your browser. Tell him what your business does, then ring in as one of your customers.</p>
+      <ul class="tries">
+        <li>"I'm a roofer. Can you answer my calls?"</li>
+        <li>"Hi, I've got water coming through my ceiling."</li>
+        <li>"Can someone come out and quote next week?"</li>
+      </ul>
+      <p class="note">Free, and no phone needed. It uses your microphone, and calls end after 4 minutes. Demo calls may be recorded and transcribed. See our <a href="privacy.html">privacy policy</a>.</p>
+    </div>
+    <div class="talk reveal" id="talk" data-state="idle">
+      <div class="talk-who"><i aria-hidden="true"></i><span id="talk-who">George is ready to take your call</span></div>
+      <button class="orb" id="orb" type="button" aria-describedby="talk-status">
+        <svg class="ico-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>
+        <svg class="ico-end" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.7 14.6c-.5-.5-.5-1.3 0-1.8 4.6-4.4 12-4.4 16.6 0 .5.5.5 1.3 0 1.8l-1.9 1.8c-.4.4-1.1.5-1.6.1l-2.2-1.6c-.4-.3-.6-.7-.5-1.2l.2-1.4a10 10 0 0 0-4.6 0l.2 1.4c.1.5-.1.9-.5 1.2l-2.2 1.6c-.5.4-1.2.3-1.6-.1z"/></svg>
+        <span class="sr-only" id="orb-label">Start talking to George</span>
+      </button>
+      <p class="talk-status" id="talk-status" aria-live="polite">Tap to talk to George</p>
+      <p class="talk-sub" id="talk-sub">Your browser will ask to use your microphone.</p>
+      <a class="after js-book" href="#contact">Want George answering your phone? Book a demo</a>
+    </div>
+  </div>
+</section>
+
 <section class="loss" aria-labelledby="loss-title">
   <div class="wrap">
     <div class="reveal">
@@ -449,7 +511,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <p class="kicker">Hear how a call goes</p>
       <h2 class="display" id="call-title">From hello to job details.</h2>
       <p class="lede">Here's an example: <span id="call-intro">a customer rings a roofing firm about a leak</span>. From the first hello to the details being taken, nobody has to stop what they're doing.</p>
-      <p class="note">You'll be able to ring our demo line and try it yourself as soon as it opens. Every call is recorded and transcribed, so you can check exactly what was said.</p>
+      <p class="note"><span class="js-live-note" hidden>Want to hear it for real? <a href="#try">Talk to George live</a>. </span>Every call is recorded and transcribed, so you can check exactly what was said.</p>
     </div>
     <div class="transcript reveal" aria-label="Example call transcript">
       <p class="tag">Example call, written out: <span data-f="biz">Westcountry Roofing</span></p>
@@ -821,6 +883,96 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       if (entries[0].isIntersecting && !started) { started = true; obs.disconnect(); play(current); }
     }, { threshold: 0.4 }).observe(phone);
   }
+
+  // ---- Live demo: talk to George in the browser (Vapi)
+  // The public key is safe to publish. Lock it to this domain in the Vapi dashboard.
+  var VAPI_PUBLIC_KEY = "5f4a7101-6c16-4046-b824-d90213ea6c0d";
+  // Paste the assistant's ID from Vapi > Assistants. The live demo stays hidden until it's set.
+  var VAPI_ASSISTANT_ID = "";
+  var DEMO_MAX_SECONDS = 240;
+
+  (function () {
+    var section = document.getElementById('try');
+    if (!VAPI_ASSISTANT_ID || !VAPI_PUBLIC_KEY) return;
+    section.hidden = false;
+    document.querySelectorAll('.js-live').forEach(function (a) { a.textContent = 'Talk to it now'; a.href = '#try'; });
+    document.querySelectorAll('.js-live-note').forEach(function (n) { n.hidden = false; });
+
+    var talk = document.getElementById('talk'), orb = document.getElementById('orb'), orbLabel = document.getElementById('orb-label');
+    var statusEl = document.getElementById('talk-status'), sub = document.getElementById('talk-sub');
+    var vapi = null, state = 'idle', limitTimer = null, tickTimer = null, startedAt = 0;
+
+    function set(next, status, subText) {
+      state = next;
+      talk.dataset.state = next;
+      statusEl.textContent = status;
+      sub.innerHTML = subText || '';
+      orbLabel.textContent = next === 'live' ? 'End the call' : 'Start talking to George';
+      document.getElementById('talk-who').textContent = next === 'live' ? "You're on a call with George" : 'George is ready to take your call';
+      if (next !== 'live') orb.style.setProperty('--lvl', 0);
+    }
+    function clock() {
+      var s = Math.floor((Date.now() - startedAt) / 1000);
+      return '<span class="talk-time">' + Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60) + '</span> &middot; Press the red button to hang up';
+    }
+    function cleanup() { clearTimeout(limitTimer); clearInterval(tickTimer); }
+
+    function loadSdk() {
+      return new Promise(function (resolve, reject) {
+        if (window.Vapi) return resolve();
+        var sc = document.createElement('script');
+        sc.src = 'vendor/vapi-web-2.7.1.min.js';
+        sc.onload = function () { resolve(); };
+        sc.onerror = function () { reject(new Error('sdk')); };
+        document.head.appendChild(sc);
+      });
+    }
+
+    function setup() {
+      vapi = new window.Vapi(VAPI_PUBLIC_KEY);
+      vapi.on('call-start', function () {
+        startedAt = Date.now();
+        set('live', 'Listening…', clock());
+        tickTimer = setInterval(function () { sub.innerHTML = clock(); }, 1000);
+        limitTimer = setTimeout(function () { vapi.stop(); }, DEMO_MAX_SECONDS * 1000);
+      });
+      vapi.on('speech-start', function () { if (state === 'live') statusEl.textContent = 'George is talking…'; });
+      vapi.on('speech-end', function () { if (state === 'live') statusEl.textContent = 'Listening…'; });
+      vapi.on('volume-level', function (v) { if (state === 'live') orb.style.setProperty('--lvl', Math.min(1, v * 1.6)); });
+      vapi.on('call-end', function () {
+        var long = startedAt && Date.now() - startedAt >= DEMO_MAX_SECONDS * 1000 - 1500;
+        cleanup();
+        set('ended', 'Call ended', long ? 'Demo calls are limited to 4 minutes. Tap to talk again.' : 'Tap to talk to George again.');
+      });
+      vapi.on('error', function () {
+        cleanup();
+        if (state === 'live' || state === 'connecting') set('error', "Sorry, that didn't connect", 'Please try again in a moment, or <a href="#contact">book a demo</a>.');
+      });
+    }
+
+    orb.addEventListener('click', function () {
+      if (state === 'connecting') return;
+      if (state === 'live') { set('connecting', 'Hanging up…'); vapi.stop(); return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        set('error', "Your browser can't use a microphone here", 'Try Chrome, Safari or Edge, or <a href="#contact">book a demo</a>.');
+        return;
+      }
+      set('connecting', 'Connecting…', 'Allow microphone access if your browser asks.');
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); return loadSdk(); })
+        .then(function () { if (!vapi) setup(); return vapi.start(VAPI_ASSISTANT_ID); })
+        .catch(function (err) {
+          cleanup();
+          if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+            set('error', 'Microphone blocked', 'Allow microphone access for this site (the icon in your address bar), then tap again.');
+          } else if (err && err.name === 'NotFoundError') {
+            set('error', 'No microphone found', 'Plug in a headset or try on your phone.');
+          } else {
+            set('error', "Sorry, that didn't connect", 'Please try again in a moment, or <a href="#contact">book a demo</a>.');
+          }
+        });
+    });
+  })();
 
   // ---- Missed-call calculator
   var cCalls = document.getElementById('c-calls'), cRate = document.getElementById('c-rate'), cValue = document.getElementById('c-value');
