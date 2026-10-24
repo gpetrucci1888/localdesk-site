@@ -4,332 +4,382 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Localdesk AI Consultancy</title>
-<meta name="description" content="AI receptionist for local service businesses. Never miss a call again. £397 a month.">
+<meta name="description" content="An AI receptionist for local businesses. It answers every call, takes the details and texts you a summary. £397 a month, website included.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F2328'/%3E%3Ccircle cx='32' cy='19' r='13' fill='%23F5B800'/%3E%3Ccircle cx='19' cy='42' r='13' fill='%23F5B800' stroke='%231F2328' stroke-width='2'/%3E%3Ccircle cx='45' cy='42' r='13' fill='%23F5B800' stroke='%231F2328' stroke-width='2'/%3E%3C/svg%3E">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/Archivo-VF.woff" as="font" type="font/woff" crossorigin>
 <style>
-body{margin:0}
+@font-face{font-family:'Archivo';src:url('fonts/Archivo-VF.woff') format('woff');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+:root{
+  --charcoal:#1F2328;
+  --charcoal-2:#2A3038;
+  --yellow:#F5B800;
+  --concrete:#E9EBED;
+  --paper:#F7F8F8;
+  --steel:#566069;
+  --line:#C9CED3;
+  --white:#fff;
+  --pad:clamp(20px,5vw,56px);
+  --max:1180px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--charcoal);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:18px;line-height:1.55;font-stretch:100%}
 a{color:inherit}
-html{scroll-behavior:smooth}
-.hero-mark{position:absolute;right:24px;top:50%;transform:translateY(-50%);width:290px}
-@media(max-width:1000px){.hero-mark{display:none}}
-</style>
+a:focus-visible,button:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.wrap{max-width:var(--max);margin:0 auto;padding-left:var(--pad);padding-right:var(--pad)}
+.display{font-family:'Archivo',Impact,'Arial Narrow',sans-serif;font-weight:900;font-stretch:68%;letter-spacing:-.005em;word-spacing:.1em;line-height:.94;margin:0}
+h1.display{font-size:clamp(3.4rem,9.2vw,7.6rem)}
+h2.display{font-size:clamp(2.6rem,6vw,4.6rem)}
+.lede{font-size:clamp(1.1rem,1.6vw,1.3rem);line-height:1.5;max-width:34em;margin:0}
+.btn{display:inline-flex;align-items:center;min-height:52px;padding:0 28px;font:inherit;font-weight:700;font-size:1.05rem;text-decoration:none;border:2px solid transparent;transition:transform .12s ease,background .12s ease}
+.btn:active{transform:translateY(1px)}
+.btn-yellow{background:var(--yellow);color:var(--charcoal)}
+.btn-yellow:hover{background:#FFC619}
+.btn-ghost{border-color:#6C757F;color:var(--white)}
+.btn-ghost:hover{border-color:var(--white)}
 
+/* nav */
+.top{background:var(--charcoal);color:var(--white)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:18px;padding-bottom:18px}
+.brand{display:flex;align-items:center;gap:14px;text-decoration:none}
+.brand-name{display:block;font-weight:900;font-stretch:80%;font-size:1.55rem;letter-spacing:.06em;line-height:1}
+.brand-sub{display:block;font-weight:600;font-size:.72rem;letter-spacing:.2em;color:var(--yellow);margin-top:5px}
+.nav{display:flex;align-items:center;gap:28px;font-weight:600;font-size:.98rem}
+.nav a{text-decoration:none;color:#D5D9DD}
+.nav a:hover{color:var(--white)}
+.nav .btn{min-height:44px;padding:0 20px;color:var(--charcoal);font-size:.98rem;white-space:nowrap}
+@media(max-width:760px){.nav a:not(.btn){display:none}.nav .btn{padding:0 14px}.brand-name{font-size:1.35rem}.brand-sub{letter-spacing:.14em}}
+
+/* hero */
+.hero{background:var(--charcoal);color:var(--white);position:relative;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:clamp(24px,5vw,72px);align-items:center;padding-top:clamp(36px,6vw,80px);padding-bottom:clamp(64px,9vw,128px)}
+.hero h1 span{display:block}
+.hero .lede{color:#D5D9DD;margin-top:28px}
+.hero .actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
+.hero .fine{margin:22px 0 0;color:#9AA3AB;font-size:.95rem}
+@media(max-width:900px){.hero .wrap{grid-template-columns:1fr}}
+
+/* phone */
+.phone-stage{display:flex;flex-direction:column;align-items:center;gap:30px}
+.phone{width:min(310px,100%);background:#0F1215;border-radius:44px;padding:11px;box-shadow:0 0 0 2px #3A424A,0 40px 80px -30px rgba(0,0,0,.7);transform:rotate(3deg);animation:rise .7s cubic-bezier(.2,.7,.2,1) both}
+.screen{background:#EEF0F2;border-radius:34px;color:var(--charcoal);min-height:430px;padding:16px 14px 18px;display:flex;flex-direction:column;gap:12px}
+.status{display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;padding:0 8px}
+.thread-head{display:flex;align-items:center;gap:10px;padding:8px 6px 10px;border-bottom:1px solid #D2D6DA}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;font-weight:900;font-stretch:80%;font-size:1.1rem}
+.thread-head b{display:block;font-size:.95rem;line-height:1.2}
+.thread-head small{color:var(--steel);font-size:.75rem}
+.msg{background:var(--white);border-radius:18px 18px 18px 6px;padding:13px 14px;font-size:.88rem;line-height:1.4;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.msg dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px}
+.msg dt{color:var(--steel);font-weight:600}
+.msg dd{margin:0;font-weight:700}
+.msg .urgent{display:inline-block;background:var(--yellow);padding:0 7px;font-weight:800}
+.msg-first{animation:pop .45s ease .9s both}
+.msg-second{animation:pop .45s ease 1.5s both;border-radius:18px 18px 6px 18px;background:var(--charcoal);color:var(--white);align-self:flex-end;max-width:84%}
+.caption{font-size:.85rem;color:#9AA3AB}
+@keyframes rise{from{opacity:0;transform:translateY(34px) rotate(3deg)}to{opacity:1;transform:rotate(3deg)}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@media(max-width:900px){.phone{transform:none;animation-name:rise0}@keyframes rise0{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}}
+@media(prefers-reduced-motion:reduce){.phone,.msg-first,.msg-second{animation:none}}
+
+/* statement */
+.statement{padding:clamp(64px,9vw,120px) 0}
+.statement .wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(24px,5vw,72px);align-items:end}
+.statement p{margin:0;color:#3B434B}
+@media(max-width:900px){.statement .wrap{grid-template-columns:1fr}}
+
+/* transcript */
+.call{background:var(--concrete);padding:clamp(64px,9vw,120px) 0}
+.call .wrap{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(28px,6vw,88px);align-items:start}
+.call .lede{margin-top:22px;color:#3B434B}
+.call .note{margin-top:18px;font-size:.95rem;color:var(--steel);max-width:30em}
+.transcript{background:var(--charcoal);color:var(--white);padding:clamp(20px,3vw,36px);display:flex;flex-direction:column;gap:14px}
+.transcript .tag{font-size:.85rem;color:#9AA3AB;margin:0 0 4px;font-weight:600}
+.line{max-width:86%;padding:12px 16px;line-height:1.4;font-size:1rem}
+.line small{display:block;font-size:.78rem;font-weight:700;margin-bottom:3px}
+.line.rec{background:var(--yellow);color:var(--charcoal);align-self:flex-start}
+.line.rec small{color:#5C4500}
+.line.cal{background:var(--charcoal-2);align-self:flex-end}
+.line.cal small{color:#9AA3AB}
+@media(max-width:900px){.call .wrap{grid-template-columns:1fr}.line{max-width:94%}}
+
+/* what you get */
+.get{padding:clamp(64px,9vw,120px) 0}
+.get h2{max-width:11em}
+.rows{margin:clamp(32px,5vw,56px) 0 0;padding:0;list-style:none;border-top:3px solid var(--charcoal)}
+.rows li{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:8px clamp(20px,5vw,72px);padding:22px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.rows b{font-weight:900;font-stretch:76%;font-size:clamp(1.5rem,2.6vw,2.1rem);line-height:1.05}
+.rows span{color:#3B434B}
+@media(max-width:700px){.rows li{grid-template-columns:1fr}}
+
+/* compare */
+.compare{background:var(--charcoal);color:var(--white);padding:clamp(64px,9vw,120px) 0}
+.compare h2{max-width:12em}
+.tbl{width:100%;border-collapse:collapse;margin-top:clamp(32px,5vw,56px);font-size:1rem}
+.tbl th,.tbl td{text-align:left;padding:16px 16px 16px 0;border-bottom:1px solid #3A424A;vertical-align:top}
+.tbl thead th{font-weight:900;font-stretch:76%;font-size:1.5rem;color:#C9CED3;border-bottom:3px solid #6C757F}
+.tbl thead th.us{color:var(--yellow);border-bottom-color:var(--yellow)}
+.tbl tbody th{font-weight:600;color:#9AA3AB;width:26%}
+.tbl td.us{color:var(--white);font-weight:700}
+.tbl td{color:#D5D9DD}
+@media(max-width:700px){
+  .tbl,.tbl tbody,.tbl tr,.tbl th,.tbl td{display:block}
+  .tbl thead{display:none}
+  .tbl tr{padding:14px 0;border-bottom:1px solid #3A424A}
+  .tbl th,.tbl td{border:0;padding:3px 0;width:auto!important}
+  .tbl td::before{content:attr(data-h) ": ";color:#9AA3AB;font-weight:600}
+  .tbl td.us::before{color:var(--yellow)}
+}
+
+/* how */
+.how{padding:clamp(64px,9vw,120px) 0}
+.steps{margin:clamp(32px,5vw,56px) 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,4vw,56px);counter-reset:s}
+.steps li{counter-increment:s;border-top:3px solid var(--charcoal);padding-top:18px}
+.steps li::before{content:counter(s);display:block;font-weight:900;font-stretch:68%;font-size:5.5rem;line-height:.9;color:var(--yellow);-webkit-text-stroke:2px var(--charcoal);margin-bottom:10px}
+.steps b{display:block;font-weight:900;font-stretch:76%;font-size:1.7rem;line-height:1.1;margin-bottom:8px}
+.steps span{color:#3B434B}
+@media(max-width:800px){.steps{grid-template-columns:1fr}}
+
+/* built for */
+.trades{background:var(--yellow);padding:clamp(48px,7vw,88px) 0}
+.trades p{margin:0;font-weight:900;font-stretch:68%;word-spacing:.1em;font-size:clamp(2rem,4.8vw,3.9rem);line-height:1.05;letter-spacing:-.005em}
+.trades p i{font-style:normal;color:rgba(31,35,40,.38);padding:0 .12em}
+.trades small{display:block;margin-top:18px;font-weight:600;font-size:1.05rem}
+
+/* pricing */
+.pricing{background:var(--charcoal);color:var(--white);padding:clamp(64px,9vw,120px) 0}
+.pricing .wrap{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(28px,6vw,88px);align-items:start}
+.pricing .lede{color:#D5D9DD;margin-top:22px}
+.addon{margin-top:28px;padding-left:18px;border-left:4px solid var(--yellow);color:#C9CED3;font-size:1rem;max-width:30em}
+.price-panel{background:var(--white);color:var(--charcoal);padding:clamp(26px,4vw,48px);position:relative}
+.price{display:flex;align-items:baseline;gap:10px;line-height:.9}
+.price b{font-weight:900;font-stretch:68%;font-size:clamp(5rem,12vw,8.5rem);letter-spacing:-.01em}
+.price span{font-weight:700;font-size:1.3rem;color:var(--steel)}
+.price-panel ul{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:10px}
+.price-panel li{padding-left:30px;position:relative;font-weight:600}
+.price-panel li::before{content:"";position:absolute;left:0;top:.42em;width:16px;height:9px;border-left:4px solid var(--charcoal);border-bottom:4px solid var(--charcoal);transform:rotate(-45deg)}
+.setup{margin-top:30px;padding-top:22px;border-top:2px solid var(--charcoal);font-size:1rem;color:#3B434B}
+.setup b{font-size:1.1rem;color:var(--charcoal)}
+.setup s{color:var(--steel)}
+.stamp{position:absolute;top:-22px;right:clamp(10px,3vw,30px);transform:rotate(7deg);border:4px solid var(--yellow);background:var(--charcoal);color:var(--yellow);padding:8px 16px;font-weight:900;font-stretch:76%;font-size:1.25rem;line-height:1.05;text-align:center}
+.stamp small{display:block;font-size:.8rem;font-weight:700;color:var(--white);margin-top:2px;font-stretch:100%}
+@media(max-width:900px){.pricing .wrap{grid-template-columns:1fr}.stamp{top:-26px}}
+
+/* trust + faq */
+.faq{padding:clamp(64px,9vw,120px) 0}
+.trust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,4vw,56px);margin:0 0 clamp(48px,7vw,88px);padding:0;list-style:none}
+.trust li{border-top:3px solid var(--yellow);padding-top:16px}
+.trust b{display:block;font-weight:900;font-stretch:76%;font-size:1.55rem;line-height:1.1;margin-bottom:6px}
+.trust span{color:#3B434B;font-size:1rem}
+@media(max-width:800px){.trust{grid-template-columns:1fr}}
+.qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(24px,5vw,72px);margin-top:clamp(28px,4vw,48px)}
+.qa div{padding:20px 0;border-top:1px solid var(--line)}
+.qa dt{font-weight:800;font-size:1.15rem;line-height:1.25}
+.qa dd{margin:6px 0 0;color:#3B434B;font-size:1rem}
+@media(max-width:800px){.qa{grid-template-columns:1fr}}
+
+/* contact */
+.hazard{height:16px;background:repeating-linear-gradient(-45deg,var(--yellow) 0 16px,var(--charcoal) 16px 32px)}
+.contact{background:var(--yellow);padding:clamp(56px,8vw,104px) 0}
+.contact .wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(28px,6vw,88px);align-items:end}
+.contact .lede{margin-top:20px}
+.details{background:var(--charcoal);color:var(--white);padding:clamp(22px,3vw,36px);display:grid;gap:18px}
+.details dt{font-size:.85rem;font-weight:700;color:var(--yellow)}
+.details dd{margin:2px 0 0;font-size:1.3rem;font-weight:700}
+.details a{text-underline-offset:4px}
+@media(max-width:900px){.contact .wrap{grid-template-columns:1fr}}
+.foot{background:var(--charcoal);color:#9AA3AB;font-size:.92rem}
+.foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;padding-top:22px;padding-bottom:22px}
+</style>
 </head>
 <body>
 
-<div style="background: #F6F4EE; color: #23272D; font-family: 'Inter', system-ui, sans-serif; font-size: 17px; line-height: 1.55">
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Localdesk AI Consultancy, home">
+      <svg class="logo-mark" width="52" height="49" viewBox="-4 -4 228 214" role="img" aria-label="Localdesk logo" aria-hidden="true"><defs><linearGradient id="nv0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="nv1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient></defs><circle cx="110" cy="58" r="58" fill="url(#nv0)" stroke="#1F2328" stroke-width="6"/><g transform="translate(110 55) scale(2.2)"><path d="M-9 3V-1a9 9 0 0 1 18 0V3" fill="none" stroke="#1F2328" stroke-width="2.8" stroke-linecap="round"/><rect x="-12.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><rect x="6.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><path d="M9.5 10Q9.5 13 4 13H0" fill="none" stroke="#1F2328" stroke-width="2.4" stroke-linecap="round"/><circle cx="-1" cy="13" r="2" fill="#1F2328"/></g><circle cx="60" cy="144" r="58" fill="url(#nv1)" stroke="#1F2328" stroke-width="6"/><g transform="translate(60 144) scale(2.2)"><rect x="-12" y="-9.5" width="24" height="21.5" rx="3.6" fill="#1F2328"/><rect x="-7.6" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="4.4" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="-12" y="-5" width="24" height="2.4" fill="#F5B800"/><path d="M-5.8 5.2L-1.6 9L6.2 0.8" fill="none" stroke="#F5B800" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="160" cy="144" r="58" fill="url(#nv2)" stroke="#1F2328" stroke-width="6"/><g transform="translate(160 146) scale(2.2)"><path d="M-12 -10.5h24a3.5 3.5 0 0 1 3.5 3.5v11a3.5 3.5 0 0 1-3.5 3.5H-1.5L-9 15v-6.5h-3a3.5 3.5 0 0 1-3.5-3.5V-7a3.5 3.5 0 0 1 3.5-3.5Z" fill="#1F2328" transform="scale(.82) translate(0 -1)"/><rect x="-8.5" y="-6.8" width="17" height="2.6" rx="1.3" fill="#F5B800"/><rect x="-8.5" y="-1.8" width="10.5" height="2.6" rx="1.3" fill="#F5B800"/></g></svg>
+      <span><span class="brand-name">LOCALDESK</span><span class="brand-sub">AI CONSULTANCY</span></span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn btn-yellow" href="#contact">Book a demo</a>
+    </nav>
+  </div>
+</header>
 
-<div style="background: #1F2328">
-<div style="max-width: 1120px; margin: 0 auto; padding: 20px 24px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
-<a href="#top" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #FFFFFF">
-<svg width="76" height="72" viewBox="-4 -4 228 214" role="img" aria-label="Localdesk logo" aria-hidden="true"><defs><linearGradient id="lg0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient></defs><circle cx="110" cy="58" r="58" fill="url(#lg0)" stroke="#1F2328" stroke-width="6"/><g transform="translate(110 55) scale(2.2)"><path d="M-9 3V-1a9 9 0 0 1 18 0V3" fill="none" stroke="#1F2328" stroke-width="2.8" stroke-linecap="round"/><rect x="-12.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><rect x="6.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><path d="M9.5 10Q9.5 13 4 13H0" fill="none" stroke="#1F2328" stroke-width="2.4" stroke-linecap="round"/><circle cx="-1" cy="13" r="2" fill="#1F2328"/></g><circle cx="60" cy="144" r="58" fill="url(#lg1)" stroke="#1F2328" stroke-width="6"/><g transform="translate(60 144) scale(2.2)"><rect x="-12" y="-9.5" width="24" height="21.5" rx="3.6" fill="#1F2328"/><rect x="-7.6" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="4.4" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="-12" y="-5" width="24" height="2.4" fill="#F5B800"/><path d="M-5.8 5.2L-1.6 9L6.2 0.8" fill="none" stroke="#F5B800" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="160" cy="144" r="58" fill="url(#lg2)" stroke="#1F2328" stroke-width="6"/><g transform="translate(160 146) scale(2.2)"><path d="M-12 -10.5h24a3.5 3.5 0 0 1 3.5 3.5v11a3.5 3.5 0 0 1-3.5 3.5H-1.5L-9 15v-6.5h-3a3.5 3.5 0 0 1-3.5-3.5V-7a3.5 3.5 0 0 1 3.5-3.5Z" fill="#1F2328" transform="scale(.82) translate(0 -1)"/><rect x="-8.5" y="-6.8" width="17" height="2.6" rx="1.3" fill="#F5B800"/><rect x="-8.5" y="-1.8" width="10.5" height="2.6" rx="1.3" fill="#F5B800"/></g></svg>
-<div style="display: flex; flex-direction: column; gap: 3px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 22px; letter-spacing: 2px; line-height: 1">LOCALDESK</div>
-<div style="font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 3px; color: #F5B800; line-height: 1">AI CONSULTANCY</div>
-</div>
-</a>
-<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 24px; font-size: 15px; font-weight: 600">
-<a href="#how" style="text-decoration: none; color: #DADDE2">How it works</a>
-<a href="#pricing" style="text-decoration: none; color: #DADDE2">Pricing</a>
-<a href="#faq" style="text-decoration: none; color: #DADDE2">FAQ</a>
-<a href="#contact" style="text-decoration: none; background: #F5B800; color: #1F2328; padding: 12px 20px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; font-weight: 700">Book a demo</a>
-</div>
-</div>
-</div>
+<main id="top">
 
-<div id="top" style="background: #1F2328; color: #FFFFFF">
-<div style="max-width: 1120px; margin: 0 auto; padding: 56px 24px 88px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 26px; position: relative">
-<svg class="hero-mark" viewBox="-4 -4 228 214" aria-hidden="true"><defs><linearGradient id="hm0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="hm1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="hm2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient></defs><circle cx="110" cy="58" r="58" fill="url(#hm0)" stroke="#1F2328" stroke-width="6"/><g transform="translate(110 55) scale(2.2)"><path d="M-9 3V-1a9 9 0 0 1 18 0V3" fill="none" stroke="#1F2328" stroke-width="2.8" stroke-linecap="round"/><rect x="-12.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><rect x="6.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><path d="M9.5 10Q9.5 13 4 13H0" fill="none" stroke="#1F2328" stroke-width="2.4" stroke-linecap="round"/><circle cx="-1" cy="13" r="2" fill="#1F2328"/></g><circle cx="60" cy="144" r="58" fill="url(#hm1)" stroke="#1F2328" stroke-width="6"/><g transform="translate(60 144) scale(2.2)"><rect x="-12" y="-9.5" width="24" height="21.5" rx="3.6" fill="#1F2328"/><rect x="-7.6" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="4.4" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="-12" y="-5" width="24" height="2.4" fill="#F5B800"/><path d="M-5.8 5.2L-1.6 9L6.2 0.8" fill="none" stroke="#F5B800" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="160" cy="144" r="58" fill="url(#hm2)" stroke="#1F2328" stroke-width="6"/><g transform="translate(160 146) scale(2.2)"><path d="M-12 -10.5h24a3.5 3.5 0 0 1 3.5 3.5v11a3.5 3.5 0 0 1-3.5 3.5H-1.5L-9 15v-6.5h-3a3.5 3.5 0 0 1-3.5-3.5V-7a3.5 3.5 0 0 1 3.5-3.5Z" fill="#1F2328" transform="scale(.82) translate(0 -1)"/><rect x="-8.5" y="-6.8" width="17" height="2.6" rx="1.3" fill="#F5B800"/><rect x="-8.5" y="-1.8" width="10.5" height="2.6" rx="1.3" fill="#F5B800"/></g></svg>
-<div style="font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 2.5px; color: #F5B800">AI RECEPTIONIST FOR LOCAL SERVICE BUSINESSES</div>
-<h1 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 68px; line-height: 1.02; letter-spacing: -0.5px; max-width: 800px">Never miss another <span style="color: #F5B800">customer call.</span></h1>
-<p style="margin: 0; font-size: 20px; line-height: 1.5; color: #DADDE2; max-width: 640px">Localdesk answers every call like a real receptionist, takes the details and texts you the summary, so you can stay on the job. A professional website comes free.</p>
-<div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px">
-<a href="#contact" style="text-decoration: none; background: #F5B800; color: #1F2328; padding: 14px 28px; min-height: 48px; box-sizing: border-box; display: inline-flex; align-items: center; font-weight: 700; font-size: 17px">Book a 10-minute demo</a>
-<a href="#sample" style="text-decoration: none; color: #FFFFFF; border: 2px solid #7D8590; padding: 12px 26px; min-height: 48px; box-sizing: border-box; display: inline-flex; align-items: center; font-weight: 700; font-size: 17px">Hear a sample call</a>
-</div>
-</div>
-</div>
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1 class="display"><span>Hands full?</span><span>We'll get</span><span>the phone.</span></h1>
+      <p class="lede">Localdesk answers every call for your business, takes the details and texts you a summary. You ring back the ones worth winning.</p>
+      <div class="actions">
+        <a class="btn btn-yellow" href="#contact">Book a 10-minute demo</a>
+        <a class="btn btn-ghost" href="#call">See how a call goes</a>
+      </div>
+      <p class="fine">£397 a month. Website included. No call-by-call bills.</p>
+    </div>
+    <div class="phone-stage">
+      <div class="phone" role="img" aria-label="A phone showing the text message a roofer receives after a call: caller name, number, address, job and urgency.">
+        <div class="screen">
+          <div class="status"><span>14:32</span><span>5G</span></div>
+          <div class="thread-head"><div class="avatar">L</div><div><b>Localdesk</b><small>Westcountry Roofing</small></div></div>
+          <div class="msg msg-first">
+            <b>New call. Flat roof leak.</b>
+            <dl>
+              <dt>Name</dt><dd>Sarah Patel</dd>
+              <dt>Number</dt><dd>07700 900123</dd>
+              <dt>Address</dt><dd>14 Elm Road</dd>
+              <dt>Job</dt><dd>Water coming through ceiling, rear flat roof</dd>
+              <dt>Urgency</dt><dd><span class="urgent">Today</span></dd>
+            </dl>
+          </div>
+          <div class="msg msg-second">Ringing her back now.</div>
+        </div>
+      </div>
+      <span class="caption">Example text. Details are made up.</span>
+    </div>
+  </div>
+</section>
 
-<div style="background: #F6F4EE">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start">
-<div style="flex: 1 1 380px; min-width: 0">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #5A5F66; margin-bottom: 12px">THE PROBLEM</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08; color: #1F2328">The phone rings when your hands are full.</h2>
-</div>
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px; font-size: 18px; color: #3A4048">
-<p style="margin: 0">On the tools, with a customer in front of you, or out of hours, calls go unanswered. The caller doesn't leave a voicemail. They ring the next business on Google.</p>
-<p style="margin: 0"><b>Every missed call can be a missed job.</b> Localdesk makes sure someone always picks up.</p>
-</div>
-</div>
-</div>
+<section class="statement">
+  <div class="wrap">
+    <h2 class="display">Every missed call is a missed job.</h2>
+    <p class="lede">Busy with a customer, out on a job, or closed for the night, and calls go unanswered. The caller doesn't leave a voicemail. They ring the next business on Google. Localdesk makes sure someone always picks up.</p>
+  </div>
+</section>
 
-<div style="background: #1F2328; color: #FFFFFF">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 36px">
-<div style="max-width: 640px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #F5B800; margin-bottom: 12px">WHAT YOU GET</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08; color: #FFFFFF">A receptionist that never clocks off.</h2>
-</div>
-<div style="display: flex; flex-wrap: wrap; gap: 20px">
-<div style="flex: 1 1 320px; min-width: 0; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<div style="width: 28px; height: 6px; background: #F5B800"></div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">Answers 24/7</h3>
-<div style="color: #C9CDD3; font-size: 16px">Every call picked up, day, night and weekends, in a natural UK voice.</div>
-</div>
-<div style="flex: 1 1 320px; min-width: 0; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<div style="width: 28px; height: 6px; background: #F5B800"></div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">Takes the job details</h3>
-<div style="color: #C9CDD3; font-size: 16px">Name, number, address, type of work and how urgent it is.</div>
-</div>
-<div style="flex: 1 1 320px; min-width: 0; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<div style="width: 28px; height: 6px; background: #F5B800"></div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">Answers common questions</h3>
-<div style="color: #C9CDD3; font-size: 16px">Areas you cover, services you offer and your opening hours.</div>
-</div>
-<div style="flex: 1 1 320px; min-width: 0; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<div style="width: 28px; height: 6px; background: #F5B800"></div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">Books visits and call-backs</h3>
-<div style="color: #C9CDD3; font-size: 16px">Lines up quote visits and call-backs so jobs don't go cold.</div>
-</div>
-<div style="flex: 1 1 320px; min-width: 0; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<div style="width: 28px; height: 6px; background: #F5B800"></div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">Missed-call text-back</h3>
-<div style="color: #C9CDD3; font-size: 16px">Catches customers before they ring a rival.</div>
-</div>
-<div style="flex: 1 1 320px; min-width: 0; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<div style="width: 28px; height: 6px; background: #F5B800"></div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">A summary after every call</h3>
-<div style="color: #C9CDD3; font-size: 16px">A text or email with who called and what they need, plus the transcript and recording.</div>
-</div>
-</div>
-</div>
-</div>
+<section class="call" id="call">
+  <div class="wrap">
+    <div>
+      <h2 class="display">Hear how a call goes.</h2>
+      <p class="lede">Here's an example: a customer rings a roofing firm about a leak. From the first hello to the details being taken, nobody has to stop what they're doing.</p>
+      <p class="note">You can ring the demo line and try it yourself as soon as it opens. Every call is recorded and transcribed, so you can check exactly what was said.</p>
+    </div>
+    <div class="transcript" aria-label="Example call transcript">
+      <p class="tag">Example call, written out</p>
+      <div class="line rec"><small>Localdesk</small>Good afternoon, Westcountry Roofing. You've reached the virtual receptionist. How can I help?</div>
+      <div class="line cal"><small>Caller</small>Hi, I've got water coming through the ceiling. I think it's the flat roof at the back.</div>
+      <div class="line rec"><small>Localdesk</small>Sorry to hear that. Can I take your name and the address?</div>
+      <div class="line cal"><small>Caller</small>Sarah Patel, 14 Elm Road.</div>
+      <div class="line rec"><small>Localdesk</small>Thanks Sarah. Is it still coming in now?</div>
+      <div class="line cal"><small>Caller</small>Yes, it's dripping.</div>
+      <div class="line rec"><small>Localdesk</small>Understood. I'll mark that as urgent and get it to the team straight away. What's the best number to reach you on?</div>
+    </div>
+  </div>
+</section>
 
-<div style="background: #F6F4EE">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 36px">
-<div style="max-width: 680px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #5A5F66; margin-bottom: 12px">WHY LOCALDESK</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08; color: #1F2328">Better than voicemail. Far cheaper than hiring.</h2>
-</div>
-<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
-<div style="flex: 1 1 300px; min-width: 0; box-sizing: border-box; background: #1F2328; color: #FFFFFF; border: 2px solid #1F2328; padding: 26px 24px; display: flex; flex-direction: column; gap: 14px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">Voicemail</h3>
-<div style="display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: #DADDE2">
-<div>Free, but many callers hang up and ring the next business</div>
-<div>A message only, with no job details taken</div>
-<div>You chase everything up later</div>
-</div>
-</div>
-<div style="flex: 1 1 300px; min-width: 0; box-sizing: border-box; background: #1F2328; color: #FFFFFF; border: 2px solid #1F2328; padding: 26px 24px; display: flex; flex-direction: column; gap: 14px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #FFFFFF">Hiring a receptionist</h3>
-<div style="display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: #DADDE2">
-<div>Costs tens of thousands of pounds a year</div>
-<div>Covers office hours only</div>
-<div>Sick days and holidays leave gaps</div>
-</div>
-</div>
-<div style="flex: 1 1 300px; min-width: 0; box-sizing: border-box; background: #1F2328; color: #FFFFFF; border-top: 8px solid #F5B800; padding: 26px 24px; display: flex; flex-direction: column; gap: 14px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px; color: #F5B800">Localdesk</h3>
-<div style="display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: #DADDE2">
-<div>Answers every call, 24/7</div>
-<div>Takes the job details and texts you the summary</div>
-<div>One fixed monthly price</div>
-<div>Set up for you, with a free website</div>
-</div>
-</div>
-</div>
-</div>
-</div>
+<section class="get">
+  <div class="wrap">
+    <h2 class="display">A receptionist that never clocks off.</h2>
+    <ul class="rows">
+      <li><b>Answers every call</b><span>Day, night and weekends, in a clear, friendly voice.</span></li>
+      <li><b>Takes the details</b><span>Name, number, address, what they need and how urgent it is.</span></li>
+      <li><b>Answers common questions</b><span>Areas you cover, services you offer and your opening hours.</span></li>
+      <li><b>Books visits and call-backs</b><span>Lines up quote visits and call-backs so jobs don't go cold.</span></li>
+      <li><b>Texts back missed calls</b><span>Catches customers before they ring a rival.</span></li>
+      <li><b>Sends a summary after every call</b><span>A text or email with who called and what they need, plus the transcript and recording.</span></li>
+    </ul>
+  </div>
+</section>
 
-<div id="how" style="background: #1F2328; color: #FFFFFF">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 36px">
-<div style="max-width: 640px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #F5B800; margin-bottom: 12px">HOW IT WORKS</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08">Simple to start, nothing to learn.</h2>
-</div>
-<div style="display: flex; flex-wrap: wrap; gap: 20px">
-<div style="flex: 1 1 280px; min-width: 0; background: #2A3038; padding: 28px 24px; display: flex; flex-direction: column; gap: 10px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 44px; line-height: 1; color: #F5B800">1</div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px">We set it up</h3>
-<div style="color: #C9CDD3; font-size: 16px">We build your receptionist and website around your business, your services and your area.</div>
-</div>
-<div style="flex: 1 1 280px; min-width: 0; background: #2A3038; padding: 28px 24px; display: flex; flex-direction: column; gap: 10px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 44px; line-height: 1; color: #F5B800">2</div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px">Forward your calls</h3>
-<div style="color: #C9CDD3; font-size: 16px">When you can't pick up, the call goes to Localdesk and gets answered.</div>
-</div>
-<div style="flex: 1 1 280px; min-width: 0; background: #2A3038; padding: 28px 24px; display: flex; flex-direction: column; gap: 10px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 44px; line-height: 1; color: #F5B800">3</div>
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 22px">Get the job in your pocket</h3>
-<div style="color: #C9CDD3; font-size: 16px">A text lands with who called and what they need, so you can call back and win the work.</div>
-</div>
-</div>
-</div>
-</div>
+<section class="compare">
+  <div class="wrap">
+    <h2 class="display">Better than voicemail. Far cheaper than hiring.</h2>
+    <table class="tbl">
+      <thead><tr><th></th><th>Voicemail</th><th>Hiring a receptionist</th><th class="us">Localdesk</th></tr></thead>
+      <tbody>
+        <tr><th>Picks up</th><td data-h="Voicemail">Rings out, then a message</td><td data-h="Hiring a receptionist">Office hours only</td><td class="us" data-h="Localdesk">Every call, 24/7</td></tr>
+        <tr><th>Caller details</th><td data-h="Voicemail">Only what the caller bothers to say</td><td data-h="Hiring a receptionist">Yes</td><td class="us" data-h="Localdesk">Yes, texted to you</td></tr>
+        <tr><th>Sick days and holidays</th><td data-h="Voicemail">n/a</td><td data-h="Hiring a receptionist">Leave gaps</td><td class="us" data-h="Localdesk">None</td></tr>
+        <tr><th>Cost</th><td data-h="Voicemail">Free, but callers hang up and ring the next business</td><td data-h="Hiring a receptionist">Costs tens of thousands of pounds a year</td><td class="us" data-h="Localdesk">£397 a month, fixed</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
-<div id="sample" style="background: #F6F4EE">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 40px; align-items: center">
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #5A5F66">HEAR IT FOR YOURSELF</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08; color: #1F2328">Don't take our word for it. Ring it.</h2>
-<p style="margin: 0; color: #3A4048; font-size: 18px">Hear how Localdesk handles a customer ringing a roofer about a leak, from the first hello to the details being taken.</p>
-</div>
-<div style="flex: 1 1 380px; min-width: 0; background: #1F2328; color: #FFFFFF; padding: 32px 28px; display: flex; flex-direction: column; gap: 10px; border-top: 8px solid #F5B800">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #F5B800">TRY IT NOW</div>
-<div style="font-size: 18px; color: #DADDE2">Call our demo line and talk to the receptionist yourself. Pretend to be a customer with a leaking roof.</div>
-<div style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 34px; line-height: 1.1; color: #FFFFFF; margin-top: 4px"><span style="font-size: 26px">Demo line opening soon</span></div>
-<div style="font-size: 14px; color: #C9CDD3">Free to try. It's a demo, so nothing is booked.</div>
-</div>
-</div>
-</div>
+<section class="how" id="how">
+  <div class="wrap">
+    <h2 class="display">Simple to start, nothing to learn.</h2>
+    <ol class="steps">
+      <li><b>We set it up</b><span>We build your receptionist and website around your business, your services and your area.</span></li>
+      <li><b>Forward your calls</b><span>When you can't pick up, the call goes to Localdesk and gets answered. You keep your number.</span></li>
+      <li><b>Get the details in your pocket</b><span>A text lands with who called and what they need, so you can call back and win the work.</span></li>
+    </ol>
+  </div>
+</section>
 
-<div style="background: #1F2328; color: #FFFFFF">
-<div style="max-width: 1120px; margin: 0 auto; padding: 64px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px">
-<div style="max-width: 640px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #F5B800; margin-bottom: 12px">BUILT FOR</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 36px; line-height: 1.1; color: #FFFFFF">Any local business that can't always pick up the phone.</h2>
-</div>
-<div style="display: flex; flex-wrap: wrap; gap: 10px">
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Roofers</div>
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Plumbers</div>
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Electricians</div>
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Builders</div>
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Heating engineers</div>
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Landscapers</div>
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Cleaners</div>
-<div style="background: #2A3038; border: 2px solid #444B54; padding: 10px 18px; font-weight: 700; font-size: 16px">Locksmiths</div>
-</div>
-</div>
-</div>
+<section class="trades" aria-label="Who it's for">
+  <div class="wrap">
+    <p>Roofers <i>/</i> Plumbers <i>/</i> Electricians <i>/</i> Builders <i>/</i> Salons <i>/</i> Dentists <i>/</i> Garages <i>/</i> Cleaners <i>/</i> Vets <i>/</i> Accountants</p>
+    <small>Any local business that can't always pick up the phone. Starting with the trades, built for all of them.</small>
+  </div>
+</section>
 
-<div id="pricing" style="background: #F6F4EE">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 40px; align-items: stretch">
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #5A5F66">PRICING</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08; color: #1F2328">One fixed price. No call-by-call bills.</h2>
-<p style="margin: 0; color: #3A4048; font-size: 18px">Your receptionist and website for one simple monthly fee. If it saves you a single job, it has paid for itself.</p>
-<div style="background: #FFFFFF; border: 2px solid #1F2328; padding: 20px 22px; display: flex; flex-direction: column; gap: 6px; margin-top: 8px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #5A5F66">ADD LATER</div>
-<div style="font-size: 16px; color: #3A4048">Meta (Facebook and Instagram) ads, extra website pages and larger changes, and AI consulting. Priced separately when you're ready.</div>
-</div>
-</div>
-<div style="flex: 1 1 380px; min-width: 0; box-sizing: border-box; background: #1F2328; color: #FFFFFF; padding: 36px 32px; display: flex; flex-direction: column; gap: 18px; border-top: 8px solid #F5B800">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #F5B800">LOCALDESK STARTER</div>
-<div style="display: flex; align-items: baseline; gap: 8px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 64px; line-height: 1">£397</div>
-<div style="font-size: 17px; color: #C9CDD3">/ month</div>
-</div>
-<div style="display: flex; flex-direction: column; gap: 10px; font-size: 16px; color: #DADDE2">
-<div style="display: flex; gap: 12px; align-items: flex-start"><div style="width: 10px; height: 10px; background: #F5B800; margin-top: 7px; flex: none"></div><div>AI receptionist answering 24/7</div></div>
-<div style="display: flex; gap: 12px; align-items: flex-start"><div style="width: 10px; height: 10px; background: #F5B800; margin-top: 7px; flex: none"></div><div>Job details, booking and call-backs</div></div>
-<div style="display: flex; gap: 12px; align-items: flex-start"><div style="width: 10px; height: 10px; background: #F5B800; margin-top: 7px; flex: none"></div><div>Missed-call text-back and summary after every call</div></div>
-<div style="display: flex; gap: 12px; align-items: flex-start"><div style="width: 10px; height: 10px; background: #F5B800; margin-top: 7px; flex: none"></div><div>Free professional website, hosted and kept up to date</div></div>
-<div style="display: flex; gap: 12px; align-items: flex-start"><div style="width: 10px; height: 10px; background: #F5B800; margin-top: 7px; flex: none"></div><div>Ongoing tweaks as your business changes</div></div>
-</div>
-<div style="height: 1px; background: #3A4048"></div>
-<div style="display: flex; flex-direction: column; gap: 4px">
-<div style="display: flex; align-items: baseline; gap: 10px"><div style="font-size: 15px; color: #C9CDD3">Setup fee</div><div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 20px; color: #8D939B; text-decoration: line-through">£497</div><div style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 20px; color: #F5B800">WAIVED</div></div>
-<div style="font-size: 14px; color: #C9CDD3">For our first 5 founding clients. 3-month minimum, then rolling month to month with 30 days' notice.</div>
-</div>
-</div>
-</div>
-</div>
+<section class="pricing" id="pricing">
+  <div class="wrap">
+    <div>
+      <h2 class="display">One fixed price. No call-by-call bills.</h2>
+      <p class="lede">Your receptionist and website for one simple monthly fee. If it saves you a single job, it has paid for itself.</p>
+      <p class="addon"><b>Add later:</b> Meta (Facebook and Instagram) ads, extra website pages and larger changes, and AI consulting. Priced separately when you're ready.</p>
+    </div>
+    <div class="price-panel">
+      <div class="stamp">Setup fee waived<small>first 5 founding clients</small></div>
+      <div class="price"><b>£397</b><span>a month</span></div>
+      <ul>
+        <li>AI receptionist answering 24/7</li>
+        <li>Caller details, booking and call-backs</li>
+        <li>Missed-call text-back and a summary after every call</li>
+        <li>Free professional website, hosted and kept up to date</li>
+        <li>Ongoing tweaks as your business changes</li>
+      </ul>
+      <p class="setup"><b>Setup fee <s>£497</s>, waived.</b><br>For our first 5 founding clients. 3-month minimum, then rolling month to month with 30 days' notice.</p>
+    </div>
+  </div>
+</section>
 
-<div style="background: #1F2328; color: #FFFFFF">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 32px">
-<div style="max-width: 680px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #F5B800; margin-bottom: 12px">TRUST</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08; color: #FFFFFF">Nothing hidden. Every call on record.</h2>
-</div>
-<div style="display: flex; flex-wrap: wrap; gap: 20px">
-<div style="flex: 1 1 300px; min-width: 0; box-sizing: border-box; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 20px; color: #FFFFFF">Every call recorded and transcribed</h3>
-<div style="color: #C9CDD3; font-size: 16px">Listen back to any call and see exactly what was said, so you stay in control.</div>
-</div>
-<div style="flex: 1 1 300px; min-width: 0; box-sizing: border-box; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 20px; color: #FFFFFF">Your data, handled properly</h3>
-<div style="color: #C9CDD3; font-size: 16px">Caller details are used only to run your service and are never sold.</div>
-</div>
-<div style="flex: 1 1 300px; min-width: 0; box-sizing: border-box; border: 2px solid #444B54; padding: 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 20px; color: #FFFFFF">Founding client offer</h3>
-<div style="color: #C9CDD3; font-size: 16px">Our first 5 founding clients get free setup in return for an honest review.</div>
-</div>
-</div>
-</div>
-</div>
+<section class="faq" id="faq">
+  <div class="wrap">
+    <ul class="trust">
+      <li><b>Every call recorded and transcribed</b><span>Listen back to any call and see exactly what was said, so you stay in control.</span></li>
+      <li><b>Your data, handled properly</b><span>Caller details are used only to run your service and are never sold.</span></li>
+      <li><b>Founding client offer</b><span>Our first 5 founding clients get free setup in return for an honest review.</span></li>
+    </ul>
+    <h2 class="display">What you might want to know.</h2>
+    <dl class="qa">
+      <div><dt>Do I have to change my phone number?</dt><dd>No. You keep your existing number and forward calls to Localdesk when you can't pick up.</dd></div>
+      <div><dt>What if it can't answer a question?</dt><dd>It takes a message and sends you the details, so you can call the customer back.</dd></div>
+      <div><dt>How does it know about my business?</dt><dd>We build it around you: your services, areas, opening hours and how you like calls handled. You approve it before it goes live.</dd></div>
+      <div><dt>How long does setup take?</dt><dd>Usually within a few days of signing up.</dd></div>
+      <div><dt>Am I tied into a contract?</dt><dd>There's a 3-month minimum, then it rolls month to month and you can cancel with 30 days' notice.</dd></div>
+      <div><dt>What does it cost?</dt><dd>£397 a month, fixed, with no call-by-call bills. The £497 setup fee is waived for our first 5 founding clients.</dd></div>
+      <div><dt>Will customers know it isn't a person?</dt><dd>It introduces itself as the virtual receptionist and never pretends to be a person. Callers can ask for a call-back from you at any time.</dd></div>
+    </dl>
+  </div>
+</section>
 
-<div id="faq" style="background: #1F2328; color: #FFFFFF">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 32px">
-<div style="max-width: 680px">
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 2px; color: #F5B800; margin-bottom: 12px">QUESTIONS</div>
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08; color: #FFFFFF">What you might want to know.</h2>
-</div>
-<div style="display: flex; flex-wrap: wrap; gap: 20px">
-<div style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; background: #2A3038; border: 2px solid #444B54; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 19px; color: #FFFFFF">Do I have to change my phone number?</h3>
-<div style="color: #C9CDD3; font-size: 16px">No. You keep your existing number and forward calls to Localdesk when you can't pick up.</div>
-</div>
-<div style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; background: #2A3038; border: 2px solid #444B54; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 19px; color: #FFFFFF">What if it can't answer a question?</h3>
-<div style="color: #C9CDD3; font-size: 16px">It takes a message and sends you the details, so you can call the customer back.</div>
-</div>
-<div style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; background: #2A3038; border: 2px solid #444B54; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 19px; color: #FFFFFF">How does it know about my business?</h3>
-<div style="color: #C9CDD3; font-size: 16px">We build it around you: your services, areas, opening hours and how you like calls handled. You approve it before it goes live.</div>
-</div>
-<div style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; background: #2A3038; border: 2px solid #444B54; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 19px; color: #FFFFFF">How long does setup take?</h3>
-<div style="color: #C9CDD3; font-size: 16px">Usually within a few days of signing up.</div>
-</div>
-<div style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; background: #2A3038; border: 2px solid #444B54; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 19px; color: #FFFFFF">Am I tied into a contract?</h3>
-<div style="color: #C9CDD3; font-size: 16px">There's a 3-month minimum, then it rolls month to month and you can cancel with 30 days' notice.</div>
-</div>
-<div style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; background: #2A3038; border: 2px solid #444B54; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 19px; color: #FFFFFF">What does it cost?</h3>
-<div style="color: #C9CDD3; font-size: 16px">£397 a month, fixed, with no call-by-call bills. The £497 setup fee is waived for our first 5 founding clients.</div>
-</div>
-<div style="flex: 1 1 480px; min-width: 0; box-sizing: border-box; background: #2A3038; border: 2px solid #444B54; padding: 22px 24px; display: flex; flex-direction: column; gap: 8px">
-<h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 19px; color: #FFFFFF">Will customers know it isn't a person?</h3>
-<div style="color: #C9CDD3; font-size: 16px">It sounds natural and friendly, and you choose how it greets callers. Callers can ask for a call-back from you at any time.</div>
-</div>
-</div>
-</div>
-</div>
+<div class="hazard" aria-hidden="true"></div>
+<section class="contact" id="contact">
+  <div class="wrap">
+    <div>
+      <h2 class="display">Book a 10-minute demo.</h2>
+      <p class="lede">Tell us about your business and we'll show you how Localdesk would answer your calls.</p>
+    </div>
+    <dl class="details">
+      <div><dt>Phone</dt><dd>Demo line opening soon</dd></div>
+      <div><dt>Email</dt><dd><a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a></dd></div>
+      <div><dt>Contact</dt><dd>Gio Petrucci</dd></div>
+    </dl>
+  </div>
+</section>
 
-<div id="contact" style="background: #F5B800; color: #1F2328">
-<div style="max-width: 1120px; margin: 0 auto; padding: 72px 24px; box-sizing: border-box; display: flex; flex-wrap: wrap; gap: 40px; align-items: center">
-<div style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
-<h2 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 42px; line-height: 1.08">Book a 10-minute demo.</h2>
-<p style="margin: 0; font-size: 19px">Tell us about your business and we'll show you how Localdesk would answer your calls.</p>
-</div>
-<div style="flex: 1 1 340px; min-width: 0; box-sizing: border-box; background: #1F2328; color: #FFFFFF; padding: 28px 26px; display: flex; flex-direction: column; gap: 16px">
-<div>
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 2px; color: #F5B800">PHONE</div>
-<div style="font-size: 20px; font-weight: 600">Demo line opening soon</div>
-</div>
-<div>
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 2px; color: #F5B800">EMAIL</div>
-<div style="font-size: 20px; font-weight: 600"><a href="mailto:hello@localdeskai.co.uk" style="text-decoration: underline">hello@localdeskai.co.uk</a></div>
-</div>
-<div>
-<div style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 2px; color: #F5B800">CONTACT</div>
-<div style="font-size: 20px; font-weight: 600">Gio Petrucci</div>
-</div>
-</div>
-</div>
-</div>
+</main>
 
-<div style="background: #1F2328; color: #AEB4BB">
-<div style="max-width: 1120px; margin: 0 auto; padding: 24px; box-sizing: border-box; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 14px">
-<div>&copy; Localdesk AI Consultancy</div>
-<div>AI receptionists and websites for local service businesses</div>
-</div>
-</div>
-
-</div>
+<footer class="foot">
+  <div class="wrap"><span>© Localdesk AI Consultancy</span><span>AI receptionists and websites for local businesses</span></div>
+</footer>
 
 </body>
 </html>
