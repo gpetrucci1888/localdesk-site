@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Receptionist for Local Businesses | Localdesk</title>
-<meta name="description" content="An AI receptionist for local businesses. It answers every call, takes the details and texts you a summary. £397 a month, no VAT to add, website included.">
+<meta name="description" content="An AI receptionist for local businesses. It answers every call, takes the details and texts you a summary. from £199 a month, no VAT to add.">
 <link rel="canonical" href="https://www.localdeskai.co.uk/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.localdeskai.co.uk/">
@@ -32,8 +32,8 @@
   "makesOffer": {
     "@type": "Offer",
     "name": "Localdesk Starter",
-    "description": "AI receptionist answering 24/7, caller details, booking, missed-call text-back and a free hosted website.",
-    "priceSpecification": { "@type": "UnitPriceSpecification", "price": 397, "priceCurrency": "GBP", "unitCode": "MON" }
+    "description": "AI receptionist answering 24/7, call summaries by text and email, missed-call text-back, 150 call minutes a month.",
+    "priceSpecification": { "@type": "UnitPriceSpecification", "price": 199, "priceCurrency": "GBP", "unitCode": "MON" }
   }
 }
 </script>
@@ -299,23 +299,35 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
 
 /* pricing */
 .pricing{background:var(--charcoal);color:var(--white);padding:clamp(64px,9vw,120px) 0}
-.pricing .wrap{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(28px,6vw,88px);align-items:start}
+.pricing-head{max-width:46em}
 .pricing .lede{color:#D5D9DD;margin-top:22px}
-.addon{margin-top:28px;padding-left:18px;border-left:4px solid var(--yellow);color:#C9CED3;font-size:1rem;max-width:30em}
-.price-panel{background:var(--white);color:var(--charcoal);padding:clamp(26px,4vw,48px);position:relative;box-shadow:12px 12px 0 var(--yellow)}
-.price{display:flex;align-items:baseline;gap:10px;line-height:.9}
-.price b{font-weight:900;font-stretch:68%;font-size:clamp(5rem,12vw,8.5rem);letter-spacing:-.01em}
-.price span{font-weight:700;font-size:1.3rem;color:var(--steel)}
-.price-panel ul{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:10px}
-.price-panel li{padding-left:30px;position:relative;font-weight:600}
-.price-panel li::before{content:"";position:absolute;left:0;top:.42em;width:16px;height:9px;border-left:4px solid var(--charcoal);border-bottom:4px solid var(--charcoal);transform:rotate(-45deg)}
-.setup{margin-top:30px;padding-top:22px;border-top:2px solid var(--charcoal);font-size:1rem;color:#3B434B}
-.setup b{font-size:1.1rem;color:var(--charcoal)}
-.setup s{color:var(--steel)}
-.price-panel .btn{margin-top:24px;width:100%}
-.stamp{position:absolute;top:-22px;right:clamp(10px,3vw,30px);transform:rotate(7deg);border:4px solid var(--yellow);background:var(--charcoal);color:var(--yellow);padding:8px 16px;font-weight:900;font-stretch:76%;font-size:1.25rem;line-height:1.05;text-align:center}
-.stamp small{display:block;font-size:.8rem;font-weight:700;color:var(--white);margin-top:2px;font-stretch:100%}
-@media(max-width:900px){.pricing .wrap{grid-template-columns:1fr}.stamp{top:-26px}.price-panel{box-shadow:8px 8px 0 var(--yellow)}}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.4vw,28px);margin-top:clamp(36px,5vw,60px);align-items:stretch}
+.plan-card{position:relative;display:flex;flex-direction:column;gap:14px;border:2px solid var(--charcoal-3);padding:clamp(22px,2.6vw,32px)}
+.plan-card ul{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:10px;flex:1;align-content:start}
+.plan-card li{padding-left:28px;position:relative;font-size:1rem;color:#D5D9DD}
+.plan-card li::before{content:"";position:absolute;left:0;top:.42em;width:14px;height:8px;border-left:3px solid var(--yellow);border-bottom:3px solid var(--yellow);transform:rotate(-45deg)}
+.plan-name{margin:0;font-weight:900;font-stretch:76%;font-size:1.9rem;line-height:1}
+.plan-for{margin:0;font-size:.98rem;color:#C9CED3;min-height:3em}
+.price{display:flex;align-items:baseline;gap:8px;line-height:.9}
+.price small{font-weight:700;font-size:1rem;color:#9AA3AB}
+.price b{font-weight:900;font-stretch:68%;font-size:clamp(3.6rem,6vw,4.8rem);letter-spacing:-.01em}
+.price span{font-weight:700;font-size:1.05rem;color:#9AA3AB;line-height:1.15}
+.price-extra{margin:-6px 0 0;font-size:.9rem;font-weight:700;color:#9AA3AB}
+.setup{margin:0;padding-top:14px;border-top:1px solid var(--charcoal-3);font-size:.92rem;color:#C9CED3}
+.setup s{color:#9AA3AB}
+.plan-card .btn{width:100%;margin-top:4px}
+.plan-main{background:var(--white);color:var(--charcoal);border-color:var(--white);box-shadow:12px 12px 0 var(--yellow)}
+.plan-main li{color:var(--charcoal);font-weight:600}
+.plan-main li::before{border-color:var(--charcoal)}
+.plan-main .plan-for,.plan-main .setup{color:#3B434B}
+.plan-main .setup{border-top-color:var(--line)}
+.plan-main .price span,.plan-main .setup s{color:var(--steel)}
+.soon{position:absolute;top:-14px;left:20px;background:var(--charcoal);border:2px solid var(--yellow);color:var(--yellow);font-weight:800;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px}
+.stamp{position:absolute;top:-22px;right:clamp(10px,3vw,24px);transform:rotate(5deg);border:4px solid var(--yellow);background:var(--charcoal);color:var(--yellow);padding:6px 14px;font-weight:900;font-stretch:76%;font-size:1.15rem;line-height:1.05;text-align:center}
+.stamp small{display:block;font-size:.72rem;font-weight:700;color:var(--white);margin-top:2px;font-stretch:100%}
+.plans-note{margin:clamp(28px,4vw,40px) 0 0;max-width:52em;font-size:.95rem;color:#9AA3AB}
+@media(max-width:980px){.plans{grid-template-columns:1fr;max-width:520px}.plan-main{order:-1}.plan-for{min-height:0}}
+@media(max-width:900px){.plan-main{box-shadow:8px 8px 0 var(--yellow)}}
 
 /* trust + faq */
 .faq{padding:clamp(64px,9vw,120px) 0}
@@ -405,7 +417,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
         <a class="btn btn-yellow js-book" href="#contact">Book a 15-minute demo</a>
         <a class="btn btn-ghost js-live" href="#call">See how a call goes</a>
       </div>
-      <p class="fine">£397 a month, no VAT to add. Website included. No call-by-call bills.</p>
+      <p class="fine">From £199 a month, no VAT to add. Founding clients: setup fee waived.</p>
     </div>
     <div class="phone-stage">
       <div class="phone" id="phone" role="img" aria-label="A phone showing a call being answered by Localdesk and the summary text the business receives afterwards.">
@@ -510,7 +522,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <div class="result" aria-live="polite">
         <span class="big" id="o-loss">£1,625</span>
         <span class="what">a month in work going to someone else</span>
-        <div class="vs"><span>Localdesk: <b>£397 a month</b></span><span id="o-payback">Pays for itself with 2 jobs a month</span></div>
+        <div class="vs"><span>Localdesk Growth: <b>£397 a month</b></span><span id="o-payback">Pays for itself with 2 jobs a month</span></div>
       </div>
       <p class="note">A rough estimate to help you think it through, not a promise.</p>
     </form>
@@ -574,7 +586,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       </li>
       <li class="tile tile-wide tile-yellow reveal">
         <svg class="ico" viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="8" width="40" height="32" fill="#fff" stroke="#1F2328" stroke-width="3"/><path d="M4 16h40" stroke="#1F2328" stroke-width="3"/><path d="M11 24h14M11 31h9" stroke="#1F2328" stroke-width="3"/><rect x="30" y="22" width="8" height="12" fill="#1F2328"/></svg>
-        <b>Plus a website, free</b><span>A fast, mobile-friendly site with your services, your areas and a clear number to call. Built, hosted and kept up to date for you.</span>
+        <b>Plus a website, free on Growth</b><span>A fast, mobile-friendly site with your services, your areas and a clear number to call. Built, hosted and kept up to date for you.</span>
       </li>
     </ul>
   </div>
@@ -589,7 +601,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
         <tr><th>Picks up</th><td data-h="Voicemail">Rings out, then a message</td><td data-h="Hiring a receptionist">Office hours only</td><td class="us" data-h="Localdesk">Every call, 24/7</td></tr>
         <tr><th>Caller details</th><td data-h="Voicemail">Only what the caller bothers to say</td><td data-h="Hiring a receptionist">Yes</td><td class="us" data-h="Localdesk">Yes, texted to you</td></tr>
         <tr><th>Sick days and holidays</th><td data-h="Voicemail">n/a</td><td data-h="Hiring a receptionist">Leave gaps</td><td class="us" data-h="Localdesk">None</td></tr>
-        <tr><th>Cost</th><td data-h="Voicemail">Free, but callers hang up and ring the next business</td><td data-h="Hiring a receptionist">Costs tens of thousands of pounds a year</td><td class="us" data-h="Localdesk">£397 a month, fixed, no VAT</td></tr>
+        <tr><th>Cost</th><td data-h="Voicemail">Free, but callers hang up and ring the next business</td><td data-h="Hiring a receptionist">Costs tens of thousands of pounds a year</td><td class="us" data-h="Localdesk">From £199 a month, no VAT</td></tr>
       </tbody>
     </table>
   </div>
@@ -622,25 +634,59 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
 
 <section class="pricing" id="pricing" aria-labelledby="pricing-title">
   <div class="wrap">
-    <div class="reveal">
+    <div class="pricing-head reveal">
       <p class="kicker" style="color:#9AA3AB">Pricing</p>
-      <h2 class="display" id="pricing-title">One fixed price. No call-by-call bills.</h2>
-      <p class="lede">Your receptionist and website for one simple monthly fee. If it saves you a single job, it has paid for itself.</p>
-      <p class="addon"><b>Add later:</b> Meta (Facebook and Instagram) ads, extra website pages and larger changes, and AI consulting. Priced separately when you're ready.</p>
+      <h2 class="display" id="pricing-title">Simple monthly plans. No VAT to add.</h2>
+      <p class="lede">Pick the plan that fits your business. Every plan includes a month's worth of call minutes, and we warn you at 80% so there are no surprise bills.</p>
     </div>
-    <div class="price-panel reveal">
-      <div class="stamp">Setup fee waived<small>first 5 founding clients</small></div>
-      <div class="price"><b>£397</b><span>a month<br>no VAT to add</span></div>
-      <ul>
-        <li>AI receptionist answering 24/7</li>
-        <li>Caller details, booking and call-backs</li>
-        <li>Missed-call text-back and a summary after every call</li>
-        <li>Free professional website, hosted and kept up to date</li>
-        <li>Ongoing tweaks as your business changes</li>
-      </ul>
-      <p class="setup"><b>Setup fee <s>£497</s>, waived.</b><br>For our first 5 founding clients. 3-month minimum, then rolling month to month with 30 days' notice.</p>
-      <a class="btn btn-yellow js-book" href="#contact">Book a 15-minute demo</a>
+    <div class="plans">
+      <article class="plan-card reveal" aria-labelledby="plan-starter">
+        <p class="plan-name" id="plan-starter">Starter</p>
+        <p class="plan-for">For sole traders who want to stop missing calls while they're on the tools.</p>
+        <div class="price"><b>£199</b><span>a month</span></div>
+        <ul>
+          <li>AI receptionist answering 24/7</li>
+          <li>Call summaries by text and email</li>
+          <li>Missed-call text-back</li>
+          <li>150 call minutes a month included</li>
+          <li>Works with your existing website</li>
+        </ul>
+        <p class="setup">Setup £497, or <b>free when you sign up for 12 months</b>. Otherwise a 3-month minimum.</p>
+        <a class="btn btn-ghost js-book" href="#contact">Book a 15-minute demo</a>
+      </article>
+      <article class="plan-card plan-main reveal" aria-labelledby="plan-growth">
+        <div class="stamp">Most popular<small>setup waived for founding clients</small></div>
+        <p class="plan-name" id="plan-growth">Growth</p>
+        <p class="plan-for">For established local businesses that want every enquiry answered.</p>
+        <div class="price"><b>£397</b><span>a month</span></div>
+        <ul>
+          <li>Everything in Starter</li>
+          <li>500 call minutes a month included</li>
+          <li>Free professional website, built, hosted and kept up to date</li>
+          <li>Booking and quote-visit requests</li>
+          <li>Ongoing tweaks as your business changes</li>
+        </ul>
+        <p class="setup">Setup <s>£497</s> <b>waived for our first 5 founding clients</b>. 3-month minimum, then monthly with 30 days' notice.</p>
+        <a class="btn btn-yellow js-book" href="#contact">Book a 15-minute demo</a>
+      </article>
+      <article class="plan-card reveal" aria-labelledby="plan-leads">
+        <span class="soon">Coming soon</span>
+        <p class="plan-name" id="plan-leads">Lead Machine</p>
+        <p class="plan-for">For businesses that want us to run their local ads as well as answer the calls they bring in.</p>
+        <div class="price"><small>from</small><b>£997</b><span>a month</span></div>
+        <p class="price-extra">+ your ad spend, paid directly to Meta and Google</p>
+        <ul>
+          <li>Everything in Growth</li>
+          <li>1,000 call minutes a month included</li>
+          <li>Meta (Facebook and Instagram) and Google Ads set up and managed for you</li>
+          <li>A local landing page built to turn ad clicks into calls</li>
+          <li>Your AI receptionist answers the calls your ads bring in, day and night</li>
+        </ul>
+        <p class="setup">We're testing this with a few clients first. Join the waitlist to hear when it opens.</p>
+        <a class="btn btn-ghost" href="mailto:hello@localdeskai.co.uk?subject=Lead%20Machine%20waitlist">Join the waitlist</a>
+      </article>
     </div>
+    <p class="plans-note reveal">Extra minutes are 25p each, on any plan. We'll text you when you've used 80% of your minutes, so you can decide what to do before any extra charge. Extra website pages, larger changes and AI consulting are priced separately.</p>
   </div>
 </section>
 
@@ -649,7 +695,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
     <ul class="trust">
       <li class="reveal"><b>Every call recorded and transcribed</b><span>Callers are told the call may be recorded. You can listen back to any call and see exactly what was said.</span></li>
       <li class="reveal"><b>Your data, handled properly</b><span>Caller details are used only to run your service and are never sold. <a href="privacy.html">Read our privacy policy</a>.</span></li>
-      <li class="reveal"><b>Founding client offer</b><span>Our first 5 founding clients get free setup. We'll ask for an honest review afterwards, and it will be shown as coming from a founding client.</span></li>
+      <li class="reveal"><b>Founding client offer</b><span>Our first 5 founding clients on Growth get free setup. We'll ask for an honest review afterwards, and it will be shown as coming from a founding client.</span></li>
     </ul>
     <h2 class="display" id="faq-title">What you might want to know.</h2>
     <div class="qa">
@@ -660,8 +706,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
         <details><summary>How long does setup take?</summary><p>Usually within a few days of signing up.</p></details>
       </div>
       <div>
-        <details><summary>Am I tied into a contract?</summary><p>There's a 3-month minimum, then it rolls month to month and you can cancel with 30 days' notice. See our <a href="terms.html">terms</a>.</p></details>
-        <details><summary>What does it cost?</summary><p>£397 a month, fixed, with no VAT to add and no call-by-call bills. The £497 setup fee is waived for our first 5 founding clients.</p></details>
+        <details><summary>Am I tied into a contract?</summary><p>Growth has a 3-month minimum, then rolls month to month with 30 days' notice. Starter is the same with a £497 setup fee, or sign up for 12 months and the setup fee is waived. See our <a href="terms.html">terms</a>.</p></details>
+        <details><summary>What does it cost?</summary><p>Starter is £199 a month with 150 call minutes. Growth is £397 a month with 500 call minutes and a free website. There's no VAT to add. Extra minutes are 25p each, and we text you when you've used 80% of your minutes, so there are no surprises.</p></details>
         <details><summary>Will customers know it isn't a person?</summary><p>It introduces itself as the virtual receptionist and never pretends to be a person. Callers can ask for a call-back from you at any time.</p></details>
       </div>
     </div>
@@ -702,7 +748,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
 </div>
 
 <div class="mbar" id="mbar">
-  <span><b>£397 a month</b>No VAT. Setup waived.</span>
+  <span><b>From £199 a month</b>No VAT to add.</span>
   <a class="btn btn-yellow js-book" href="#contact">Book a demo</a>
 </div>
 
