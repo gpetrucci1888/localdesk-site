@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Westcountry Roofing",
+    "assistantId": "PASTE-THE-CLIENT-ASSISTANT-ID",
+    "vapiNumber": "+441234567890",
+    "fromNumber": "+441234567890",
+    "notifySms": ["+447700900123"],
+    "notifyEmail": ["owner@example.com"],
+    "missedCallTextBack": true,
+    "textBackMessage": "Hi, it's {business}. Sorry we couldn't take your call just now. Reply here with what you need, or we'll call you back as soon as we can."
+  }
+]

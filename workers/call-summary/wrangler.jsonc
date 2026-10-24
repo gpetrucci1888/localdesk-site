@@ -1,0 +1,15 @@
+// Separate Worker from the website. Deploy from this folder with: npx wrangler deploy
+// Secrets (set once with `npx wrangler secret put NAME`):
+//   VAPI_SECRET        - shared secret, also entered in Vapi as the server URL credential
+//   TWILIO_ACCOUNT_SID - from the Twilio console
+//   TWILIO_AUTH_TOKEN  - from the Twilio console
+//   RESEND_API_KEY     - optional, for summary emails (resend.com)
+//   CLIENTS            - JSON list of clients, see clients.example.json
+{
+  "name": "localdesk-call-summary",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "vars": {
+    "EMAIL_FROM": "Localdesk <calls@localdeskai.co.uk>"
+  }
+}
