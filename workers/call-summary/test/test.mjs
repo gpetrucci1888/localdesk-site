@@ -79,4 +79,15 @@ assert.ok(isUkMobile('+447700900123') && !isUkMobile('+441872000000'));
 assert.equal(summarise({ transcript: 'User: hi', durationSeconds: 40 }).missed, false);
 assert.ok(smsText(summarise(answered)).length <= 600);
 
+// 6. no SMS number for the client -> texts come from "Localdesk" and the text-back doesn't say "reply"
+sent.length = 0;
+const env2 = { ...env, CLIENTS: JSON.stringify([{ ...client, fromNumber: '' }]) };
+const waits = [];
+await worker.fetch(new Request('https://w.example/', { method: 'POST', headers: { 'x-vapi-secret': 's3cret' }, body: JSON.stringify({ message: { type: 'end-of-call-report', assistant: { id: 'asst-1' }, customer: { number: '+447700900555' }, durationSeconds: 3, transcript: '' } }) }), env2, { waitUntil: p => waits.push(p) });
+await Promise.all(waits);
+assert.ok(sent.every(s => s.body.From === 'Localdesk'));
+const back = sent.find(s => s.body.To === '+447700900555');
+assert.ok(back && !/Reply here/.test(back.body.Body));
+console.log('Text-back from Localdesk:', back.body.Body);
+
 console.log('\nAll call-summary tests passed.');

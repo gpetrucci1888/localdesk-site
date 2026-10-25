@@ -39,13 +39,16 @@ export async function handleCall(msg, client, env) {
 
   if (call.missed) {
     if (client.missedCallTextBack !== false && call.callerNumber && isUkMobile(call.callerNumber)) {
-      const text = (client.textBackMessage ||
-        "Hi, it's {business}. Sorry we couldn't take your call just now. Reply here with what you need, or we'll call you back as soon as we can.")
+      const from = senderFor(client, env);
+      const canReply = from.startsWith('+');
+      const text = (client.textBackMessage || (canReply
+        ? "Hi, it's {business}. Sorry we couldn't take your call just now. Reply here with what you need, or we'll call you back as soon as we can."
+        : "Hi, it's {business}. Sorry we couldn't take your call just now. We'll call you back as soon as we can."))
         .replace('{business}', client.name);
-      sent.push(await sendSms(env, client.fromNumber, call.callerNumber, text));
+      sent.push(await sendSms(env, from, call.callerNumber, text));
     }
     for (const to of list(client.notifySms)) {
-      sent.push(await sendSms(env, client.fromNumber, to,
+      sent.push(await sendSms(env, senderFor(client, env), to,
         `Missed call from ${pretty(call.callerNumber) || 'a withheld number'} (${call.when}). ` +
         (call.callerNumber && isUkMobile(call.callerNumber) && client.missedCallTextBack !== false ? "We've texted them back." : 'They hung up before leaving details.')));
     }
@@ -53,7 +56,7 @@ export async function handleCall(msg, client, env) {
   }
 
   const sms = smsText(call);
-  for (const to of list(client.notifySms)) sent.push(await sendSms(env, client.fromNumber, to, sms));
+  for (const to of list(client.notifySms)) sent.push(await sendSms(env, senderFor(client, env), to, sms));
   for (const to of list(client.notifyEmail)) sent.push(await sendEmail(env, to, client, call));
   return sent;
 }
@@ -119,6 +122,12 @@ export function findClient(clients, msg) {
 
 // ---------- sending ----------
 
+// Who texts appear to come from: the client's own SMS-capable number (+447...) so customers can reply,
+// or a name like "Localdesk" (alphanumeric sender: one-way, up to 11 letters/numbers).
+export function senderFor(client, env) {
+  return client.fromNumber || env.SMS_SENDER || 'Localdesk';
+}
+
 async function sendSms(env, from, to, body) {
   if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) return { channel: 'sms', to, skipped: 'Twilio not configured' };
   const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`, {
@@ -127,7 +136,7 @@ async function sendSms(env, from, to, body) {
       Authorization: 'Basic ' + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`),
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: new URLSearchParams({ From: from || env.TWILIO_FROM, To: to, Body: body }),
+    body: new URLSearchParams({ From: from, To: to, Body: body }),
   });
   if (!res.ok) console.error('Twilio error', res.status, await res.text());
   return { channel: 'sms', to, status: res.status };

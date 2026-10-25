@@ -10,6 +10,7 @@
   "main": "src/index.js",
   "compatibility_date": "2026-10-01",
   "vars": {
-    "EMAIL_FROM": "Localdesk <calls@localdeskai.co.uk>"
+    "EMAIL_FROM": "Localdesk <calls@localdeskai.co.uk>",
+    "SMS_SENDER": "Localdesk"
   }
 }
