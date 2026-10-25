@@ -166,7 +166,7 @@ section{scroll-margin-top:12px}
 @media(max-width:360px){.phone{zoom:1}}
 @media(max-width:900px){.phone{transform:none}.phone.buzz{animation:none}}
 
-/* live demo: talk to Tamsin */
+/* live demo: talk to Mia */
 .ring-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:22px;padding:14px 16px;background:var(--charcoal);color:var(--white);text-decoration:none;border-left:6px solid var(--yellow)}
 .ring-line span{font-size:.95rem;color:#C9CED3}
 .ring-line b{font-weight:900;font-stretch:76%;font-size:1.7rem;line-height:1;color:var(--yellow);letter-spacing:.01em}
@@ -460,7 +460,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
     <div class="reveal">
       <p class="kicker">Live demo</p>
       <h2 class="display" id="try-title">Don't take our word for it. Talk to it.</h2>
-      <p class="lede">Press the button and talk to Tamsin, our AI receptionist, right here in your browser. Tell her what your business does, then ring in as one of your customers.</p>
+      <p class="lede">Press the button and talk to Mia, our AI receptionist, right here in your browser. Tell her what your business does, then ring in as one of your customers.</p>
       <ul class="tries">
         <li>"I'm a roofer. Can you answer my calls?"</li>
         <li>"Hi, I've got water coming through my ceiling."</li>
@@ -470,15 +470,15 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <p class="note">Free to try. Demo calls end after 4 minutes and may be recorded and transcribed. See our <a href="privacy.html">privacy policy</a>.</p>
     </div>
     <div class="talk reveal" id="talk" data-state="idle">
-      <div class="talk-who"><i aria-hidden="true"></i><span id="talk-who">Tamsin is ready to take your call</span></div>
+      <div class="talk-who"><i aria-hidden="true"></i><span id="talk-who">Mia is ready to take your call</span></div>
       <button class="orb" id="orb" type="button" aria-describedby="talk-status">
         <svg class="ico-mic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
         <svg class="ico-end" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.7 14.6c-.5-.5-.5-1.3 0-1.8 4.6-4.4 12-4.4 16.6 0 .5.5.5 1.3 0 1.8l-1.9 1.8c-.4.4-1.1.5-1.6.1l-2.2-1.6c-.4-.3-.6-.7-.5-1.2l.2-1.4a10 10 0 0 0-4.6 0l.2 1.4c.1.5-.1.9-.5 1.2l-2.2 1.6c-.5.4-1.2.3-1.6-.1z"/></svg>
-        <span class="sr-only" id="orb-label">Start talking to Tamsin</span>
+        <span class="sr-only" id="orb-label">Start talking to Mia</span>
       </button>
-      <p class="talk-status" id="talk-status" aria-live="polite">Tap to talk to Tamsin</p>
+      <p class="talk-status" id="talk-status" aria-live="polite">Tap to talk to Mia</p>
       <p class="talk-sub" id="talk-sub">Your browser will ask to use your microphone.</p>
-      <a class="after js-book" href="#contact">Want Tamsin answering your phone? Book a demo</a>
+      <a class="after js-book" href="#contact">Want Mia answering your phone? Book a demo</a>
     </div>
   </div>
 </section>
@@ -521,7 +521,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <p class="kicker">Hear how a call goes</p>
       <h2 class="display" id="call-title">From hello to job details.</h2>
       <p class="lede">Here's an example: <span id="call-intro">a customer rings a roofing firm about a leak</span>. From the first hello to the details being taken, nobody has to stop what they're doing.</p>
-      <p class="note"><span class="js-live-note" hidden>Want to hear it for real? <a href="#try">Talk to Tamsin live</a>. </span>Every call is recorded and transcribed, so anything unclear can be checked.</p>
+      <p class="note"><span class="js-live-note" hidden>Want to hear it for real? <a href="#try">Talk to Mia live</a>. </span>Every call is recorded and transcribed, so anything unclear can be checked.</p>
     </div>
     <div class="transcript reveal" aria-label="Example call transcript">
       <p class="tag">Example call, written out: <span data-f="biz">Westcountry Roofing</span></p>
@@ -897,7 +897,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
     }, { threshold: 0.4 }).observe(phone);
   }
 
-  // ---- Live demo: talk to Tamsin in the browser (Vapi)
+  // ---- Live demo: talk to Mia in the browser (Vapi)
   // The public key is safe to publish. Lock it to this domain in the Vapi dashboard.
   var VAPI_PUBLIC_KEY = "5f4a7101-6c16-4046-b824-d90213ea6c0d";
   // Paste the assistant's ID from Vapi > Assistants. The live demo stays hidden until it's set.
@@ -908,7 +908,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
     var section = document.getElementById('try');
     if (!VAPI_ASSISTANT_ID || !VAPI_PUBLIC_KEY) return;
     section.hidden = false;
-    document.querySelectorAll('.js-live').forEach(function (a) { a.innerHTML = '<svg class="btn-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Talk to Tamsin now'; a.href = '#try'; });
+    document.querySelectorAll('.js-live').forEach(function (a) { a.innerHTML = '<svg class="btn-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>Talk to Mia now'; a.href = '#try'; });
     document.querySelectorAll('.js-live-note').forEach(function (n) { n.hidden = false; });
 
     var talk = document.getElementById('talk'), orb = document.getElementById('orb'), orbLabel = document.getElementById('orb-label');
@@ -920,8 +920,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       talk.dataset.state = next;
       statusEl.textContent = status;
       sub.innerHTML = subText || '';
-      orbLabel.textContent = next === 'live' ? 'End the call' : 'Start talking to Tamsin';
-      document.getElementById('talk-who').textContent = next === 'live' ? "You're on a call with Tamsin" : 'Tamsin is ready to take your call';
+      orbLabel.textContent = next === 'live' ? 'End the call' : 'Start talking to Mia';
+      document.getElementById('talk-who').textContent = next === 'live' ? "You're on a call with Mia" : 'Mia is ready to take your call';
       if (next !== 'live') orb.style.setProperty('--lvl', 0);
     }
     function clock() {
@@ -949,13 +949,13 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
         tickTimer = setInterval(function () { sub.innerHTML = clock(); }, 1000);
         limitTimer = setTimeout(function () { vapi.stop(); }, DEMO_MAX_SECONDS * 1000);
       });
-      vapi.on('speech-start', function () { if (state === 'live') statusEl.textContent = 'Tamsin is talking…'; });
+      vapi.on('speech-start', function () { if (state === 'live') statusEl.textContent = 'Mia is talking…'; });
       vapi.on('speech-end', function () { if (state === 'live') statusEl.textContent = 'Listening…'; });
       vapi.on('volume-level', function (v) { if (state === 'live') orb.style.setProperty('--lvl', Math.min(1, v * 1.6)); });
       vapi.on('call-end', function () {
         var long = startedAt && Date.now() - startedAt >= DEMO_MAX_SECONDS * 1000 - 1500;
         cleanup();
-        set('ended', 'Call ended', long ? 'Demo calls are limited to 4 minutes. Tap to talk again.' : 'Tap to talk to Tamsin again.');
+        set('ended', 'Call ended', long ? 'Demo calls are limited to 4 minutes. Tap to talk again.' : 'Tap to talk to Mia again.');
       });
       vapi.on('error', function () {
         cleanup();
