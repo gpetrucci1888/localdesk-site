@@ -164,6 +164,11 @@ section{scroll-margin-top:12px}
 @media(max-width:900px){.phone{transform:none}.phone.buzz{animation:none}}
 
 /* live demo: talk to George */
+.ring-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:22px;padding:14px 16px;background:var(--charcoal);color:var(--white);text-decoration:none;border-left:6px solid var(--yellow)}
+.ring-line span{font-size:.95rem;color:#C9CED3}
+.ring-line b{font-weight:900;font-stretch:76%;font-size:1.7rem;line-height:1;color:var(--yellow);letter-spacing:.01em}
+.ring-line:hover b{text-decoration:underline}
+.hero .fine a{color:var(--white);font-weight:700;white-space:nowrap}
 .live{background:var(--concrete);padding:clamp(64px,9vw,120px) 0}
 .live .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(28px,6vw,88px);align-items:center}
 .live .lede{margin-top:22px;color:#3B434B}
@@ -394,6 +399,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
         <a class="btn btn-ghost js-live" href="#call">See how a call goes</a>
       </div>
       <p class="fine">£397 a month, no VAT to add. Website included. No call-by-call bills.</p>
+      <p class="fine">Hear it on the phone: ring our demo line on <a href="tel:+441752741686">01752 741686</a>.</p>
     </div>
     <div class="phone-stage">
       <div class="phone" id="phone" role="img" aria-label="A phone showing a call being answered by Localdesk and the summary text the business receives afterwards.">
@@ -457,7 +463,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
         <li>"Hi, I've got water coming through my ceiling."</li>
         <li>"Can someone come out and quote next week?"</li>
       </ul>
-      <p class="note">Free, and no phone needed. It uses your microphone, and calls end after 4 minutes. Demo calls may be recorded and transcribed. See our <a href="privacy.html">privacy policy</a>.</p>
+      <a class="ring-line" href="tel:+441752741686"><span>Prefer your phone? Ring our demo line</span><b>01752 741686</b></a>
+      <p class="note">Free to try. Demo calls end after 4 minutes and may be recorded and transcribed. See our <a href="privacy.html">privacy policy</a>.</p>
     </div>
     <div class="talk reveal" id="talk" data-state="idle">
       <div class="talk-who"><i aria-hidden="true"></i><span id="talk-who">George is ready to take your call</span></div>
@@ -665,6 +672,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <p class="me">You'll deal with me, Gio Petrucci, directly: from the demo to setting up your receptionist and website, and any changes after that. No call centres, no ticket queues.</p>
     </div>
     <dl class="details">
+      <div><dt>Demo line</dt><dd><a href="tel:+441752741686">01752 741686</a></dd></div>
       <div><dt>Book online</dt><dd><a class="btn btn-yellow js-book" href="mailto:hello@localdeskai.co.uk?subject=Demo%20request">Choose a time</a></dd></div>
       <div><dt>Email</dt><dd><a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a></dd></div>
       <div><dt>Contact</dt><dd>Gio Petrucci</dd></div>
