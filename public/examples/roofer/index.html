@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carrick Ridge Roofing | Roofers in Saltash, Plymouth &amp; East Cornwall</title>
+<meta name="description" content="Example website built by Localdesk for a made-up roofing business.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#16232E">
+<link rel="preload" href="../../fonts/Archivo-VF.woff" as="font" type="font/woff" crossorigin>
+<style>
+@font-face{font-family:'Archivo';src:url('../../fonts/Archivo-VF.woff') format('woff');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+:root{
+  --slate:#16232E;
+  --slate-2:#22323F;
+  --slate-3:#3B4C5A;
+  --copper:#C8642F;
+  --copper-2:#A94F20;
+  --cream:#F6F2EC;
+  --stone:#E7E0D6;
+  --ink:#1B2329;
+  --muted:#5B6670;
+  --line:#D8D0C4;
+  --white:#fff;
+  --pad:clamp(16px,5vw,56px);
+  --max:1160px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:18px;line-height:1.6;font-stretch:100%}
+a{color:inherit}
+img,svg{display:block;max-width:100%}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 var(--pad)}
+h1,h2,h3{font-stretch:88%;line-height:1.05;letter-spacing:-.01em;margin:0}
+h1{font-size:clamp(40px,7vw,78px);font-weight:850}
+h2{font-size:clamp(30px,4.6vw,48px);font-weight:820}
+h3{font-size:21px;font-weight:750;font-stretch:96%}
+p{margin:0}
+.kicker{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--copper)}
+.kicker::before{content:"";width:22px;height:3px;background:var(--copper)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 26px;font-weight:750;font-size:17px;text-decoration:none;border:2px solid transparent;border-radius:4px;transition:transform .15s,background .15s}
+.btn:hover{transform:translateY(-2px)}
+.btn-copper{background:var(--copper);color:#fff}
+.btn-copper:hover{background:var(--copper-2)}
+.btn-ghost{border-color:rgba(255,255,255,.4);color:#fff}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
+.btn svg{width:20px;height:20px}
+
+/* demo banner */
+.demo{background:#FFE9A8;color:#3D2F00;font-size:14px;text-align:center;padding:9px 16px;line-height:1.4}
+.demo a{font-weight:700}
+
+/* header */
+header{background:var(--slate);color:#fff;position:sticky;top:0;z-index:20;border-bottom:1px solid rgba(255,255,255,.08)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:72px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo svg{width:40px;height:40px;flex:none}
+.logo b{display:block;font-size:19px;font-weight:800;font-stretch:90%;line-height:1}
+.logo small{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#C9B9A6;margin-top:4px}
+nav{display:flex;align-items:center;gap:26px;font-size:15px}
+nav a{text-decoration:none;color:#E6E1DA}
+nav a:hover{color:#fff}
+.tel{display:flex;align-items:center;gap:8px;background:var(--copper);color:#fff!important;padding:11px 16px;border-radius:4px;font-weight:750}
+.tel svg{width:18px;height:18px}
+.tel .short{display:none}
+.tel{white-space:nowrap}
+@media (max-width:520px){.tel .full{display:none}.tel .short{display:inline}.logo small{letter-spacing:.1em}}
+@media (max-width:860px){nav a:not(.tel){display:none}}
+
+/* hero */
+.hero{background:var(--slate);color:#fff;position:relative;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding-top:64px;padding-bottom:72px}
+.hero p.lede{font-size:clamp(18px,2vw,21px);color:#D9D3CB;margin:22px 0 32px;max-width:34em}
+.hero .actions{display:flex;flex-wrap:wrap;gap:14px}
+.trust{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:34px;font-size:15px;color:#D9D3CB}
+.trust span{display:flex;align-items:center;gap:8px}
+.trust svg{width:18px;height:18px;color:var(--copper);flex:none}
+.art{position:relative;aspect-ratio:1/1;max-width:460px;justify-self:end;width:100%}
+.art .card{position:absolute;left:-6%;bottom:6%;background:#fff;color:var(--ink);border-radius:6px;padding:14px 16px;box-shadow:0 18px 40px rgba(0,0,0,.35);font-size:14px;line-height:1.35;max-width:250px}
+.art .card b{display:block;font-size:15px}
+.art .card .stars{color:var(--copper);letter-spacing:2px;font-size:15px}
+@media (max-width:860px){.hero .wrap{grid-template-columns:1fr;padding-top:44px;padding-bottom:52px}.art{justify-self:center;max-width:340px}.art .card{left:0}}
+
+/* strip */
+.strip{background:var(--copper);color:#fff}
+.strip .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px 28px;padding-top:18px;padding-bottom:18px;font-weight:700;font-size:16px}
+.strip span{display:flex;align-items:center;gap:10px}
+.strip i{width:7px;height:7px;background:#fff;border-radius:50%}
+
+section{padding:88px 0}
+.head{display:flex;flex-direction:column;gap:14px;max-width:720px;margin-bottom:44px}
+.head p{color:var(--muted);font-size:19px}
+
+/* services */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.svc{background:#fff;border:1px solid var(--line);border-radius:6px;padding:28px;display:flex;flex-direction:column;gap:12px;transition:border-color .2s,transform .2s}
+.svc:hover{border-color:var(--copper);transform:translateY(-3px)}
+.svc svg{width:42px;height:42px;color:var(--copper)}
+.svc p{color:var(--muted);font-size:16.5px}
+.svc .from{margin-top:auto;padding-top:8px;font-size:14px;font-weight:700;color:var(--slate-3)}
+.svc.em{background:var(--slate);color:#fff;border-color:var(--slate)}
+.svc.em p{color:#D9D3CB}
+.svc.em .from{color:#F3C7AE}
+@media (max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.grid{grid-template-columns:1fr}}
+
+/* why */
+.why{background:var(--stone)}
+.why .wrap{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:start}
+.points{display:grid;gap:22px}
+.pt{display:grid;grid-template-columns:52px 1fr;gap:16px}
+.pt .n{width:52px;height:52px;border-radius:50%;background:var(--slate);color:#fff;display:grid;place-items:center;font-weight:800;font-size:18px}
+.pt p{color:var(--muted);font-size:16.5px;margin-top:4px}
+.quote-box{background:var(--slate);color:#fff;border-radius:6px;padding:34px;position:sticky;top:100px}
+.quote-box .big{font-size:56px;font-weight:850;font-stretch:85%;line-height:1;color:var(--copper)}
+.quote-box p{color:#D9D3CB;margin-top:10px}
+.quote-box ul{list-style:none;padding:0;margin:22px 0 26px;display:grid;gap:10px}
+.quote-box li{display:flex;gap:10px;font-size:16px}
+.quote-box li svg{width:20px;height:20px;color:var(--copper);flex:none;margin-top:2px}
+@media (max-width:860px){.why .wrap{grid-template-columns:1fr}.quote-box{position:static}}
+
+/* process */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;counter-reset:s;border-top:3px solid var(--slate)}
+.step{padding:26px 22px 0 0}
+.step b{display:block;font-size:44px;font-weight:850;font-stretch:80%;color:var(--copper);line-height:1;margin-bottom:12px}
+.step p{color:var(--muted);font-size:16px;margin-top:8px}
+@media (max-width:860px){.steps{grid-template-columns:repeat(2,1fr);row-gap:20px}}
+@media (max-width:480px){.steps{grid-template-columns:1fr}}
+
+/* reviews */
+.reviews{background:var(--slate);color:#fff}
+.reviews .head p{color:#C9C2B8}
+.rv{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.r{background:var(--slate-2);border-radius:6px;padding:28px;display:flex;flex-direction:column;gap:14px}
+.r .stars{color:var(--copper);letter-spacing:3px}
+.r p{color:#E6E1DA;font-size:16.5px}
+.r small{color:#A9A29A;margin-top:auto;font-size:14px}
+.sample{display:inline-block;margin-top:6px;font-size:13px;color:#A9A29A;border:1px solid #3B4C5A;border-radius:99px;padding:3px 12px}
+@media (max-width:920px){.rv{grid-template-columns:1fr}}
+
+/* areas */
+.areas .wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.towns{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.towns span{background:#fff;border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-size:15.5px;font-weight:600}
+.map{background:var(--stone);border-radius:6px;aspect-ratio:4/3;position:relative;overflow:hidden}
+@media (max-width:860px){.areas .wrap{grid-template-columns:1fr}}
+
+/* faq */
+.faq .wrap{max-width:860px}
+details{border-bottom:1px solid var(--line);padding:20px 0}
+summary{cursor:pointer;font-weight:750;font-size:19px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:26px;line-height:1;color:var(--copper);font-weight:700}
+details[open] summary::after{content:"–"}
+details p{color:var(--muted);margin-top:12px;font-size:17px}
+
+/* contact */
+.contact{background:var(--stone)}
+.contact .wrap{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px}
+.ways{display:grid;gap:14px;margin-top:28px}
+.way{display:flex;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:6px;padding:18px 20px;text-decoration:none}
+.way svg{width:26px;height:26px;color:var(--copper);flex:none}
+.way b{display:block}
+.way small{color:var(--muted);font-size:14.5px}
+form{background:#fff;border:1px solid var(--line);border-radius:6px;padding:30px;display:grid;gap:16px}
+label{display:grid;gap:6px;font-weight:650;font-size:15px}
+input,select,textarea{font:inherit;font-size:16px;padding:13px 14px;border:1px solid #C9C0B3;border-radius:4px;background:#FCFBF9;color:var(--ink);width:100%}
+input:focus,select:focus,textarea:focus{outline:3px solid rgba(200,100,47,.35);border-color:var(--copper)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.note{font-size:13.5px;color:var(--muted)}
+.sent{display:none;background:#EAF4EC;border:1px solid #9CC9A6;color:#1F4D2A;border-radius:4px;padding:14px;font-size:15.5px}
+@media (max-width:860px){.contact .wrap{grid-template-columns:1fr}}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
+
+footer{background:var(--slate);color:#C9C2B8;font-size:15px;padding:44px 0 110px}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px}
+footer a{color:#fff}
+
+/* mobile call bar */
+.callbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(22,35,46,.97);border-top:1px solid rgba(255,255,255,.1)}
+.callbar a{flex:1;padding:14px;font-size:16px}
+@media (max-width:760px){.callbar{display:flex}footer{padding-bottom:120px}}
+:focus-visible{outline:3px solid var(--copper);outline-offset:3px}
+</style>
+</head>
+<body>
+
+<div class="demo">Example website built by <a href="https://www.localdeskai.co.uk/">Localdesk</a>. Carrick Ridge Roofing is a made-up business. Want a site like this for your trade? <a href="https://www.localdeskai.co.uk/#contact">Get in touch</a>.</div>
+
+<header>
+  <div class="wrap bar">
+    <a class="logo" href="#top" aria-label="Carrick Ridge Roofing, home">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="6" fill="#C8642F"/><path d="M8 27 24 13l16 14" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 25v11h20V25" fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/><path d="M14 30h20" stroke="#fff" stroke-width="2.5"/></svg>
+      <span><b>Carrick Ridge</b><small>Roofing &amp; Leadwork</small></span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#services">Services</a>
+      <a href="#why">Why us</a>
+      <a href="#areas">Areas</a>
+      <a href="#faq">FAQ</a>
+      <a class="tel" href="tel:07700900461"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg><span class="full">07700 900461</span><span class="short">Call</span></a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero" style="padding:0">
+  <div class="wrap">
+    <div>
+      <span class="kicker">Saltash · Plymouth · East Cornwall</span>
+      <h1 style="margin-top:18px">Roofs fixed properly, first time.</h1>
+      <p class="lede">From a slipped slate to a full re-roof, Carrick Ridge is a family roofing firm covering Saltash, Plymouth and East Cornwall. Free written quotes, photos of every job, and a 10-year guarantee on new roofs.</p>
+      <div class="actions">
+        <a class="btn btn-copper" href="#contact">Get a free quote</a>
+        <a class="btn btn-ghost" href="tel:07700900461"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>Call 07700 900461</a>
+      </div>
+      <div class="trust">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Fully insured</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>22 years' experience</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Calls answered 24/7</span>
+      </div>
+    </div>
+    <div class="art" aria-hidden="true">
+      <svg viewBox="0 0 400 400">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E4556"/><stop offset="1" stop-color="#1C2C38"/></linearGradient>
+          <pattern id="slate" width="28" height="16" patternUnits="userSpaceOnUse"><rect width="28" height="16" fill="#3B4C5A"/><path d="M0 15.5h28M14 0v8M0 8h28M0 8v8M28 8v8" stroke="#2A3945" stroke-width="1.5"/></pattern>
+        </defs>
+        <rect width="400" height="400" rx="8" fill="url(#sky)"/>
+        <circle cx="318" cy="88" r="34" fill="#C8642F" opacity=".9"/>
+        <path d="M0 330 Q100 300 200 318 T400 306 V400 H0Z" fill="#132029"/>
+        <rect x="270" y="120" width="34" height="78" fill="#6B5A4C"/><rect x="264" y="112" width="46" height="12" fill="#5A4A3D"/>
+        <path d="M60 230 200 120 340 230Z" fill="url(#slate)"/>
+        <path d="M52 236 200 116 348 236" fill="none" stroke="#C8642F" stroke-width="10" stroke-linejoin="round"/>
+        <rect x="88" y="232" width="224" height="110" fill="#E7E0D6"/>
+        <rect x="118" y="258" width="44" height="40" fill="#22323F"/><rect x="238" y="258" width="44" height="40" fill="#22323F"/>
+        <rect x="183" y="280" width="34" height="62" fill="#C8642F"/>
+        <path d="M140 148 l18 -14 l6 8 l-18 14z" fill="#C8642F"/>
+        <g stroke="#E7E0D6" stroke-width="5" stroke-linecap="round"><path d="M128 198 L156 222"/><path d="M132 190 l-8 -10"/></g>
+        <circle cx="122" cy="174" r="9" fill="#E7E0D6"/>
+        <rect x="112" y="183" width="20" height="28" rx="4" fill="#C8642F"/>
+      </svg>
+      <div class="card"><span class="stars">★★★★★</span><b>"Tidy, on time, fair price."</b>Re-roof in Saltash · sample review</div>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="wrap">
+    <span><i></i>Free written quotes</span>
+    <span><i></i>Photos before &amp; after</span>
+    <span><i></i>10-year guarantee on new roofs</span>
+    <span><i></i>Emergency cover</span>
+  </div>
+</div>
+
+<section id="services">
+  <div class="wrap">
+    <div class="head">
+      <span class="kicker">What we do</span>
+      <h2>Every kind of roof work, done right.</h2>
+      <p>Pitched or flat, slate or tile, we'll tell you honestly what needs doing, and what doesn't.</p>
+    </div>
+    <div class="grid">
+      <article class="svc">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M6 26 24 10l18 16"/><path d="M24 22v10m0 6v.5"/></svg>
+        <h3>Roof repairs</h3>
+        <p>Slipped or broken slates and tiles, leaks, storm damage and ridge tiles. Most repairs done in a single visit.</p>
+        <span class="from">Most repairs from £180</span>
+      </article>
+      <article class="svc">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M4 24 24 8l20 16"/><path d="M10 20v20h28V20"/><path d="M10 28h28M10 34h28M19 20v20M29 20v20"/></svg>
+        <h3>New roofs &amp; re-roofs</h3>
+        <p>Natural slate, concrete and clay tiles, with breathable membranes and new battens. Covered by our 10-year guarantee.</p>
+        <span class="from">Free survey and written quote</span>
+      </article>
+      <article class="svc">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="18" width="36" height="14"/><path d="M6 18h36M10 32v8M38 32v8"/></svg>
+        <h3>Flat roofs</h3>
+        <p>EPDM rubber and GRP fibreglass for extensions, garages and dormers. Long-lasting, seamless and neat.</p>
+        <span class="from">Garage roofs from £1,400</span>
+      </article>
+      <article class="svc">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M16 42V10h16v32"/><path d="M12 10h24M16 18h16M16 26h16M16 34h16"/></svg>
+        <h3>Chimneys &amp; leadwork</h3>
+        <p>Repointing, flashings, lead valleys and chimney rebuilds. Where most leaks start, so we take extra care.</p>
+        <span class="from">Flashing repairs from £250</span>
+      </article>
+      <article class="svc">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M6 16h36v6H6z"/><path d="M38 22v18m-6 0h12"/><path d="M12 28c3 3 6 3 9 0s6-3 9 0"/></svg>
+        <h3>Fascias, soffits &amp; gutters</h3>
+        <p>uPVC replacements, gutter clearing and repairs. Stops damp and rot before it reaches your walls.</p>
+        <span class="from">Gutter clear from £95</span>
+      </article>
+      <article class="svc em">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" aria-hidden="true"><path d="M24 6v8m0 20v8M6 24h8m20 0h8"/><circle cx="24" cy="24" r="8"/></svg>
+        <h3>Emergency call-outs</h3>
+        <p>Water coming in? Ring us any time. Every call is answered, and urgent jobs are made safe as quickly as we can get to you.</p>
+        <span class="from">Call 07700 900461, day or night</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="why" id="why">
+  <div class="wrap">
+    <div>
+      <div class="head" style="margin-bottom:34px">
+        <span class="kicker">Why Carrick Ridge</span>
+        <h2>No cowboys. No surprises.</h2>
+      </div>
+      <div class="points">
+        <div class="pt"><span class="n">1</span><div><h3>We always pick up</h3><p>On a roof all day? Our receptionist answers every call, takes your details and gets them straight to us. No chasing, no voicemail.</p></div></div>
+        <div class="pt"><span class="n">2</span><div><h3>Written quotes, no pressure</h3><p>You get a clear, itemised quote in writing, usually within 48 hours of our visit. The price we quote is the price you pay.</p></div></div>
+        <div class="pt"><span class="n">3</span><div><h3>Photos of everything</h3><p>We photograph the problem before we start and the finished job after, so you can see exactly what's been done, even up high.</p></div></div>
+        <div class="pt"><span class="n">4</span><div><h3>Tidy, safe and insured</h3><p>Proper scaffolding where it's needed, full public liability insurance, and we leave your garden as we found it.</p></div></div>
+      </div>
+    </div>
+    <aside class="quote-box">
+      <div class="big">Free</div>
+      <h3 style="font-size:26px;margin-top:6px">roof survey &amp; quote</h3>
+      <p>We'll come out, check the whole roof, and tell you honestly what needs doing now, what can wait, and what doesn't need doing at all.</p>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Usually within a week</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Itemised written quote</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Photos of any problems found</li>
+      </ul>
+      <a class="btn btn-copper" href="#contact" style="width:100%">Book my free survey</a>
+    </aside>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <span class="kicker">How it works</span>
+      <h2>Simple from first call to final tile.</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><b>01</b><h3>You get in touch</h3><p>Call any time or send the form. Every call is answered, even when we're up a roof.</p></div>
+      <div class="step"><b>02</b><h3>We visit</h3><p>A free survey at a time that suits you, with photos of anything we find.</p></div>
+      <div class="step"><b>03</b><h3>Written quote</h3><p>Clear and itemised, usually within 48 hours. No pressure, no hard sell.</p></div>
+      <div class="step"><b>04</b><h3>Job done properly</h3><p>Tidy work, before-and-after photos, and a guarantee on new roofs.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="reviews">
+  <div class="wrap">
+    <div class="head">
+      <span class="kicker">What customers say</span>
+      <h2>Trusted across Saltash and Plymouth.</h2>
+      <p>Your real Google reviews go here. <span class="sample">Sample reviews for this example site</span></p>
+    </div>
+    <div class="rv">
+      <figure class="r" style="margin:0"><span class="stars">★★★★★</span><p>"Rang on a Sunday with water coming through the bedroom ceiling. Got a text back straight away and they had it made safe on Monday morning. Proper job."</p><small>Leak repair · Saltash</small></figure>
+      <figure class="r" style="margin:0"><span class="stars">★★★★★</span><p>"Three quotes for our re-roof and Carrick Ridge were the only ones who sent photos of what they'd found. Fair price, finished on time, garden left spotless."</p><small>Full re-roof · Plymstock</small></figure>
+      <figure class="r" style="margin:0"><span class="stars">★★★★★</span><p>"Replaced the felt garage roof with rubber. Neat, quick and they explained everything. Wouldn't use anyone else now."</p><small>Flat roof · Torpoint</small></figure>
+    </div>
+  </div>
+</section>
+
+<section class="areas" id="areas">
+  <div class="wrap">
+    <div>
+      <span class="kicker">Areas we cover</span>
+      <h2 style="margin-top:14px">Based in Saltash. Working both sides of the Tamar.</h2>
+      <p style="color:var(--muted);margin-top:16px;font-size:19px">Within about 25 miles of Saltash. Not sure if you're covered? Just ask.</p>
+      <div class="towns">
+        <span>Saltash</span><span>Plymouth</span><span>Torpoint</span><span>Plymstock</span><span>Plympton</span><span>Callington</span><span>Liskeard</span><span>Looe</span><span>Launceston</span><span>Tavistock</span><span>Ivybridge</span><span>Gunnislake</span>
+      </div>
+    </div>
+    <div class="map" aria-hidden="true">
+      <svg viewBox="0 0 400 300" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+        <rect width="400" height="300" fill="#E7E0D6"/>
+        <path d="M150 0 C170 60 140 100 175 150 S 205 230 190 300" fill="none" stroke="#A9C2CF" stroke-width="16" stroke-linecap="round"/>
+        <path d="M0 270 C80 255 140 280 190 300" fill="none" stroke="#A9C2CF" stroke-width="22"/>
+        <circle cx="200" cy="175" r="120" fill="#C8642F" opacity=".1" stroke="#C8642F" stroke-dasharray="6 6" stroke-width="2"/>
+        <g font-family="Archivo, sans-serif" font-size="13" font-weight="700" fill="#3B4C5A">
+          <circle cx="182" cy="172" r="7" fill="#C8642F"/><text x="194" y="168">Saltash</text>
+          <circle cx="232" cy="212" r="4"/><text x="240" y="216">Plymouth</text>
+          <circle cx="160" cy="226" r="4"/><text x="92" y="230">Torpoint</text>
+          <circle cx="92" cy="128" r="4"/><text x="40" y="118">Liskeard</text>
+          <circle cx="132" cy="70" r="4"/><text x="64" y="66">Callington</text>
+          <circle cx="250" cy="70" r="4"/><text x="258" y="74">Tavistock</text>
+          <circle cx="300" cy="226" r="4"/><text x="308" y="230">Plympton</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="head">
+      <span class="kicker">Questions</span>
+      <h2>Good to know.</h2>
+    </div>
+    <details><summary>How quickly can you come out?</summary><p>For leaks and storm damage we aim to make things safe as soon as we can, often the same or next day. For quotes, we usually visit within a week.</p></details>
+    <details><summary>Do you charge for quotes?</summary><p>No. Surveys and written quotes are always free, with no obligation.</p></details>
+    <details><summary>Are you insured?</summary><p>Yes, we carry full public liability insurance and we're happy to show you the certificate before we start.</p></details>
+    <details><summary>What guarantee do I get?</summary><p>New roofs and re-roofs come with a 10-year workmanship guarantee. Repairs are guaranteed for 12 months.</p></details>
+    <details><summary>Do I need scaffolding?</summary><p>For many small repairs we can work safely from ladders or a roof ladder. For bigger jobs we arrange scaffolding, and it's included in your quote so there are no surprises.</p></details>
+    <details><summary>How do I pay?</summary><p>Bank transfer or card. For larger jobs we take a small deposit for materials and the rest when you're happy with the work.</p></details>
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="wrap">
+    <div>
+      <span class="kicker">Get in touch</span>
+      <h2 style="margin-top:14px">Get your free quote.</h2>
+      <p style="color:var(--muted);margin-top:16px;font-size:19px">Call any time, every call is answered. Or send us a few details and we'll come back to you.</p>
+      <div class="ways">
+        <a class="way" href="tel:07700900461"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg><span><b>07700 900461</b><small>Answered 24/7, including weekends</small></span></a>
+        <div class="way"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span><b>Mon–Fri 7.30am–5.30pm</b><small>Sat 8am–12pm · emergencies any time</small></span></div>
+        <div class="way"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span><b>Based in Saltash</b><small>Covering Plymouth and East Cornwall</small></span></div>
+      </div>
+    </div>
+    <form id="quote" novalidate>
+      <div class="row">
+        <label>Your name<input name="name" autocomplete="name" required></label>
+        <label>Phone number<input name="phone" type="tel" autocomplete="tel" required></label>
+      </div>
+      <label>Postcode<input name="postcode" autocomplete="postal-code"></label>
+      <label>What do you need?
+        <select name="job">
+          <option>Roof repair / leak</option>
+          <option>New roof or re-roof</option>
+          <option>Flat roof</option>
+          <option>Chimney or leadwork</option>
+          <option>Fascias, soffits or gutters</option>
+          <option>Something else</option>
+        </select>
+      </label>
+      <label>Tell us a bit more<textarea name="msg" rows="4" placeholder="e.g. water coming through the ceiling in the back bedroom"></textarea></label>
+      <button class="btn btn-copper" type="submit">Send my request</button>
+      <p class="note">This is an example site, so the form doesn't send anything.</p>
+      <p class="sent" id="sent" role="status">Thanks! On a real site, this would go straight to the roofer's phone.</p>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© Carrick Ridge Roofing (a made-up business) · Example website</span>
+    <span>Website by <a href="https://www.localdeskai.co.uk/">Localdesk</a></span>
+  </div>
+</footer>
+
+<div class="callbar">
+  <a class="btn btn-copper" href="tel:07700900461">Call now</a>
+  <a class="btn btn-ghost" href="#contact">Free quote</a>
+</div>
+
+<script>
+document.getElementById('quote').addEventListener('submit', function (e) {
+  e.preventDefault();
+  document.getElementById('sent').style.display = 'block';
+});
+</script>
+</body>
+</html>
