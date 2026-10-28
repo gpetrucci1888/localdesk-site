@@ -21,7 +21,7 @@ FIELDS = ['BUSINESS', 'TRADE', 'OWNER', 'SERVICES', 'AREAS', 'HOURS', 'QUOTES', 
 # Shared with the demo line, so clients sound the same as what they tried.
 VOICE = {
     'provider': '11labs', 'model': 'eleven_turbo_v2', 'voiceId': 'pFZP5JQG7iQjIQuC4Bku',
-    'stability': 0.4, 'similarityBoost': 0.75, 'style': 0.15, 'speed': 1.05,
+    'stability': 0.55, 'similarityBoost': 0.75, 'style': 0.05, 'speed': 1.0,
     'chunkPlan': {'enabled': True, 'formatPlan': {'enabled': True, 'replacements': [
         {'type': 'exact', 'key': 'Tamar', 'value': 'Taymar'},
     ]}},
