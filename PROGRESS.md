@@ -106,3 +106,9 @@
 **Call sheet:** <private link removed> (source in scratchpad call-sheet.html, not in repo).
 
 **Gio's routine:** 3 calls a day at 5:00–6:00pm, Saturday 9–12 backup. Call list: private sales notes. Top up Vapi credit.
+
+## Client template (28 Oct)
+- `ops/client-prompt.txt` is the client receptionist prompt; `ops/new_client.py <client.json>` creates/updates a client's Vapi assistant (see `ops/example-client.json`).
+- Example client assistant: 734343a2 "CLIENT - Carrick Ridge Roofing".
+- Call texts: put the summary Worker URL + x-vapi-secret header on the client's phone number in Vapi (copy from the 01752 number), and add the client to the Worker's CLIENTS setting.
+- Live Mia now uses the approved test config (voice, booking tools, no office noise). Backup of the old version is not in git.
