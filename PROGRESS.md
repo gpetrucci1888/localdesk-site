@@ -118,3 +118,12 @@
 - Don't open by saying what you sell ("I sort out phone answering…"). Just say hi, who you are, then ask a normal question about THEIR business.
 - Keep lines short. Short replies in chat too, no filler.
 - Answer him and ask before changing anything. Don't ring him until he says.
+
+## State at end of 28 Oct
+- Call sheet (one for every call, flow style): <private link removed> . Opener "Alright {name}, it's Gio from Localdesk, over in Saltash." Buttons: Rang earlier, Pitch, How much, Robot ("AI employee I've trained"), Send info, Bad time, Not interested, Voicemail.
+- Lead tracker: in the private sales notes.
+- (personal note removed)
+- Google Calendar connector is connected. Google Business Profile "LocalDesk Ai Consultancy" exists (verified). Calendly asks business/trade/phone; hours 9-8 weekdays, Sat 9-5. Stripe link asks Business name.
+- Facebook token not done (logins blocked); retry from phone browser. TPSCheck not signed up yet. FreeAgent: just connect Stripe inside FreeAgent.
+- Mia: more human ("mm, right, okay") live. West Country voice: Gio to pick from ElevenLabs voice library.
+- Next week: Gio building a brand on GoHighLevel (GHL).
