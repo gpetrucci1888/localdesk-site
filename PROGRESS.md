@@ -112,3 +112,9 @@
 - Example client assistant: 734343a2 "CLIENT - Carrick Ridge Roofing".
 - Call texts: put the summary Worker URL + x-vapi-secret header on the client's phone number in Vapi (copy from the 01752 number), and add the client to the Worker's CLIENTS setting.
 - Live Mia now uses the approved test config (voice, booking tools, no office noise). Backup of the old version is not in git.
+
+## Gio's rules for call scripts (IMPORTANT, 28 Oct)
+- Talk like a normal person, not a salesman. No pitch lines, no stats, no "a lot of roofers tell me…", no clever hooks.
+- Don't open by saying what you sell ("I sort out phone answering…"). Just say hi, who you are, then ask a normal question about THEIR business.
+- Keep lines short. Short replies in chat too, no filler.
+- Answer him and ask before changing anything. Don't ring him until he says.
