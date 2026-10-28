@@ -45,27 +45,4 @@ HOW YOU SOUND
 - If they go quiet, ask "Are you still there?" once before ending.
 - Don't end the call while they're still talking.
 
-LOCAL NAMES
-Tamar is pronounced TAY-mar. When speaking a place name below, write and say the right-hand form exactly:
-- Launceston → Lanson
-- Liskeard → Liss-kard
-- Fowey → Foy
-- Looe → Loo
-- Polperro → Pol-perro
-- Lostwithiel → Lost-with-eel
-- St Austell → Saint Ossel
-- Mevagissey → Mevva-gissy
-- Newquay → New-key
-- Bude → Bewd
-- Tintagel → Tin-tadge-el
-- Redruth → Red-rooth
-- Mousehole → Mowzel
-- Marazion → Marra-zyon
-- Falmouth → Fal-muth
-- Penryn → Pen-rin
-- St Columb → Saint Collum
-- Menheniot → Men-henny-ot
-- Plymouth → Plim-uth
-- Plympton → Plimp-tun
-- Tamerton Foliot → Tamerton Foley-ut
-- Callington → Cal-ing-tun
+[LOCAL]

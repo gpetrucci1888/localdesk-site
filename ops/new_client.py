@@ -39,9 +39,12 @@ def call(method, path, body=None):
 
 def build(client):
     prompt = (HERE / 'client-prompt.txt').read_text()
+    prompt = prompt.replace('[LOCAL]', (HERE / 'local-knowledge.txt').read_text())
     for f in FIELDS:
         prompt = prompt.replace(f'[{f}]', client.get(f.lower(), '') or 'not given')
     places = [p.strip() for p in client.get('areas', '').replace(' and ', ',').split(',') if p.strip()]
+    local = json.loads((HERE / 'keyterms.json').read_text())
+    keyterms = list(dict.fromkeys([client['business'], client.get('owner', ''), *places, *local]))
     return {
         'name': f"CLIENT - {client['business']}",
         'firstMessage': f"Hello, {client['business']}, you're through to Mia, the virtual receptionist. "
@@ -53,7 +56,7 @@ def build(client):
         },
         'voice': VOICE,
         'transcriber': {'provider': 'deepgram', 'model': 'nova-3', 'language': 'en',
-                        'keyterm': [client['business'], client.get('owner', ''), 'Mia', 'Tamar', *places][:50]},
+                        'keyterm': [k for k in keyterms if k][:100]},
         'backgroundSound': 'off',
         'endCallMessage': '',
         'silenceTimeoutSeconds': 30,
