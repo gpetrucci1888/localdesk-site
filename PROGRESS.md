@@ -126,4 +126,4 @@
 - Google Calendar connector is connected. Google Business Profile "LocalDesk Ai Consultancy" exists (verified). Calendly asks business/trade/phone; hours 9-8 weekdays, Sat 9-5. Stripe link asks Business name.
 - Facebook token not done (logins blocked); retry from phone browser. TPSCheck not signed up yet. FreeAgent: just connect Stripe inside FreeAgent.
 - Mia: more human ("mm, right, okay") live. West Country voice: Gio to pick from ElevenLabs voice library.
-- Next week: Gio building a brand on GoHighLevel (GHL).
+- Next week: Gio building an AI consultancy brand on GoHighLevel (GHL). Google listing is already "LocalDesk Ai Consultancy". Decide: same Localdesk name or new brand; which services (receptionist, websites, Google profile, ads, AI help).
