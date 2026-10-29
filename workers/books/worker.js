@@ -281,7 +281,7 @@ const CLIENT_WHATS = ['file', 'summary', 'owed', 'recent', 'invoice', 'remind', 
   'quote', 'quotes', 'won', 'chase', 'invoiceit', 'customers', 'jobs', 'job', 'pack', 'accountant',
   'changes', 'revert', 'miles', 'mileoff', 'cis', 'settings', 'problem',
   'expenses', 'expense', 'fix', 'receipt', 'invoices', 'invoicedoc', 'share', 'customerlist', 'customer', 'trend', 'status',
-  'pushkey', 'push', 'unpush', 'pushtest', 'me'];
+  'pushkey', 'push', 'unpush', 'pushtest', 'me', 'noreceipt', 'attach'];
 // Extras a client pays for on top of the starter. "quotes" = quotes and jobs.
 const EXTRA_ONLY = { quote: 'quotes', quotes: 'quotes', won: 'quotes', chase: 'quotes', invoiceit: 'quotes', jobs: 'quotes', job: 'quotes' };
 const SESSION_DAYS = 365, CODE_MINUTES = 10, CODES_PER_HOUR = 5, CODE_TRIES = 5;
@@ -395,6 +395,8 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
   if (what === 'mileoff' && post && id) return Response.json(await deleteTrip(store, realmId, id));
   if (what === 'cis') return Response.json(await cisSuffered(env, store, realmId));
   if (what === 'expenses') return Response.json(await expenses(env, store, realmId, url.searchParams));
+  if (what === 'noreceipt') return Response.json(await noReceipt(env, store, realmId));
+  if (what === 'attach' && post && id) return Response.json(await attachReceipt(env, store, realmId, id, (await body()).image));
   if (what === 'expense' && id) return Response.json(await expense(env, store, realmId, id));
   if (what === 'fix' && post && id) return Response.json(await fixExpense(env, store, realmId, id, await body()));
   if (what === 'receipt' && id) return receiptOfPurchase(env, store, realmId, id);
@@ -518,15 +520,7 @@ async function fileReceipt(env, store, realmId, r) {
   const created = (await qb(env, store, realmId, 'POST', 'purchase', purchase)).Purchase;
 
   let attached = false;
-  const img = (r.image || '').match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
-  if (img) {
-    const bytes = Uint8Array.from(atob(img[2]), c => c.charCodeAt(0));
-    const form = new FormData();
-    form.append('file_metadata_01', new Blob([JSON.stringify({ AttachableRef: [{ EntityRef: { type: 'Purchase', value: created.Id } }], FileName: 'receipt.jpg', ContentType: img[1] })], { type: 'application/json' }), 'meta.json');
-    form.append('file_content_01', new Blob([bytes], { type: img[1] }), 'receipt.jpg');
-    await qb(env, store, realmId, 'POST', 'upload', form);
-    attached = true;
-  }
+  if (/^data:image\//.test(r.image || '')) attached = await uploadReceipt(env, store, realmId, created.Id, r.image);
   await logChange(store, realmId, { kind: 'file', ref: created.Id, text: `Filed ${r.supplier || 'an expense'} ${money(created.TotalAmt)} (${expense.Name})` });
   return { ok: true, id: created.Id, total: created.TotalAmt, account: expense.Name, vatCode: code ? code.Name : 'none', attached };
 }
@@ -1050,6 +1044,8 @@ async function pack(env, store, realmId, from, to) {
     trips: trips.trips, miles: trips.miles, mileWorth: trips.worth,
     cis: cisPays.map(x => ({ date: x.TxnDate, customer: (x.CustomerRef && x.CustomerRef.name) || '', amount: Number(x.TotalAmt) })),
     cisTotal: round(cisPays.reduce((s, x) => s + Number(x.TotalAmt), 0)),
+    big: buys.filter(p => Number(p.TotalAmt) - tax(p) >= BIG_PURCHASE && !EVERYDAY.test(accountOf(p))).map(p => ({ date: p.TxnDate, supplier: (p.EntityRef && p.EntityRef.name) || '', total: Number(p.TotalAmt), net: round(Number(p.TotalAmt) - tax(p)),
+      what: (p.Line || []).map(l => l.Description).filter(Boolean).join(', ') || String(p.PrivateNote || '').replace(/\s*\((added from a receipt photo|added in Books)\)/, '').trim() })),
   };
 }
 
@@ -1061,10 +1057,18 @@ async function receiptFile(env, store, realmId, id) {
   return new Response(res.body, { headers: { 'Content-Type': a.ContentType || res.headers.get('Content-Type') || 'application/octet-stream', 'Cache-Control': 'private, max-age=600' } });
 }
 
+// Purchases this big (before VAT) are listed on their own in the pack: tools, equipment or a van
+// may need to go in as assets (capital allowances) rather than everyday costs.
+const BIG_PURCHASE = 500;
+// Big costs that are plainly everyday running costs, not equipment, so left off that list.
+const EVERYDAY = /rent|insurance|rates|subcontract|wage|salar|cost of sales|purchases|materials|utilit|telephone|legal|professional|accountan|subscription/i;
+const accountOf = p => ((p.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.AccountRef && l.AccountBasedExpenseLineDetail.AccountRef.name).find(Boolean)) || '';
+
 function packCsv(d) {
   const rows = [['Books pack', d.business, `${d.from} to ${d.to}`], [],
     ['SUMMARY'], ['Income', d.income.toFixed(2)], ['Expenses', d.expenses.toFixed(2)], ['Profit', d.profit.toFixed(2)], [],
     ['BY CATEGORY'], ['Section', 'Category', 'Amount'], ...d.lines.map(l => [l.section, l.name, l.amount.toFixed(2)]), [],
+    ...(d.big.length ? [['BIG PURCHASES (£500+ before VAT: check if any are equipment or vehicles)'], ['Date', 'Supplier', 'What', 'Before VAT', 'Total'], ...d.big.map(b => [b.date, b.supplier, b.what, b.net.toFixed(2), b.total.toFixed(2)]), []] : []),
     ['EXPENSES'], ['Date', 'Supplier', 'Category', 'VAT', 'Total', 'Receipt'], ...d.spent.map(s => [s.date, s.supplier, s.category, s.vat.toFixed(2), s.total.toFixed(2), s.receipt ? 'Yes' : 'No']), [],
     ['INVOICES'], ['Date', 'Number', 'Customer', 'VAT', 'Total', 'Unpaid'], ...d.invoiced.map(i => [i.date, i.number, i.customer, i.vat.toFixed(2), i.total.toFixed(2), i.unpaid.toFixed(2)]), [],
     ['CIS TAKEN OFF BY CONTRACTORS'], ['Date', 'Contractor', 'Amount'], ...d.cis.map(c => [c.date, c.customer, c.amount.toFixed(2)]), ['Total', '', d.cisTotal.toFixed(2)], [],
@@ -1099,6 +1103,8 @@ a{color:#1f5fbf}.note{font-size:13px;color:var(--muted);margin:8px 0 0}
 <div class="card"><h2>Summary</h2><div class="tiles"><div><span>Income</span><b>${m(d.income)}</b></div><div><span>Expenses</span><b>${m(d.expenses)}</b></div><div><span>Profit</span><b>${m(d.profit)}</b></div></div>
 <p class="note">From QuickBooks, before any adjustments. ${d.spent.length} expenses, ${d.spent.length - missing} with a receipt attached.</p></div>
 <div class="card"><h2>By category</h2><table>${Object.keys(sections).map(k => `<tr><th colspan="2">${e(label[k] || k)}</th></tr>` + sections[k].map(l => `<tr><td>${e(l.name)}</td><td class="n">${m(l.amount)}</td></tr>`).join('')).join('') || '<tr><td>Nothing in this period.</td></tr>'}</table></div>
+${d.big.length ? `<div class="card"><h2>Big purchases</h2><p class="note" style="margin:0 0 8px">£${BIG_PURCHASE}+ before VAT. Worth checking if any are tools, equipment or a vehicle (capital allowances).</p><table><tr><th>Date</th><th>Supplier</th><th>What</th><th class="n">Before VAT</th><th class="n">Total</th></tr>
+${d.big.map(b => `<tr><td>${dt(b.date)}</td><td>${e(b.supplier)}</td><td>${e(b.what)}</td><td class="n">${m(b.net)}</td><td class="n">${m(b.total)}</td></tr>`).join('')}</table></div>` : ''}
 <div class="card"><h2>Expenses</h2><table><tr><th>Date</th><th>Supplier</th><th>Category</th><th class="n">VAT</th><th class="n">Total</th><th>Receipt</th></tr>
 ${d.spent.map(s => `<tr><td>${dt(s.date)}</td><td>${e(s.supplier)}</td><td>${e(s.category)}</td><td class="n">${m(s.vat)}</td><td class="n">${m(s.total)}</td><td>${s.receipt ? `<a href="${self}/r/${s.receipt}" target="_blank" rel="noopener">View</a>` : '–'}</td></tr>`).join('') || '<tr><td colspan="6">None.</td></tr>'}</table></div>
 <div class="card"><h2>Invoices</h2><table><tr><th>Date</th><th>No.</th><th>Customer</th><th class="n">VAT</th><th class="n">Total</th><th class="n">Unpaid</th></tr>
@@ -1335,6 +1341,34 @@ async function expenses(env, store, realmId, params) {
   const cat = params.get('cat');
   if (cat) items = items.filter(i => i.account === cat);
   return { from, to, items, total: round(items.reduce((s, i) => s + i.total, 0)), accounts };
+}
+
+// Saves a receipt photo (data: URL) onto an expense in QuickBooks. True if it was saved.
+async function uploadReceipt(env, store, realmId, purchaseId, image) {
+  const img = (image || '').match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
+  if (!img) return false;
+  const bytes = Uint8Array.from(atob(img[2]), c => c.charCodeAt(0));
+  const form = new FormData();
+  form.append('file_metadata_01', new Blob([JSON.stringify({ AttachableRef: [{ EntityRef: { type: 'Purchase', value: purchaseId } }], FileName: 'receipt.jpg', ContentType: img[1] })], { type: 'application/json' }), 'meta.json');
+  form.append('file_content_01', new Blob([bytes], { type: img[1] }), 'receipt.jpg');
+  await qb(env, store, realmId, 'POST', 'upload', form);
+  return true;
+}
+
+// Expenses in the last 90 days with no receipt attached (bank-feed ones included): the accountant
+// and HMRC can ask for these, so the app asks for a photo.
+const NO_RECEIPT_DAYS = 90;
+async function noReceipt(env, store, realmId) {
+  const from = isoDay(new Date(Date.now() - NO_RECEIPT_DAYS * 86400000));
+  const d = await expenses(env, store, realmId, new URLSearchParams({ from }));
+  return d.items.filter(i => !i.hasReceipt && i.total > 0).map(i => ({ id: i.id, date: i.date, supplier: i.supplier, total: i.total, account: i.account }));
+}
+
+async function attachReceipt(env, store, realmId, id, image) {
+  const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
+  if (!(await uploadReceipt(env, store, realmId, p.Id, image))) throw new Error('No photo received');
+  await logChange(store, realmId, { kind: 'attach', ref: p.Id, text: `Added the receipt to ${(p.EntityRef && p.EntityRef.name) || 'an expense'} ${money(p.TotalAmt)}` });
+  return { ok: true };
 }
 
 function purchaseRow(p, hasReceipt) {

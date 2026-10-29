@@ -506,11 +506,33 @@ async function loadTodo(){
   var calls=[api('untidy').then(function(l){if(l.length)items.push({tab:'tidy',t:l.length+' expense'+(l.length>1?'s':'')+' to sort',s:'One tap each'})}).catch(function(){}),
     api('owed').then(function(l){var late=l.filter(function(i){return i.daysOverdue>0});if(late.length)items.push({tab:'owed',t:late.length+' invoice'+(late.length>1?'s':'')+' late',s:'Oldest '+late[0].daysOverdue+' days. Tap to remind'})}).catch(function(){})];
   if(QUOTES)calls.push(api('quotes').then(function(l){var c=l.filter(function(q){return q.status==='waiting'&&q.days>=7});if(c.length)items.push({tab:'jobs',t:c.length+' quote'+(c.length>1?'s':'')+' to chase',s:'No answer for a week. One tap'})}).catch(function(){}));
+  calls.push(api('noreceipt').then(function(l){if(l.length)items.push({tab:'',act:'noreceipt',t:l.length+' expense'+(l.length>1?'s':'')+' with no receipt',s:'Your accountant needs these. Snap or add them'})}).catch(function(){}));
   await Promise.all(calls);
   $('todo').hidden=!items.length;
-  var TI={tidy:KIND.tidy,owed:KIND.remind,jobs:KIND.quote};
-  $('todoList').innerHTML=items.map(function(i){return '<li data-tab="'+i.tab+'"><span class="av soft" aria-hidden="true">'+(TI[i.tab]||'')+'</span><div class="grow"><b>'+esc(i.t)+'</b><small>'+esc(i.s)+'</small></div><span class="chev">›</span></li>'}).join('');
+  var TI={tidy:KIND.tidy,owed:KIND.remind,jobs:KIND.quote,'':KIND.file};
+  $('todoList').innerHTML=items.map(function(i){return '<li '+(i.act?'data-act="'+i.act+'"':'data-tab="'+i.tab+'"')+'><span class="av soft" aria-hidden="true">'+(TI[i.tab]||'')+'</span><div class="grow"><b>'+esc(i.t)+'</b><small>'+esc(i.s)+'</small></div><span class="chev">›</span></li>'}).join('');
 }
+
+// ---- receipts missing: snap one onto each expense ----
+function receiptBtn(id,label){return '<label class="go small" style="flex:0;white-space:nowrap;cursor:pointer;text-align:center">'+(label||'Add receipt')+'<input type="file" accept="image/*,application/pdf,.pdf" data-attach="'+esc(id)+'" hidden></label>'}
+document.addEventListener('click',async function(e){
+  var r=e.target.closest('[data-act="noreceipt"]');if(!r)return;
+  var sh=sheet('<div class="skel" style="height:200px"></div>');
+  try{var l=await api('noreceipt');
+    sh.el.innerHTML='<div class="grab"></div><h3>Receipts missing</h3><p class="sub">Last 90 days. Tap "Add receipt" to snap it or pick a photo or PDF.</p><ul>'+
+      l.map(function(i){return '<li data-row="'+esc(i.id)+'"><div class="grow"><b>'+esc(i.supplier||'Expense')+'</b><small>'+esc(ukDate(i.date))+' · '+money(i.total)+(i.account?' · '+esc(i.account):'')+'</small></div>'+receiptBtn(i.id)+'</li>'}).join('')+
+      '</ul><p class="note">Lost one? A bank statement line or an email from the supplier can do instead. Ask your accountant.</p><button class="cancel" data-close>Done</button>';
+  }catch(err){sh.el.innerHTML='<div class="grab"></div><p class="err">'+esc(err.message)+'</p><button class="cancel" data-close>Close</button>'}
+});
+document.addEventListener('change',async function(e){
+  var inp=e.target.closest('[data-attach]');if(!inp||!inp.files[0])return;
+  var lab=inp.closest('label'),was=lab.firstChild.textContent;lab.firstChild.textContent='Saving…';
+  try{var img=await shrink(inp.files[0]);await api('attach/'+inp.dataset.attach,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:img})});
+    var row=inp.closest('[data-row]');if(row)row.remove();else lab.outerHTML='<span class="pill ok">Receipt added ✓</span>';
+    toast('✓ Receipt saved in QuickBooks',null);loadTodo();
+  }catch(err){lab.firstChild.textContent=was;say(err.message,true)}
+  inp.value='';
+});
 
 // ---- accountant pack ----
 var lastPack=null;
@@ -936,7 +958,7 @@ function drawExpense(sh,x){
   sh.el.innerHTML='<div class="grab"></div>'+(x.hasReceipt?'<img class="rimg" alt="The receipt" src="'+BASE+'/receiptimg/'+esc(x.id)+'">':'')+
     '<h3>'+esc(x.supplier||'Expense')+'</h3><p class="big" style="margin:4px 0 14px">'+money(x.total)+'</p>'+
     '<dl class="kv"><dt>Date</dt><dd>'+esc(ukDate(x.date))+'</dd><dt>Category</dt><dd>'+esc(x.account||'None')+'</dd>'+(VAT?'<dt>VAT</dt><dd>'+money(x.vat)+'</dd>':'')+(x.job?'<dt>Job</dt><dd>'+esc(x.job)+'</dd>':'')+(x.note?'<dt>Note</dt><dd>'+esc(x.note)+'</dd>':'')+
-    '<dt>Receipt</dt><dd>'+(x.hasReceipt?'Attached ✓':'None')+'</dd><dt>Added</dt><dd>'+(x.fromApp?'In Books':'In QuickBooks')+'</dd></dl>'+
+    '<dt>Receipt</dt><dd>'+(x.hasReceipt?'Attached ✓':receiptBtn(x.id))+'</dd><dt>Added</dt><dd>'+(x.fromApp?'In Books':'In QuickBooks')+'</dd></dl>'+
     (QUOTES?'<label class="f" style="margin:0 0 12px">Which job (customer)?<select data-setjob="'+esc(x.id)+'" id="xJob" style="font:inherit;font-size:16px;padding:11px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);width:100%"><option>Loading…</option></select></label>':'')+
     (x.editable?'<button class="go" style="width:100%" data-edit>Change it</button>':'<p class="note">This one has more than one line, so change it in QuickBooks.</p>')+
     '<button class="cancel" data-close>Close</button>';
