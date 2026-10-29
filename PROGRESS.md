@@ -127,3 +127,9 @@
 - Facebook token not done (logins blocked); retry from phone browser. TPSCheck not signed up yet. FreeAgent: just connect Stripe inside FreeAgent.
 - Mia: more human ("mm, right, okay") live. West Country voice: Gio to pick from ElevenLabs voice library.
 - Next week: Gio building an AI consultancy brand on GoHighLevel (GHL). Google listing is already "LocalDesk Ai Consultancy". Decide: same Localdesk name or new brand; which services (receptionist, websites, Google profile, ads, AI help).
+
+## New offer idea: QuickBooks "less pressure" setup (29 Oct)
+- A plumber Gio met on site wants "something that deals with everything" and he takes it to his accountant. He uses QuickBooks himself; everything bugs him.
+- Offer: set up QuickBooks to run itself (bank rules, invoice reminders, receipts), plus text-a-receipt and a monthly summary text. £395 setup + £150/month done-for-you (monthly tidy).
+- Doing books for money needs AML supervision first: HMRC (~£300 application + £400/yr + ~£40 approval, fees from 1 Dec 2025) or a body like ICB/IAB/AAT. Register only after a firm yes.
+- Next: get plumber's details, 30-min sit-down with his QuickBooks open, one-page plain offer.
