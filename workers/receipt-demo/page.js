@@ -465,35 +465,76 @@ show(TITLES[start]?start:'home');
 
 // Logging in on a new phone: a 6-digit code texted to the client's number. Same head and styles as the app.
 const HEAD = PAGE.slice(0, PAGE.indexOf('<header'));
-export const LOGIN = HEAD + String.raw`<header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1>Log in</h1><p class="sub">Books, on this phone</p></div></div></header>
-<main>
-<div class="card" id="step1"><h2>First time on this phone</h2>
-  <p style="margin:0 0 14px">We'll text a code to your mobile ending <b>{{PHONE_END}}</b>.</p>
-  <button class="go" id="send" style="width:100%">Text me a code</button></div>
-<div class="card" id="step2" hidden><h2>Enter the code</h2>
-  <label class="f">6-digit code<input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" style="font-size:24px;letter-spacing:.3em;text-align:center"></label>
-  <button class="go" id="verify" style="width:100%">Log in</button>
-  <button class="link" id="again">Send a new code</button></div>
-<p class="msg" id="msg" hidden></p>
-<p class="note" style="text-align:center">You'll stay logged in on this phone. Wrong number? Ring Gio on 07700 900000.</p>
-<p class="by">Books by Localdesk</p>
-</main>
+export const LOGIN = HEAD + String.raw`<style>
+body{background:var(--hd);min-height:100vh;display:flex;flex-direction:column}
+.hero{color:#fff;text-align:center;padding:calc(env(safe-area-inset-top) + 56px) 24px 40px}
+.hero .logo{width:104px;height:104px;box-shadow:0 0 0 3px #ffffff1f,0 10px 30px #0006}
+.hero .biz{margin:18px 0 0;font-size:13px}
+.hero h1{font-size:28px;margin:6px 0 0}
+.sheet{background:var(--bg);border-radius:28px 28px 0 0;flex:1;padding:28px 20px calc(env(safe-area-inset-bottom) + 28px)}
+.sheet .in{max-width:420px;margin:0 auto;display:grid;gap:16px}
+.sheet h2{font-size:22px;margin:0;letter-spacing:-.01em}
+.sheet p.lead{margin:0;color:var(--muted)}
+.big-btn{width:100%;padding:17px;font-size:17px;border-radius:14px}
+.otp{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.otp div{height:58px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.otp div.on{border-color:var(--hd);box-shadow:0 0 0 3px var(--acc)}
+.otp input{position:absolute;inset:0;width:100%;height:100%;opacity:.01;font-size:16px;border:0;color:transparent;caret-color:transparent;background:transparent}
+.otp.bad div{border-color:var(--stop)}
+.row{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.row button{background:none;border:0;padding:0;color:var(--blue);font-weight:800;font-size:14px}
+.row button:disabled{color:var(--muted);opacity:1}
+.err{color:var(--stop);font-weight:700;margin:0;min-height:1.2em;font-size:14px}
+.help{text-align:center;font-size:13px;color:var(--muted);margin:8px 0 0}
+.help a{color:inherit}
+</style>
+<div class="hero">{{LOGO}}<p class="biz">{{NAME}}</p><h1>Books</h1></div>
+<div class="sheet"><div class="in">
+  <div id="step1" style="display:grid;gap:16px">
+    <h2>Log in</h2>
+    <p class="lead">We'll text a code to your mobile ending in <b style="color:var(--ink)">{{PHONE_END}}</b>.</p>
+    <button class="go big-btn" id="send">Text me a code</button>
+  </div>
+  <div id="step2" hidden style="display:grid;gap:16px">
+    <h2>Enter your code</h2>
+    <p class="lead">Sent to your mobile ending in <b style="color:var(--ink)">{{PHONE_END}}</b>.</p>
+    <div class="otp" id="otp"><div></div><div></div><div></div><div></div><div></div><div></div>
+      <input id="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" aria-label="6-digit code"></div>
+    <p class="err" id="err"></p>
+    <button class="go big-btn" id="verify">Log in</button>
+    <div class="row"><span style="color:var(--muted)">No text?</span><button id="again" disabled>Send again</button></div>
+  </div>
+  <p class="err" id="err1"></p>
+  <p class="help">You'll stay logged in on this phone.<br>Need a hand? <a href="tel:07700900000">07700 900000</a></p>
+  <p class="by">Books by Localdesk</p>
+</div></div>
 <script>
 var BASE=location.pathname.replace(/\/$/,'');
 var $=function(id){return document.getElementById(id)};
-function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
+var boxes=document.querySelectorAll('#otp div');
 async function post(path,body){var r=await fetch(BASE+'/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});var d=await r.json().catch(function(){return {error:'No response'}});if(d.error)throw new Error(d.error);return d}
-async function send(){$('send').disabled=true;say('Sending…');
-  try{await post('login/send');say('Code sent. It can take a few seconds.');$('step1').hidden=true;$('step2').hidden=false;$('code').focus()}
-  catch(e){say(e.message,true)}$('send').disabled=false}
+function draw(){var v=$('code').value.replace(/\D/g,'').slice(0,6);$('code').value=v;$('otp').classList.remove('bad');
+  boxes.forEach(function(b,i){b.textContent=v[i]||'';b.className=(document.activeElement===$('code')&&i===Math.min(v.length,5))?'on':''})}
+var timer=null;
+function countdown(){var n=30;$('again').disabled=true;clearInterval(timer);
+  timer=setInterval(function(){n--;$('again').textContent=n>0?'Send again in '+n+'s':'Send again';if(n<=0){clearInterval(timer);$('again').disabled=false}},1000);$('again').textContent='Send again in 30s'}
+async function send(){var b=this;b.disabled=true;$('err1').textContent='';var was=b.textContent;b.textContent='Sending…';
+  try{await post('login/send');$('step1').hidden=true;$('step2').hidden=false;$('code').value='';draw();$('code').focus();countdown();listen()}
+  catch(e){$('err1').textContent=e.message;b.disabled=false}
+  b.textContent=was}
 $('send').addEventListener('click',send);$('again').addEventListener('click',send);
-async function verify(){var c=$('code').value.replace(/\D/g,'');if(c.length!==6){say('The code is 6 numbers',true);return}
-  $('verify').disabled=true;say('Checking…');
-  try{await post('login/verify',{code:c});location.reload()}catch(e){say(e.message,true);$('verify').disabled=false}}
+async function verify(){var c=$('code').value;if(c.length!==6){$('err').textContent='Put in all 6 numbers';return}
+  $('verify').disabled=true;$('verify').textContent='Checking…';$('err').textContent='';
+  try{await post('login/verify',{code:c});$('verify').textContent='✓';location.reload()}
+  catch(e){$('err').textContent=e.message;$('otp').classList.add('bad');$('verify').disabled=false;$('verify').textContent='Log in'}}
 $('verify').addEventListener('click',verify);
-$('code').addEventListener('input',function(){if($('code').value.replace(/\D/g,'').length===6)verify()});
+$('code').addEventListener('input',function(){draw();if($('code').value.length===6)verify()});
+$('code').addEventListener('focus',draw);$('code').addEventListener('blur',draw);
+// Android Chrome: read the code straight from the text.
+function listen(){if(!('OTPCredential' in window))return;navigator.credentials.get({otp:{transport:['sms']}}).then(function(o){if(o&&o.code){$('code').value=o.code;draw();verify()}}).catch(function(){})}
 </script></body></html>`;
 
 // A client with no phone number saved can't log in yet.
-export const NO_LOGIN = HEAD + String.raw`<header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1>Nearly ready</h1></div></div></header>
-<main><div class="card"><p style="margin:0">Your app isn't switched on yet. Ring Gio on 07700 900000 and he'll sort it.</p></div><p class="by">Books by Localdesk</p></main></body></html>`;
+export const NO_LOGIN = HEAD + String.raw`<style>body{background:var(--hd);min-height:100vh;display:flex;flex-direction:column}.hero{color:#fff;text-align:center;padding:72px 24px 40px}.hero .logo{width:104px;height:104px}.sheet{background:var(--bg);border-radius:28px 28px 0 0;flex:1;padding:28px 20px}.sheet .in{max-width:420px;margin:0 auto}</style>
+<div class="hero">{{LOGO}}<p class="biz" style="margin-top:18px">{{NAME}}</p><h1>Books</h1></div>
+<div class="sheet"><div class="in"><h2 style="margin:0 0 8px">Nearly ready</h2><p style="margin:0;color:var(--muted)">Your app isn't switched on yet. Ring Gio on <a href="tel:07700900000">07700 900000</a> and he'll sort it.</p><p class="by">Books by Localdesk</p></div></div></body></html>`;

@@ -40,6 +40,7 @@
 //   POST /job/<realmId>/<id>    (X-Key) {customerId} puts an expense against a job ("" takes it off)
 //   POST /pack/<realmId>        (X-Key) {period: quarter|lastquarter|taxyear|lasttaxyear} link to the accountant pack
 //   POST /logout/<realmId>      (X-Key) logs that client's app out on every phone
+//   POST /testlink/<realmId>    (X-Key) an extra app link for that company that always needs a login (for testing)
 //
 // The app (one client, over the service binding): /c/... with X-App: <their app key>
 //   GET  /c/app                  business name, brand, extras, whether they're logged in
@@ -216,7 +217,8 @@ async function clientRoute(what, id, request, url, env, store, origin) {
   if (!res.ok) return Response.json({ error: 'Unknown app link' }, { status: 404 });
   const realmId = (await res.json()).realmId;
   const client = (await getClient(store, realmId)) || {};
-  const loggedIn = client.demo || await validSession(store, appKey, request.headers.get('X-Session'));
+  // demo: the practice company's main link needs no login; any extra (test) link for it still does.
+  const loggedIn = (client.demo && appKey === client.appKey) || await validSession(store, appKey, request.headers.get('X-Session'));
 
   if (what === 'app') {
     return Response.json({ realmId, name: client.name || '', brand: client.brand || '', extras: client.extras || '', loggedIn: Boolean(loggedIn),
@@ -229,7 +231,9 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     if (sent.length >= CODES_PER_HOUR) throw new Error('Too many codes. Try again in an hour');
     const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
     await store.fetch(`https://store/codes/${appKey}`, { method: 'PUT', body: JSON.stringify({ hash: await sha256(code), expires: Date.now() + CODE_MINUTES * 60000, tries: 0, sent: [...sent, Date.now()] }) });
-    await sendSms(env, client.phone, `Your Books code is ${code}. It runs out in ${CODE_MINUTES} minutes. Don't share it.`);
+    // Last line lets phones offer the code straight from the text (one tap on iPhone, automatic on Android).
+    const host = new URL(env.APP_URL || 'https://receipt-demo.gpetrucci93.workers.dev').host;
+    await sendSms(env, client.phone, `${code} is your ${client.name || 'Books'} login code. Don't share it with anyone.\n\n@${host} #${code}`);
     return Response.json({ ok: true });
   }
   if (what === 'login/verify' && request.method === 'POST') {
@@ -310,6 +314,11 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
     if (old.appKey && !/^[\w-]{8,}$/.test(old.appKey)) throw new Error('Bad app key');
     await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(old) });
     return Response.json(old);
+  }
+  if (what === 'testlink' && post) {
+    const key = randomKey();
+    await store.fetch(`https://store/appkeys/${key}`, { method: 'PUT', body: realmId });
+    return Response.json({ ok: true, link: `${env.APP_URL}/${key}/` });
   }
   if (what === 'logout' && post) {
     const cl = await getClient(store, realmId);
@@ -1074,6 +1083,7 @@ export class Store {
       return v && Date.now() - v.created < PACK_DAYS * 86400000 ? Response.json(v) : text('No pack', 404);
     }
     const ak = url.pathname.match(/^\/appkeys\/([\w-]+)$/);
+    if (ak && request.method === 'PUT') { await this.storage.put(`appkey:${ak[1]}`, await request.text()); return text('ok'); }
     if (ak) {
       const realmId = await this.storage.get(`appkey:${ak[1]}`);
       if (!realmId) return text('Unknown', 404);
