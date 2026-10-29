@@ -193,7 +193,7 @@ $('save').addEventListener('click',async function(){
   var r={supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()};
   $('save').disabled=true;say('Sending to QuickBooks…');
   try{
-    var res=await fetch(location.pathname.replace(/\/$/,'')+'/file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({image:$('prev').src},r))});
+    var res=await fetch(location.pathname.replace(/\\/$/,'')+'/file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({image:$('prev').src},r))});
     var out=await res.json(); if(out.error) throw new Error(out.error);
     r.qb=out.duplicate?'already there':'filed';
     var a=load();a.push(r);store(a);$('check').hidden=true;render();
