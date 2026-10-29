@@ -56,7 +56,7 @@ export default {
       }
     }
 
-    const api = rest.match(/^api\/(file|summary|owed|recent|invoice|remind\/\d+)$/);
+    const api = rest.match(/^api\/(file|summary|owed|recent|invoice|parse|untidy|quarter|remind\/\d+|tidy\/\d+)$/);
     if (api) {
       if (!env.BOOKS || !env.REALM) return json({ error: "QuickBooks isn't connected yet" }, 503);
       const [what, id] = api[1].split('/');

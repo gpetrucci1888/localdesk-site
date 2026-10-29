@@ -61,12 +61,24 @@ nav button[aria-current="page"] span{transform:scale(1.1)}
   <div class="card"><h2>Profit so far</h2><p class="big" id="profit">…</p>
     <div class="grid2" style="margin-top:10px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div></div>
   <div class="card pot" style="margin-top:14px"><h2>Put aside for tax</h2><p class="big" id="pot">…</p><p class="note">Rough guide only, about a quarter of profit. Your accountant gives the real figure.</p></div>
+  <div class="card pot" id="tidyCard" hidden style="margin-top:14px;border-left-color:var(--stop)"><h2>Needs sorting</h2><p style="margin:0"><b id="tidyCount"></b> expense(s) in "Uncategorised".</p><button class="link" data-tab="tidy" style="margin-top:8px">Tidy up (one tap each) →</button></div>
   <div class="card" style="margin-top:14px"><h2>Owed to you</h2><p class="big" id="owedTotal">…</p><p class="note" id="owedCount"></p><button class="link" data-tab="owed" style="margin-top:8px">See who owes you →</button></div>
+  <div class="card" style="margin-top:14px"><h2>Tax quarter (for your accountant)</h2><p class="sub" id="qDates"></p>
+    <div class="grid2" style="margin-top:8px"><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
+    <p class="note" id="qDue"></p><button class="link" id="qCsv" style="margin-top:8px">Download for your accountant (CSV)</button></div>
+</section>
+
+<section id="tab-tidy" hidden>
+  <div class="card"><h2>Put these in the right place</h2><ul id="tidyList"></ul><p class="msg" id="tidyEmpty" hidden>All tidy. Nothing to sort.</p></div>
+  <p class="note">The category is a suggestion. Change it if it's wrong, then tap ✓.</p>
 </section>
 
 <section id="tab-receipts" hidden>
   <label class="snap">📷 Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label>
   <label class="snap alt" style="margin-top:10px">🖼️ Add photos or PDFs<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label>
+  <div class="card" style="margin-top:10px"><h2>No receipt? Just say it</h2>
+    <div class="btns"><input id="say" placeholder="40 quid diesel at Shell" style="flex:1;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);min-width:0">
+    <button class="ghost" id="mic" title="Speak" hidden>🎙️</button><button class="go" id="sayGo" style="flex:0">Add</button></div></div>
   <div class="card" id="check" hidden style="margin-top:14px">
     <h2>Check it's right</h2>
     <img class="prev" id="prev" alt="Your receipt"><div style="height:10px"></div>
@@ -89,7 +101,9 @@ nav button[aria-current="page"] span{transform:scale(1.1)}
     <label class="f">Customer name<input id="iCust" autocomplete="off"></label>
     <label class="f">Their email (to send it)<input id="iEmail" type="email" inputmode="email" autocomplete="off" placeholder="optional"></label>
     <label class="f">What for<input id="iDesc" placeholder="Boiler service"></label>
-    <label class="f">Amount £ (before VAT)<input id="iAmt" inputmode="decimal"></label>
+    <label class="tick"><input type="checkbox" id="iCis">CIS job (for a main contractor)</label>
+    <label class="f" id="amtWrap">Amount £ (before VAT)<input id="iAmt" inputmode="decimal"></label>
+    <div class="grid2" id="cisWrap" hidden><label class="f">Labour £<input id="iLab" inputmode="decimal"></label><label class="f">Materials £<input id="iMat" inputmode="decimal"></label></div>
     <label class="tick"><input type="checkbox" id="iVat">Add VAT at 20%</label>
     <button class="go" id="iSend" style="width:100%">Create invoice</button>
   </div>
@@ -115,12 +129,12 @@ async function api(path,opts){var r=await fetch(BASE+'/api/'+path,opts);var d=aw
 CATS.forEach(function(c){var o=document.createElement('option');o.textContent=c;$('category').appendChild(o)});
 
 // ---- tabs ----
-var TITLES={home:'This month',receipts:'Receipts',owed:'Who owes you',invoice:'New invoice'};
+var TITLES={home:'This month',receipts:'Receipts',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up'};
 function show(tab){
   Object.keys(TITLES).forEach(function(t){$('tab-'+t).hidden=t!==tab});
-  document.querySelectorAll('nav button').forEach(function(b){b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false')});
+  document.querySelectorAll('nav button').forEach(function(b){b.setAttribute('aria-current',b.dataset.tab===(tab==='tidy'?'home':tab)?'page':'false')});
   $('title').textContent=TITLES[tab];say('');
-  if(tab==='home')loadSummary(); if(tab==='owed')loadOwed(); if(tab==='receipts')loadRecent();
+  if(tab==='home'){loadSummary();loadQuarter();loadTidyCount()} if(tab==='owed')loadOwed(); if(tab==='receipts')loadRecent(); if(tab==='tidy')loadTidy();
   try{localStorage.setItem('books-tab',tab)}catch(e){}
 }
 document.addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b)show(b.dataset.tab)});
@@ -155,14 +169,71 @@ document.addEventListener('click',async function(e){
 
 // ---- invoice ----
 $('iSend').addEventListener('click',async function(){
-  var body={customer:$('iCust').value,email:$('iEmail').value,description:$('iDesc').value,amount:parseFloat($('iAmt').value)||0,vat:$('iVat').checked};
+  var body={customer:$('iCust').value,email:$('iEmail').value,description:$('iDesc').value,amount:parseFloat($('iAmt').value)||0,vat:$('iVat').checked,cis:$('iCis').checked,labour:parseFloat($('iLab').value)||0,materials:parseFloat($('iMat').value)||0};
   $('iSend').disabled=true;say('Creating invoice…');
   try{var r=await api('invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    say('Invoice '+(r.number?r.number+' ':'')+'for '+money(r.total)+' created'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓');
-    ['iCust','iEmail','iDesc','iAmt'].forEach(function(id){$(id).value=''});$('iVat').checked=false;
+    say('Invoice '+(r.number?r.number+' ':'')+'for '+money(r.total)+' created'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓'+(r.cisDeduction?' They deduct '+money(r.cisDeduction)+' CIS, so expect '+money(r.toReceive)+'.':''));
+    ['iCust','iEmail','iDesc','iAmt','iLab','iMat'].forEach(function(id){$(id).value=''});$('iVat').checked=false;$('iCis').checked=false;cisToggle();
   }catch(err){say(err.message,true)}
   $('iSend').disabled=false;
 });
+
+function cisToggle(){var on=$('iCis').checked;$('cisWrap').hidden=!on;$('amtWrap').hidden=on}
+$('iCis').addEventListener('change',cisToggle);
+
+// ---- quarter and tidy ----
+var quarterData=null;
+async function loadQuarter(){
+  try{var q=await api('quarter');quarterData=q;
+    $('qDates').textContent=ukDate(q.from)+' to '+ukDate(q.to);$('qIn').textContent=money(q.income);$('qOut').textContent=money(q.expenses);
+    $('qDue').textContent='Figures due to HMRC by '+ukDate(q.due)+' (your accountant sends them).';
+  }catch(err){$('qDates').textContent="Couldn't load: "+err.message}
+}
+$('qCsv').addEventListener('click',function(){
+  if(!quarterData)return;
+  var rows=[['Section','Category','Amount']].concat(quarterData.lines.map(function(l){return [l.section,l.name,l.amount.toFixed(2)]}));
+  rows.push(['','Total income',quarterData.income.toFixed(2)],['','Total expenses',quarterData.expenses.toFixed(2)],['','Profit',quarterData.profit.toFixed(2)]);
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n');
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='quarter-'+quarterData.from+'.csv';a.click();
+});
+async function loadTidyCount(){
+  try{var list=await api('untidy');$('tidyCard').hidden=!list.length;$('tidyCount').textContent=list.length}catch(e){}
+}
+async function loadTidy(){
+  $('tidyList').innerHTML='<li><small>Loading…</small></li>';
+  try{var list=await api('untidy');$('tidyEmpty').hidden=list.length>0;
+    $('tidyList').innerHTML=list.map(function(i){
+      var opts=CATS.map(function(c){return '<option'+(c===(i.suggested||'Other')?' selected':'')+'>'+c+'</option>'}).join('');
+      return '<li><div style="flex:1;min-width:0"><b>'+esc(i.supplier||'Expense')+'</b> '+money(i.amount)+'<small>'+esc(ukDate(i.date))+'</small>'+
+        '<select data-cat="'+esc(i.id)+'" style="margin-top:6px;width:100%;font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)">'+opts+'</select></div>'+
+        '<button class="go small" style="flex:0" data-tidy="'+esc(i.id)+'">✓</button></li>'}).join('');
+  }catch(err){$('tidyList').innerHTML='';say("Couldn't load: "+err.message,true)}
+}
+document.addEventListener('click',async function(e){
+  var b=e.target.closest('[data-tidy]');if(!b)return;
+  var id=b.dataset.tidy,cat=document.querySelector('[data-cat="'+id+'"]').value;b.disabled=true;b.textContent='…';
+  try{var r=await api('tidy/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:cat})});
+    b.closest('li').remove();say('Moved to '+r.account+' ✓');if(!$('tidyList').children.length)$('tidyEmpty').hidden=false;
+  }catch(err){b.disabled=false;b.textContent='✓';say(err.message,true)}
+});
+
+// ---- say it ----
+var Rec=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(Rec){$('mic').hidden=false;$('mic').addEventListener('click',function(){
+  var r=new Rec();r.lang='en-GB';r.interimResults=false;$('mic').textContent='…';
+  r.onresult=function(e){$('say').value=e.results[0][0].transcript;$('mic').textContent='🎙️';sayIt()};
+  r.onerror=r.onend=function(){$('mic').textContent='🎙️'};r.start();
+})}
+async function sayIt(){
+  var t=$('say').value.trim();if(!t)return;say('Working it out…');
+  try{var r=await api('parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});
+    $('prev').removeAttribute('src');$('prev').hidden=true;
+    $('supplier').value=r.supplier;$('date').value=r.date;$('category').value=r.category;$('total').value=r.total.toFixed(2);$('vat').value=r.vat.toFixed(2);$('items').value=r.items;
+    say('');$('check').hidden=false;$('say').value='';$('check').scrollIntoView({behavior:'smooth'});
+  }catch(err){say(err.message,true)}
+}
+$('sayGo').addEventListener('click',sayIt);
+$('say').addEventListener('keydown',function(e){if(e.key==='Enter')sayIt()});
 
 // ---- receipts ----
 async function loadRecent(){
@@ -190,7 +261,7 @@ async function next(){
   var f=queue.shift();if(!f)return;
   $('check').hidden=true;say('Reading your receipt…'+(queue.length?' ('+queue.length+' more to go)':''));
   try{
-    var data=await shrink(f);$('prev').src=data;
+    var data=await shrink(f);$('prev').src=data;$('prev').hidden=false;
     var r=await (await fetch(BASE+'/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:data})})).json();
     if(r.error)throw new Error(r.error);
     if(!r.readable){say("Couldn't read that one. Try again in better light, with the whole receipt in shot.",true);setTimeout(next,2500);return}
@@ -199,7 +270,7 @@ async function next(){
   }catch(err){say('Something went wrong: '+err.message,true);setTimeout(next,2500)}
 }
 $('save').addEventListener('click',async function(){
-  var r={image:$('prev').src,supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()};
+  var r={image:$('prev').hidden?'':$('prev').src,supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()};
   $('save').disabled=true;say('Sending to QuickBooks…');
   try{var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
     $('check').hidden=true;loadRecent();

@@ -15,6 +15,15 @@
 //   POST /remind/<realmId>/<id> (X-Key) emails that invoice to the customer again
 //   POST /invoice/<realmId>     (X-Key) {customer, email, description, amount, vat} new invoice, emailed if there's an address
 //   GET  /recent/<realmId>      (X-Key) the last few expenses
+//   POST /parse/<realmId>       (X-Key) {text} "40 quid diesel at Shell" -> receipt fields to check and file
+//   GET  /untidy/<realmId>      (X-Key) expenses sitting in Uncategorised, each with a suggested category
+//   POST /tidy/<realmId>/<id>   (X-Key) {category} moves that expense to the right account
+//   GET  /quarter/<realmId>     (X-Key) the Making Tax Digital quarter so far, by category, for the accountant
+//   GET  /monthly/<realmId>     (X-Key) preview of the monthly text; POST sends it (?to= to send elsewhere)
+//   PUT  /client/<realmId>      (X-Key) {name, phone} who gets the monthly text
+//
+// Once a month (cron) every client with a phone gets their monthly text, and OWNER_PHONE gets a
+// short check report. Texts need TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN; SMS_FROM is the sender name.
 //
 // Settings: QB_CLIENT_ID, QB_CLIENT_SECRET (from the Intuit app), ADMIN_KEY,
 // QB_ENV ("sandbox" or "production"). Tokens live in the Store Durable Object.
@@ -56,7 +65,7 @@ export default {
       const f = url.pathname.match(/^\/file\/(\d+)$/);
       if (f && request.method === 'POST') return Response.json(await fileReceipt(env, store, f[1], await request.json()));
 
-      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind)\/(\d+)(?:\/(\d+))?$/);
+      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind|parse|untidy|tidy|quarter|monthly|client)\/(\d+)(?:\/(\d+))?$/);
       if (a) {
         const [, what, realmId, id] = a;
         if (what === 'summary') return Response.json(await summary(env, store, realmId, url.searchParams.get('month')));
@@ -64,6 +73,20 @@ export default {
         if (what === 'recent') return Response.json(await recent(env, store, realmId));
         if (what === 'invoice' && request.method === 'POST') return Response.json(await newInvoice(env, store, realmId, await request.json()));
         if (what === 'remind' && request.method === 'POST' && id) return Response.json(await remind(env, store, realmId, id));
+        if (what === 'parse' && request.method === 'POST') return Response.json(await parseSpoken(env, (await request.json()).text));
+        if (what === 'untidy') return Response.json(await untidy(env, store, realmId));
+        if (what === 'tidy' && request.method === 'POST' && id) return Response.json(await tidy(env, store, realmId, id, (await request.json()).category));
+        if (what === 'quarter') return Response.json(await quarter(env, store, realmId, url.searchParams.get('date')));
+        if (what === 'client' && request.method === 'PUT') { await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: await request.text() }); return Response.json({ ok: true }); }
+        if (what === 'monthly') {
+          const msg = await monthlyText(env, store, realmId, url.searchParams.get('month'));
+          if (request.method !== 'POST') return Response.json({ text: msg });
+          const client = await getClient(store, realmId);
+          const to = url.searchParams.get('to') || (client && client.phone);
+          if (!to) throw new Error('No phone number saved for this client');
+          await sendSms(env, to, msg);
+          return Response.json({ ok: true, sentTo: to, text: msg });
+        }
       }
 
       const m = url.pathname.match(/^\/qb\/(\d+)\/(.+)$/);
@@ -84,6 +107,11 @@ export default {
     } catch (err) {
       return text(`Error: ${err && err.message || err}`, 500);
     }
+  },
+
+  // 1st of the month: monthly text to each client, check report to Gio.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(monthlyRun(env).catch(err => console.error('monthly run failed', err && err.stack || err)));
   },
 };
 
@@ -214,8 +242,10 @@ async function remind(env, store, realmId, id) {
   return { ok: true, sentTo: email };
 }
 
+const CIS_RATE = 0.2;
+
 async function newInvoice(env, store, realmId, r) {
-  const amount = round(r.amount);
+  const amount = r.cis ? round((Number(r.labour) || 0) + (Number(r.materials) || 0)) : round(r.amount);
   if (!(amount > 0)) throw new Error('Put in an amount');
   const name = (r.customer || '').trim().slice(0, 100);
   if (!name) throw new Error('Put in the customer\'s name');
@@ -228,24 +258,202 @@ async function newInvoice(env, store, realmId, r) {
   if (!item) throw new Error('No service item in QuickBooks to invoice for');
   const codes = (await query(env, store, realmId, 'select Id, Name from TaxCode')).TaxCode || [];
   const code = codes.find(c => c.Name === (r.vat ? '20.0% S' : 'No VAT'));
+  // CIS job: labour and materials on separate lines; the contractor deducts 20% of the labour only.
+  const labour = round(r.labour), materials = round(r.materials);
+  const cis = Boolean(r.cis) && labour > 0;
+  const line = (amt, desc) => ({
+    Amount: amt, DetailType: 'SalesItemLineDetail', Description: desc.slice(0, 4000),
+    SalesItemLineDetail: { ItemRef: { value: item.Id }, Qty: 1, UnitPrice: amt, ...(code ? { TaxCodeRef: { value: code.Id } } : {}) },
+  });
+  const desc = (r.description || '').trim();
+  const cisDeduction = cis ? round(labour * CIS_RATE) : 0;
   const invoice = {
     CustomerRef: { value: cust.Id },
     ...(email ? { BillEmail: { Address: email } } : {}),
     GlobalTaxCalculation: code ? 'TaxExcluded' : 'NotApplicable',
-    Line: [{
-      Amount: amount, DetailType: 'SalesItemLineDetail', Description: (r.description || '').slice(0, 4000),
-      SalesItemLineDetail: { ItemRef: { value: item.Id }, Qty: 1, UnitPrice: amount, ...(code ? { TaxCodeRef: { value: code.Id } } : {}) },
-    }],
+    Line: cis
+      ? [line(labour, `Labour${desc ? ': ' + desc : ''}`), ...(materials > 0 ? [line(materials, `Materials${desc ? ': ' + desc : ''}`)] : [])]
+      : [line(amount, desc)],
+    ...(cis ? {
+      CustomerMemo: { value: `CIS: labour £${labour.toFixed(2)}, materials £${materials.toFixed(2)}. Deduct 20% of labour only (£${cisDeduction.toFixed(2)}).` },
+      PrivateNote: `CIS job. Expected deduction £${cisDeduction.toFixed(2)}.`,
+    } : {}),
   };
   const created = (await qb(env, store, realmId, 'POST', 'invoice', invoice)).Invoice;
   let sentTo = '';
   if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
-  return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
+  return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo, cisDeduction, toReceive: round(Number(created.TotalAmt) - cisDeduction) };
 }
 
 async function recent(env, store, realmId) {
   const list = (await query(env, store, realmId, 'select Id, TxnDate, TotalAmt, EntityRef from Purchase orderby MetaData.CreateTime desc maxresults 10')).Purchase || [];
   return list.map(p => ({ id: p.Id, date: p.TxnDate, total: Number(p.TotalAmt), supplier: (p.EntityRef && p.EntityRef.name) || '' }));
+}
+
+// ---------- quick add by voice or typing ----------
+
+const CATEGORIES = Object.keys(ACCOUNT_NAMES);
+const TEXT_MODELS = ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct'];
+
+async function askJson(env, prompt) {
+  let last = '';
+  for (const model of TEXT_MODELS) {
+    try {
+      const out = await env.AI.run(model, { messages: [{ role: 'user', content: prompt }], max_tokens: 600 });
+      const t = typeof out.response === 'string' ? out.response : JSON.stringify(out.response || out);
+      const m = t.match(/[\[{][\s\S]*[\]}]/);
+      if (m) return JSON.parse(m[0]);
+      last = 'no JSON';
+    } catch (err) { last = err && err.message || String(err); }
+  }
+  throw new Error('Could not understand that: ' + last);
+}
+
+async function parseSpoken(env, text) {
+  if (!(text || '').trim()) throw new Error('Say or type what you spent');
+  const today = new Date().toISOString().slice(0, 10);
+  const r = await askJson(env, `A UK tradesman said this about something he paid for: "${String(text).slice(0, 500)}"
+Today is ${today}. Reply with ONLY a JSON object:
+{"supplier": "", "date": "YYYY-MM-DD", "total": 0.00, "vat": 0.00, "category": "", "items": ""}
+- "40 quid" means 40.00. Use today's date unless he says another day ("yesterday" etc).
+- vat: only if he mentions VAT, else 0.
+- category: one of ${CATEGORIES.join(', ')}.
+- supplier: the shop if he says one, else "".`);
+  return {
+    supplier: String(r.supplier || ''), date: /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : today,
+    total: Number(r.total) || 0, vat: Number(r.vat) || 0,
+    category: CATEGORIES.includes(r.category) ? r.category : 'Other', items: String(r.items || ''), readable: Number(r.total) > 0,
+  };
+}
+
+// ---------- tidy up: expenses left in Uncategorised ----------
+
+async function untidy(env, store, realmId) {
+  const list = (await query(env, store, realmId, 'select * from Purchase orderby TxnDate desc maxresults 300')).Purchase || [];
+  const items = [];
+  for (const p of list) {
+    for (const l of p.Line || []) {
+      const acc = l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.AccountRef;
+      if (acc && /uncategori[sz]ed/i.test(acc.name || '')) {
+        items.push({ id: p.Id, date: p.TxnDate, amount: Number(l.Amount), supplier: (p.EntityRef && p.EntityRef.name) || '', note: [l.Description, p.PrivateNote].filter(Boolean).join(' · ') });
+        break;
+      }
+    }
+  }
+  if (items.length && env.AI) {
+    try {
+      const guesses = await askJson(env, `For each UK trade business expense below, pick the best category from: ${CATEGORIES.join(', ')}.
+Reply with ONLY a JSON array of category names, same order, same length.
+${items.slice(0, 30).map((i, n) => `${n + 1}. ${i.supplier || 'unknown supplier'} £${i.amount} ${i.note}`).join('\n')}`);
+      items.slice(0, 30).forEach((i, n) => { i.suggested = CATEGORIES.includes(guesses[n]) ? guesses[n] : 'Other'; });
+    } catch (err) { /* suggestions are a bonus; the list still works without them */ }
+  }
+  return items;
+}
+
+async function tidy(env, store, realmId, id, category) {
+  if (!CATEGORIES.includes(category)) throw new Error('Pick a category');
+  const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
+  const accounts = (await query(env, store, realmId, 'select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
+  const target = pickAccount(accounts.filter(a => a.AccountType === 'Expense' || a.AccountType === 'Cost of Goods Sold'), category);
+  let changed = 0;
+  for (const l of p.Line || []) {
+    const d = l.AccountBasedExpenseLineDetail;
+    if (d && d.AccountRef && /uncategori[sz]ed/i.test(d.AccountRef.name || '')) { d.AccountRef = { value: target.Id }; changed++; }
+  }
+  if (!changed) return { ok: true, account: target.Name, unchanged: true };
+  await qb(env, store, realmId, 'POST', 'purchase', p);
+  return { ok: true, account: target.Name };
+}
+
+// ---------- the Making Tax Digital quarter ----------
+
+// Standard MTD quarters: 6 Apr-5 Jul, 6 Jul-5 Oct, 6 Oct-5 Jan, 6 Jan-5 Apr. Updates are due on the 7th of the month after.
+function mtdQuarter(dateStr) {
+  const d = new Date((dateStr && Date.parse(dateStr)) ? dateStr : Date.now());
+  const y = d.getUTCFullYear();
+  const starts = [[y - 1, 9, 6], [y, 0, 6], [y, 3, 6], [y, 6, 6], [y, 9, 6]].map(([yy, mm, dd]) => new Date(Date.UTC(yy, mm, dd)));
+  let start = starts[0];
+  for (const s of starts) if (s <= d) start = s;
+  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 3, 5));
+  const due = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 7));
+  const iso = x => x.toISOString().slice(0, 10);
+  return { from: iso(start), to: iso(end), due: iso(due) };
+}
+
+async function quarter(env, store, realmId, dateStr) {
+  const q = mtdQuarter(dateStr);
+  const report = await qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${q.from}&end_date=${q.to}`);
+  const lines = [], totals = {};
+  const walk = (rows, section) => {
+    for (const row of rows || []) {
+      const sec = row.group || section;
+      if (row.ColData) {
+        const amt = Number(row.ColData[row.ColData.length - 1].value) || 0;
+        if (amt) lines.push({ section: sec, name: row.ColData[0].value, amount: round(amt) });
+      }
+      if (row.Rows) walk(row.Rows.Row, sec);
+      if (row.group && row.Summary) totals[row.group] = Number(row.Summary.ColData[row.Summary.ColData.length - 1].value) || 0;
+    }
+  };
+  walk(report.Rows && report.Rows.Row, '');
+  const income = round(totals.Income || 0), expenses = round((totals.COGS || 0) + (totals.Expenses || 0) + (totals.OtherExpenses || 0));
+  return { ...q, income, expenses, profit: round(income - expenses), lines };
+}
+
+// ---------- monthly text and check report ----------
+
+async function getClient(store, realmId) {
+  const res = await store.fetch(`https://store/clients/${realmId}`);
+  return res.ok ? res.json() : null;
+}
+
+function lastMonth() {
+  const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - 1);
+  return d.toISOString().slice(0, 7);
+}
+
+const gbp = n => '£' + Math.round(n).toLocaleString('en-GB');
+
+async function monthlyText(env, store, realmId, month) {
+  const m = month || lastMonth();
+  const s = await summary(env, store, realmId, m);
+  const inv = await owed(env, store, realmId);
+  const messy = await untidy(env, store, realmId).catch(() => []);
+  const name = new Date(m + '-01').toLocaleDateString('en-GB', { month: 'long' });
+  const parts = [`Your books for ${name}: in ${gbp(s.moneyIn)}, out ${gbp(s.moneyOut)}, profit ${gbp(s.profit)}.`];
+  if (inv.length) parts.push(`Owed to you: ${gbp(s.owed)} on ${inv.length} invoice${inv.length > 1 ? 's' : ''}${inv[0].daysOverdue ? `, oldest ${inv[0].daysOverdue} days late` : ''}.`);
+  if (s.taxPot > 0) parts.push(`Put aside roughly ${gbp(s.taxPot)} for tax (a guide, not advice).`);
+  if (messy.length) parts.push(`${messy.length} expense${messy.length > 1 ? 's need' : ' needs'} a category: open Books, Tidy up.`);
+  return parts.join(' ');
+}
+
+async function monthlyRun(env) {
+  const store = env.STORE.get(env.STORE.idFromName('main'));
+  const companies = await (await store.fetch('https://store/tokens')).json();
+  const report = [];
+  for (const c of companies) {
+    const client = await getClient(store, c.realmId);
+    try {
+      const msg = await monthlyText(env, store, c.realmId);
+      if (client && client.phone) await sendSms(env, client.phone, msg);
+      const messy = (msg.match(/(\d+) expenses? needs? a category/) || [])[1] || 0;
+      report.push(`${(client && client.name) || c.realmId}: ${client && client.phone ? 'text sent' : 'no phone saved'}, ${messy} to tidy.`);
+    } catch (err) {
+      report.push(`${(client && client.name) || c.realmId}: FAILED (${err.message}).`);
+    }
+  }
+  if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books monthly check: ${report.join(' ') || 'no clients connected.'}`);
+}
+
+async function sendSms(env, to, body) {
+  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) throw new Error('Texts are not set up yet (Twilio keys missing)');
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`, {
+    method: 'POST',
+    headers: { Authorization: 'Basic ' + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`), 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ From: env.SMS_FROM || 'Books', To: to, Body: body.slice(0, 900) }),
+  });
+  if (!res.ok) throw new Error(`Text failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
 }
 
 function round(n) { return Math.round((Number(n) || 0) * 100) / 100; }
@@ -311,6 +519,12 @@ export class Store {
       await this.storage.delete('state');
       const fresh = saved && saved.value === await request.text() && Date.now() - saved.at < 15 * 60_000;
       return text(fresh ? 'ok' : 'expired', fresh ? 200 : 400);
+    }
+    const c = url.pathname.match(/^\/clients\/(\d+)$/);
+    if (c) {
+      if (request.method === 'PUT') { await this.storage.put(`client:${c[1]}`, JSON.parse(await request.text())); return text('ok'); }
+      const v = await this.storage.get(`client:${c[1]}`);
+      return v ? Response.json(v) : text('No client', 404);
     }
     const m = url.pathname.match(/^\/tokens(?:\/(\d+))?$/);
     if (!m) return text('Not found', 404);
