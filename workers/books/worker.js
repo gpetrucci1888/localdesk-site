@@ -537,7 +537,7 @@ async function summary(env, store, realmId, month) {
 async function owed(env, store, realmId) {
   const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail, PrivateNote from Invoice where Balance > '0' maxresults 200")).Invoice || [];
   const today = Date.now();
-  const cisOf = (i) => Number((String(i.PrivateNote || '').match(/CIS job\. Expected deduction £([\d.]+)/) || [])[1]) || 0;
+  const cisOf = (i) => Number((String(i.PrivateNote || '').match(/CIS job\. Expected deduction £(\d+(?:\.\d+)?)/) || [])[1]) || 0;
   return list.map(i => ({
     id: i.Id, number: i.DocNumber || '', customer: (i.CustomerRef && i.CustomerRef.name) || 'Customer',
     date: i.TxnDate, due: i.DueDate || i.TxnDate, total: Number(i.TotalAmt), balance: Number(i.Balance),
@@ -551,7 +551,7 @@ async function remind(env, store, realmId, id, quiet) {
   const email = inv.BillEmail && inv.BillEmail.Address;
   if (!email) throw new Error('No email address for this customer. Add one in QuickBooks first');
   await qb(env, store, realmId, 'POST', `invoice/${id}/send?sendTo=${encodeURIComponent(email)}`);
-  if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed invoice ${inv.DocNumber || ''} to ${email} again` });
+  if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed invoice${num(inv.DocNumber)} to ${email} again` });
   return { ok: true, sentTo: email };
 }
 
@@ -586,7 +586,7 @@ async function markPaid(env, store, realmId, id, method, cis) {
   if (received > 0) refs.push((await pay(received, `Paid by ${how.toLowerCase()} (marked in Books)`, deposit)).Id);
   if (deducted > 0) refs.push((await pay(deducted, `CIS deducted by the contractor (marked in Books)`, { value: await cisAccount(env, store, realmId) })).Id);
   const who = (inv.CustomerRef && inv.CustomerRef.name) || 'Customer';
-  await logChange(store, realmId, { kind: 'paid', ref: refs.join(','), text: `Marked ${who} invoice ${inv.DocNumber || ''} paid: ${money(received)} ${how.toLowerCase()}${deducted ? `, ${money(deducted)} CIS taken off` : ''}` });
+  await logChange(store, realmId, { kind: 'paid', ref: refs.join(','), text: `Marked ${who} invoice${num(inv.DocNumber)} paid: ${money(received)} ${how.toLowerCase()}${deducted ? `, ${money(deducted)} CIS taken off` : ''}` });
   return { ok: true, amount: received, cis: deducted, how };
 }
 
@@ -662,7 +662,7 @@ async function newInvoice(env, store, realmId, r) {
   const created = (await qb(env, store, realmId, 'POST', 'invoice', doc)).Invoice;
   let sentTo = '';
   if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
-  await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice ${created.DocNumber || ''} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
+  await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice${num(created.DocNumber)} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo, cisDeduction, toReceive: round(Number(created.TotalAmt) - cisDeduction) };
 }
 
@@ -673,7 +673,7 @@ async function newQuote(env, store, realmId, r) {
   const created = (await qb(env, store, realmId, 'POST', 'estimate', { ...doc, TxnStatus: 'Pending' })).Estimate;
   let sentTo = '';
   if (email) { await qb(env, store, realmId, 'POST', `estimate/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
-  await logChange(store, realmId, { kind: 'quote', ref: created.Id, text: `Quote ${created.DocNumber || ''} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
+  await logChange(store, realmId, { kind: 'quote', ref: created.Id, text: `Quote${num(created.DocNumber)} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
 }
 
@@ -698,7 +698,7 @@ async function quoteWon(env, store, realmId, id) {
   const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
   if ((e.TxnStatus || 'Pending') !== 'Pending') throw new Error('That quote has already been dealt with');
   await qb(env, store, realmId, 'POST', 'estimate', { Id: e.Id, SyncToken: e.SyncToken, sparse: true, TxnStatus: 'Accepted' });
-  await logChange(store, realmId, { kind: 'status', ref: e.Id, text: `Quote ${e.DocNumber || ''} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} marked won` });
+  await logChange(store, realmId, { kind: 'status', ref: e.Id, text: `Quote${num(e.DocNumber)} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} marked won` });
   return { ok: true };
 }
 
@@ -707,7 +707,7 @@ async function quoteChase(env, store, realmId, id, quiet) {
   const email = e.BillEmail && e.BillEmail.Address;
   if (!email) throw new Error('No email on this quote, so give them a ring');
   await qb(env, store, realmId, 'POST', `estimate/${id}/send?sendTo=${encodeURIComponent(email)}`);
-  if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed quote ${e.DocNumber || ''} to ${email} again` });
+  if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed quote${num(e.DocNumber)} to ${email} again` });
   return { ok: true, sentTo: email };
 }
 
@@ -734,14 +734,14 @@ async function quoteInvoice(env, store, realmId, id, amount) {
   let sentTo = '';
   const email = e.BillEmail && e.BillEmail.Address;
   if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
-  await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice ${created.DocNumber || ''} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} ${money(created.TotalAmt)} from quote ${e.DocNumber || ''}${sentTo ? `, emailed to ${sentTo}` : ''}` });
+  await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice${num(created.DocNumber)} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} ${money(created.TotalAmt)} from quote${num(e.DocNumber)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
 }
 
 async function quoteLost(env, store, realmId, id) {
   const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
   await qb(env, store, realmId, 'POST', 'estimate', { Id: e.Id, SyncToken: e.SyncToken, sparse: true, TxnStatus: 'Rejected' });
-  await logChange(store, realmId, { kind: 'status', ref: e.Id, text: `Quote ${e.DocNumber || ''} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} marked lost` });
+  await logChange(store, realmId, { kind: 'status', ref: e.Id, text: `Quote${num(e.DocNumber)} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} marked lost` });
   return { ok: true };
 }
 
@@ -1309,6 +1309,7 @@ async function sendSms(env, to, body) {
 
 function round(n) { return Math.round((Number(n) || 0) * 100) / 100; }
 const money = n => '£' + (Number(n) || 0).toFixed(2);
+const num = n => (n ? ` ${n}` : '');
 
 // One QuickBooks API call. Body may be JSON-able or FormData.
 async function qb(env, store, realmId, method, path, body) {
