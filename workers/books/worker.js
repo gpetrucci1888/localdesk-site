@@ -10,6 +10,11 @@
 //                               e.g. /qb/123/query?query=select * from Purchase
 //   POST /file/<realmId>        (X-Key header) files one receipt as an expense with its photo:
 //                               {image, supplier, date, total, vat, category, items}
+//   GET  /summary/<realmId>     (X-Key) this month: money in, money out, profit, owed, rough tax pot
+//   GET  /owed/<realmId>        (X-Key) unpaid invoices, most overdue first
+//   POST /remind/<realmId>/<id> (X-Key) emails that invoice to the customer again
+//   POST /invoice/<realmId>     (X-Key) {customer, email, description, amount, vat} new invoice, emailed if there's an address
+//   GET  /recent/<realmId>      (X-Key) the last few expenses
 //
 // Settings: QB_CLIENT_ID, QB_CLIENT_SECRET (from the Intuit app), ADMIN_KEY,
 // QB_ENV ("sandbox" or "production"). Tokens live in the Store Durable Object.
@@ -50,6 +55,16 @@ export default {
 
       const f = url.pathname.match(/^\/file\/(\d+)$/);
       if (f && request.method === 'POST') return Response.json(await fileReceipt(env, store, f[1], await request.json()));
+
+      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind)\/(\d+)(?:\/(\d+))?$/);
+      if (a) {
+        const [, what, realmId, id] = a;
+        if (what === 'summary') return Response.json(await summary(env, store, realmId, url.searchParams.get('month')));
+        if (what === 'owed') return Response.json(await owed(env, store, realmId));
+        if (what === 'recent') return Response.json(await recent(env, store, realmId));
+        if (what === 'invoice' && request.method === 'POST') return Response.json(await newInvoice(env, store, realmId, await request.json()));
+        if (what === 'remind' && request.method === 'POST' && id) return Response.json(await remind(env, store, realmId, id));
+      }
 
       const m = url.pathname.match(/^\/qb\/(\d+)\/(.+)$/);
       if (m) {
@@ -154,6 +169,83 @@ function pickAccount(accounts, category) {
     || accounts.filter(a => a.Active !== false && a.Name.toLowerCase().includes(n))[0];
   for (const n of want) { const a = named(n); if (a) return a; }
   return named('uncategorised') || named('uncategorized') || accounts[0];
+}
+
+// ---------- money in, money out, who owes ----------
+
+const query = (env, store, realmId, sql) => qb(env, store, realmId, 'GET', 'query?query=' + encodeURIComponent(sql)).then(d => d.QueryResponse || {});
+
+// Rough tax guide: about a quarter of profit (basic-rate income tax plus Class 4 NI). Shown as a guide only.
+const TAX_POT = 0.25;
+
+async function summary(env, store, realmId, month) {
+  const m = /^\d{4}-\d{2}$/.test(month || '') ? month : new Date().toISOString().slice(0, 7);
+  const [y, mo] = m.split('-').map(Number);
+  const end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
+  const report = await qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${m}-01&end_date=${end}`);
+  const totals = {};
+  for (const row of (report.Rows && report.Rows.Row) || []) {
+    const cols = row.Summary && row.Summary.ColData;
+    if (row.group && cols) totals[row.group] = Number(cols[cols.length - 1].value) || 0;
+  }
+  const moneyIn = round(totals.Income || 0);
+  const moneyOut = round((totals.COGS || 0) + (totals.Expenses || 0) + (totals.OtherExpenses || 0));
+  const profit = round(totals.NetIncome != null ? totals.NetIncome : moneyIn - moneyOut);
+  const inv = await owed(env, store, realmId);
+  return { month: m, moneyIn, moneyOut, profit, owed: round(inv.reduce((s, i) => s + i.balance, 0)), owedCount: inv.length, taxPot: round(Math.max(0, profit) * TAX_POT) };
+}
+
+async function owed(env, store, realmId) {
+  const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail from Invoice where Balance > '0' maxresults 200")).Invoice || [];
+  const today = Date.now();
+  return list.map(i => ({
+    id: i.Id, number: i.DocNumber || '', customer: (i.CustomerRef && i.CustomerRef.name) || 'Customer',
+    date: i.TxnDate, due: i.DueDate || i.TxnDate, total: Number(i.TotalAmt), balance: Number(i.Balance),
+    email: (i.BillEmail && i.BillEmail.Address) || '',
+    daysOverdue: Math.max(0, Math.floor((today - Date.parse(i.DueDate || i.TxnDate)) / 86400000)),
+  })).sort((a, b) => b.daysOverdue - a.daysOverdue);
+}
+
+async function remind(env, store, realmId, id) {
+  const inv = (await qb(env, store, realmId, 'GET', `invoice/${id}`)).Invoice;
+  const email = inv.BillEmail && inv.BillEmail.Address;
+  if (!email) throw new Error('No email address for this customer. Add one in QuickBooks first');
+  await qb(env, store, realmId, 'POST', `invoice/${id}/send?sendTo=${encodeURIComponent(email)}`);
+  return { ok: true, sentTo: email };
+}
+
+async function newInvoice(env, store, realmId, r) {
+  const amount = round(r.amount);
+  if (!(amount > 0)) throw new Error('Put in an amount');
+  const name = (r.customer || '').trim().slice(0, 100);
+  if (!name) throw new Error('Put in the customer\'s name');
+  const email = (r.email || '').trim();
+  const safe = name.replace(/'/g, "\\'");
+  let cust = ((await query(env, store, realmId, `select Id, PrimaryEmailAddr from Customer where DisplayName = '${safe}'`)).Customer || [])[0];
+  if (!cust) cust = (await qb(env, store, realmId, 'POST', 'customer', { DisplayName: name, ...(email ? { PrimaryEmailAddr: { Address: email } } : {}) })).Customer;
+  const items = (await query(env, store, realmId, "select Id, Name from Item where Type = 'Service' and Active = true maxresults 50")).Item || [];
+  const item = items.find(i => /^(services?|labour)$/i.test(i.Name)) || items[0];
+  if (!item) throw new Error('No service item in QuickBooks to invoice for');
+  const codes = (await query(env, store, realmId, 'select Id, Name from TaxCode')).TaxCode || [];
+  const code = codes.find(c => c.Name === (r.vat ? '20.0% S' : 'No VAT'));
+  const invoice = {
+    CustomerRef: { value: cust.Id },
+    ...(email ? { BillEmail: { Address: email } } : {}),
+    GlobalTaxCalculation: code ? 'TaxExcluded' : 'NotApplicable',
+    Line: [{
+      Amount: amount, DetailType: 'SalesItemLineDetail', Description: (r.description || '').slice(0, 4000),
+      SalesItemLineDetail: { ItemRef: { value: item.Id }, Qty: 1, UnitPrice: amount, ...(code ? { TaxCodeRef: { value: code.Id } } : {}) },
+    }],
+  };
+  const created = (await qb(env, store, realmId, 'POST', 'invoice', invoice)).Invoice;
+  let sentTo = '';
+  if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
+}
+
+async function recent(env, store, realmId) {
+  const list = (await query(env, store, realmId, 'select Id, TxnDate, TotalAmt, EntityRef from Purchase orderby MetaData.CreateTime desc maxresults 10')).Purchase || [];
+  return list.map(p => ({ id: p.Id, date: p.TxnDate, total: Number(p.TotalAmt), supplier: (p.EntityRef && p.EntityRef.name) || '' }));
 }
 
 function round(n) { return Math.round((Number(n) || 0) * 100) / 100; }
