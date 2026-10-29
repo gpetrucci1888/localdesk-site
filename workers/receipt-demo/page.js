@@ -476,11 +476,10 @@ body{background:var(--hd);min-height:100vh;display:flex;flex-direction:column}
 .sheet h2{font-size:22px;margin:0;letter-spacing:-.01em}
 .sheet p.lead{margin:0;color:var(--muted)}
 .big-btn{width:100%;padding:17px;font-size:17px;border-radius:14px}
-.otp{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.otp div{height:58px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
-.otp div.on{border-color:var(--hd);box-shadow:0 0 0 3px var(--acc)}
-.otp input{position:absolute;inset:0;width:100%;height:100%;opacity:.01;font-size:16px;border:0;color:transparent;caret-color:transparent;background:transparent}
-.otp.bad div{border-color:var(--stop)}
+.otp{width:100%;height:68px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:800 32px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.45em;text-indent:.45em;text-align:center;font-variant-numeric:tabular-nums}
+.otp::placeholder{color:var(--line);letter-spacing:.45em}
+.otp:focus{outline:none;border-color:var(--hd);box-shadow:0 0 0 3px var(--acc)}
+.otp.bad{border-color:var(--stop)}
 .row{display:flex;justify-content:space-between;align-items:center;font-size:14px}
 .row button{background:none;border:0;padding:0;color:var(--blue);font-weight:800;font-size:14px}
 .row button:disabled{color:var(--muted);opacity:1}
@@ -497,9 +496,8 @@ body{background:var(--hd);min-height:100vh;display:flex;flex-direction:column}
   </div>
   <div id="step2" hidden style="display:grid;gap:16px">
     <h2>Enter your code</h2>
-    <p class="lead">Sent to your mobile ending in <b style="color:var(--ink)">{{PHONE_END}}</b>.</p>
-    <div class="otp" id="otp"><div></div><div></div><div></div><div></div><div></div><div></div>
-      <input id="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" aria-label="6-digit code"></div>
+    <p class="lead">Sent to your mobile ending in <b style="color:var(--ink)">{{PHONE_END}}</b>. Tap the box: your phone should offer the code from the text.</p>
+    <input class="otp" id="code" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="------" aria-label="6-digit code">
     <p class="err" id="err"></p>
     <button class="go big-btn" id="verify">Log in</button>
     <div class="row"><span style="color:var(--muted)">No text?</span><button id="again" disabled>Send again</button></div>
@@ -511,10 +509,8 @@ body{background:var(--hd);min-height:100vh;display:flex;flex-direction:column}
 <script>
 var BASE=location.pathname.replace(/\/$/,'');
 var $=function(id){return document.getElementById(id)};
-var boxes=document.querySelectorAll('#otp div');
 async function post(path,body){var r=await fetch(BASE+'/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});var d=await r.json().catch(function(){return {error:'No response'}});if(d.error)throw new Error(d.error);return d}
-function draw(){var v=$('code').value.replace(/\D/g,'').slice(0,6);$('code').value=v;$('otp').classList.remove('bad');
-  boxes.forEach(function(b,i){b.textContent=v[i]||'';b.className=(document.activeElement===$('code')&&i===Math.min(v.length,5))?'on':''})}
+function draw(){var v=$('code').value.replace(/\D/g,'').slice(0,6);if($('code').value!==v)$('code').value=v;$('code').classList.remove('bad')}
 var timer=null;
 function countdown(){var n=30;$('again').disabled=true;clearInterval(timer);
   timer=setInterval(function(){n--;$('again').textContent=n>0?'Send again in '+n+'s':'Send again';if(n<=0){clearInterval(timer);$('again').disabled=false}},1000);$('again').textContent='Send again in 30s'}
@@ -526,10 +522,9 @@ $('send').addEventListener('click',send);$('again').addEventListener('click',sen
 async function verify(){var c=$('code').value;if(c.length!==6){$('err').textContent='Put in all 6 numbers';return}
   $('verify').disabled=true;$('verify').textContent='Checking…';$('err').textContent='';
   try{await post('login/verify',{code:c});$('verify').textContent='✓';location.reload()}
-  catch(e){$('err').textContent=e.message;$('otp').classList.add('bad');$('verify').disabled=false;$('verify').textContent='Log in'}}
+  catch(e){$('err').textContent=e.message;$('code').classList.add('bad');$('verify').disabled=false;$('verify').textContent='Log in'}}
 $('verify').addEventListener('click',verify);
 $('code').addEventListener('input',function(){draw();if($('code').value.length===6)verify()});
-$('code').addEventListener('focus',draw);$('code').addEventListener('blur',draw);
 // Android Chrome: read the code straight from the text.
 function listen(){if(!('OTPCredential' in window))return;navigator.credentials.get({otp:{transport:['sms']}}).then(function(o){if(o&&o.code){$('code').value=o.code;draw();verify()}}).catch(function(){})}
 </script></body></html>`;
