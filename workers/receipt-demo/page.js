@@ -295,8 +295,7 @@ li.q{flex-wrap:wrap}li.q>.btns{width:100%;padding-left:56px}li.q>.btns button{fl
 <section id="tab-jobs" hidden>
   <div class="card"><h2>Quotes waiting</h2><ul id="quoteList"></ul><p class="note" id="quoteEmpty" hidden>No quotes waiting. Make one from New.</p></div>
   <div class="card" id="bookedCard" hidden><h2>Booked in</h2><ul id="bookedList"></ul><p class="note">Tap "Invoice it" when the job's done.</p></div>
-  <div class="card"><h2>Profit per job</h2><p class="sub">Last 12 months</p><ul id="jobList" style="margin-top:6px"></ul></div>
-  <p class="note">Costs count when a receipt is put against the job (on Receipts). Quotes with no answer after 30 days drop off.</p>
+  <p class="note">Quotes with no answer after 30 days drop off the list. To see what a job made, go to Owed, then Customers, and tap the customer.</p>
 </section>
 
 <section id="tab-invoice" hidden>
@@ -318,7 +317,7 @@ li.q{flex-wrap:wrap}li.q>.btns{width:100%;padding-left:56px}li.q>.btns button{fl
 <nav aria-label="Sections">
   <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>Home</button>
   <button data-tab="receipts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Receipts</button>
-  <button data-tab="jobs" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Jobs</button>
+  <button data-tab="jobs" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 11h6M9 15h4"/></svg>Quotes</button>
   <button data-tab="owed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.5 8.5a2.5 2.5 0 0 0-5 .5c0 3-1 4.5-2 6h8M8 12.5h5"/></svg>Owed</button>
   <button data-tab="invoice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>New</button>
 </nav>
@@ -343,14 +342,14 @@ async function api(path,opts){var r=await fetch(BASE+'/api/'+path,opts);if(r.sta
 CATS.forEach(function(c){var o=document.createElement('option');o.textContent=c;$('category').appendChild(o)});
 
 // ---- tabs ----
-var TITLES={home:'This month',receipts:'Receipts',jobs:'Jobs',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up',changes:'What Books changed',expenses:'All expenses',settings:'Settings'};
+var TITLES={home:'This month',receipts:'Receipts',jobs:'Quotes',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up',changes:'What Books changed',expenses:'All expenses',settings:'Settings'};
 // Screens that sit under another one get a back button.
 var PARENT={tidy:'home',changes:'settings',expenses:'receipts',settings:'home'};
 var current='home';
 var VAT='{{VAT}}'==='1';
 var EXTRAS='{{EXTRAS}}'.split(',').map(function(x){return x.trim()});
 var QUOTES=EXTRAS.indexOf('quotes')>=0;
-if(QUOTES){document.querySelector('nav').classList.add('five');document.querySelector('nav [data-tab=jobs]').hidden=false;$('jobCard').hidden=false}
+if(QUOTES){document.querySelector('nav').classList.add('five');document.querySelector('nav [data-tab=jobs]').hidden=false}
 function show(tab){
   var moved=tab!==current;current=tab;
   Object.keys(TITLES).forEach(function(t){var el=$('tab-'+t);el.hidden=t!==tab;if(t===tab&&moved){el.classList.remove('enter');void el.offsetWidth;el.classList.add('enter')}});
@@ -556,15 +555,7 @@ document.addEventListener('change',async function(e){
   catch(err){say(err.message,true)}
   s.disabled=false;
 });
-function loadJobs(){
-  if(!$('jobList').children.length)$('jobList').innerHTML=skel(3);
-  loadQuotes();
-  return live('jobs',function(d){
-    $('jobList').innerHTML=d.jobs.map(function(j){
-      return '<li>'+avatar(j.name)+'<div class="grow"><b>'+esc(j.name)+'</b><small>In '+money(j.in)+' · Costs '+money(j.out)+'</small></div><div class="ends"><span class="amt '+(j.profit<0?'neg':'pos')+'">'+money(j.profit)+'</span>'+(j.in>0?'<span class="pill '+(j.profit<0?'bad':'ok')+'">'+Math.round(j.profit/j.in*100)+'% kept</span>':'')+'</div></li>'}).join('')||'<li><small>No jobs yet. Invoice someone and they show up here.</small></li>';
-    if(d.unassigned>0)$('jobList').insertAdjacentHTML('beforeend','<li><div><small>Costs not on a job</small></div><div class="right"><small>'+money(d.unassigned)+'</small></div></li>');
-  },function(err,had){if(!had)$('jobList').innerHTML='';say("Couldn't load jobs: "+err.message,true)});
-}
+function loadJobs(){return loadQuotes()}
 function loadQuotes(){
   return live('quotes',function(l){quoteData={};l.forEach(function(q){quoteData[q.id]=q});
     var w=l.filter(function(q){return q.status==='waiting'}),bk=l.filter(function(q){return q.status==='booked'});
@@ -637,8 +628,7 @@ $('say').addEventListener('keydown',function(e){if(e.key==='Enter')sayIt()});
 // ---- receipts ----
 function loadRecent(){
   return live('recent',async function(list){
-    if(!custs&&QUOTES)await loadJobsPick();
-    $('recent').innerHTML=list.map(function(p){return '<li class="tap" data-exp="'+esc(p.id)+'">'+avatar(p.supplier||'Expense')+'<div class="grow"><b>'+esc(p.supplier||'Expense')+'</b><small>'+esc(ukDate(p.date))+'</small>'+(QUOTES?'<select class="chip" data-setjob="'+esc(p.id)+'" aria-label="Job">'+jobOptions(p.jobId)+'</select>':'')+'</div><div class="ends"><span class="amt">'+money(p.total)+'</span></div></li>'}).join('')||'<li><small>Nothing yet. Snap your first receipt above.</small></li>';
+    $('recent').innerHTML=list.map(function(p){return '<li class="tap" data-exp="'+esc(p.id)+'">'+avatar(p.supplier||'Expense')+'<div class="grow"><b>'+esc(p.supplier||'Expense')+'</b><small>'+esc(ukDate(p.date))+'</small>'+'</div><div class="ends"><span class="amt">'+money(p.total)+'</span></div></li>'}).join('')||'<li><small>Nothing yet. Snap your first receipt above.</small></li>';
   },function(err,had){if(!had)$('recent').innerHTML='<li><small>Couldn\'t load: '+esc(err.message)+'</small></li>'});
 }
 var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
@@ -844,8 +834,10 @@ document.addEventListener('click',async function(e){
   var r=e.target.closest('[data-cust]');if(!r)return;
   var sh=sheet('<div class="skel" style="height:220px"></div>');
   try{var c=await api('customer/'+r.dataset.cust);
+    var made=null;if(QUOTES){try{var jd=await api('jobs');made=(jd.jobs||[]).filter(function(j){return j.id===String(r.dataset.cust)})[0]||null}catch(e){}}
     sh.el.innerHTML='<div class="grab"></div><div class="r" style="margin-bottom:14px">'+avatar(c.name)+'<div class="grow"><h3>'+esc(c.name)+'</h3>'+(c.address?'<small>'+esc(c.address)+'</small>':'')+'</div></div>'+
       '<div class="split"><div><span>Owes you</span><b'+(c.owes>0?' class="neg"':'')+'>'+money(c.owes)+'</b></div><div><span>Paid you (all time)</span><b>'+money(c.paid)+'</b></div></div>'+
+      (made&&made.out>0?'<div class="split"><div><span>Costs on their jobs (12 months)</span><b>'+money(made.out)+'</b></div><div><span>What you made</span><b class="'+(made.profit<0?'neg':'pos')+'">'+money(made.profit)+'</b></div></div>':'')+
       contactBtns(c.phone,c.email)+
       (c.invoices.length?'<h2 style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 4px">Invoices</h2><ul>'+c.invoices.map(function(i){return '<li class="tap" data-invdoc="'+esc(i.id)+'"><div class="grow"><b>'+(i.number?'Invoice '+esc(i.number):'Invoice')+'</b><small>'+esc(ukDate(i.date))+'</small></div><div class="ends"><span class="amt" style="font-size:16px">'+money(i.total)+'</span>'+(i.balance>0?'<span class="pill bad">'+money(i.balance)+' to pay</span>':'<span class="pill ok">Paid</span>')+'</div></li>'}).join('')+'</ul>':'')+
       (c.quotes.length?'<h2 style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px">Quotes</h2><ul>'+c.quotes.map(function(q){return '<li><div class="grow"><b>'+(q.number?'Quote '+esc(q.number):'Quote')+'</b><small>'+esc(ukDate(q.date))+'</small></div><div class="ends"><span class="amt" style="font-size:16px">'+money(q.total)+'</span><span class="pill">'+esc({Pending:'Waiting',Accepted:'Won',Closed:'Invoiced',Rejected:'Lost'}[q.status]||q.status)+'</span></div></li>'}).join('')+'</ul>':'')+
@@ -945,8 +937,10 @@ function drawExpense(sh,x){
     '<h3>'+esc(x.supplier||'Expense')+'</h3><p class="big" style="margin:4px 0 14px">'+money(x.total)+'</p>'+
     '<dl class="kv"><dt>Date</dt><dd>'+esc(ukDate(x.date))+'</dd><dt>Category</dt><dd>'+esc(x.account||'None')+'</dd>'+(VAT?'<dt>VAT</dt><dd>'+money(x.vat)+'</dd>':'')+(x.job?'<dt>Job</dt><dd>'+esc(x.job)+'</dd>':'')+(x.note?'<dt>Note</dt><dd>'+esc(x.note)+'</dd>':'')+
     '<dt>Receipt</dt><dd>'+(x.hasReceipt?'Attached ✓':'None')+'</dd><dt>Added</dt><dd>'+(x.fromApp?'In Books':'In QuickBooks')+'</dd></dl>'+
+    (QUOTES?'<label class="f" style="margin:0 0 12px">Which job (customer)?<select data-setjob="'+esc(x.id)+'" id="xJob" style="font:inherit;font-size:16px;padding:11px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);width:100%"><option>Loading…</option></select></label>':'')+
     (x.editable?'<button class="go" style="width:100%" data-edit>Change it</button>':'<p class="note">This one has more than one line, so change it in QuickBooks.</p>')+
     '<button class="cancel" data-close>Close</button>';
+  if(QUOTES){(custs?Promise.resolve():loadJobsPick()).then(function(){var sel=$('xJob');if(sel)sel.innerHTML=jobOptions(x.jobId||'')})}
   var ed=sh.el.querySelector('[data-edit]');if(!ed)return;
   ed.addEventListener('click',function(){
     sh.el.innerHTML='<div class="grab"></div><h3>Change this expense</h3><p class="sub">You can undo it after from "What Books changed".</p>'+
