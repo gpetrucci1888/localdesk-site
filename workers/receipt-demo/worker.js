@@ -38,6 +38,15 @@ export default {
         return json({ error: String(err && err.message || err) }, 500);
       }
     }
+    if (url.pathname === `/${KEY}/file` && request.method === 'POST') {
+      // Straight into QuickBooks, through the books connector (service binding).
+      if (!env.BOOKS || !env.REALM) return json({ error: 'QuickBooks isn\'t connected for this page' }, 503);
+      const res = await env.BOOKS.fetch(`https://books/file/${env.REALM}`, {
+        method: 'POST', headers: { 'X-Key': env.BOOKS_KEY, 'Content-Type': 'application/json' }, body: request.body,
+      });
+      const text = await res.text();
+      return new Response(text.startsWith('{') ? text : JSON.stringify({ error: text }), { status: res.status, headers: { 'Content-Type': 'application/json' } });
+    }
     return new Response('Not found', { status: 404 });
   },
 };
@@ -110,7 +119,7 @@ li{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:
 li small{display:block;color:var(--muted)}
 .link{background:none;border:0;color:var(--muted);font-weight:700;font-size:14px;padding:6px;text-decoration:underline}
 </style></head><body><main>
-<div><h1>Receipts</h1><p class="sub">Snap a receipt, or add photos and PDFs. They're read and filed for you.</p></div>
+<div><h1>Receipts</h1><p class="sub">Snap a receipt, or add photos and PDFs. They go straight into QuickBooks.</p></div>
 <label class="snap">📷 Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label>
 <label class="snap alt">🖼️ Add photos or PDFs<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label>
 <p class="msg" id="msg" hidden></p>
@@ -122,7 +131,7 @@ li small{display:block;color:var(--muted)}
   <div class="two"><label class="f">Date<input id="date" type="date"></label><label class="f">Category<select id="category"></select></label></div>
   <div class="two"><label class="f">Total £<input id="total" inputmode="decimal"></label><label class="f">VAT £<input id="vat" inputmode="decimal"></label></div>
   <label class="f">What for<input id="items"></label>
-  <div class="btns"><button class="save" id="save">Looks right, save</button><button class="cancel" id="cancel">Cancel</button></div>
+  <div class="btns"><button class="save" id="save">Looks right, send to QuickBooks</button><button class="cancel" id="cancel">Cancel</button></div>
 </section>
 <section class="card">
   <h2>This month</h2>
@@ -180,9 +189,18 @@ async function next(){
     say('');$('check').hidden=false;$('check').scrollIntoView({behavior:'smooth'});
   }catch(err){say('Something went wrong: '+err.message,true);setTimeout(next,2500)}
 }
-$('save').addEventListener('click',function(){
-  var a=load();a.push({supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()});
-  store(a);$('check').hidden=true;render();if(queue.length){next()}else{say('Filed ✓');setTimeout(function(){say('')},1800)}
+$('save').addEventListener('click',async function(){
+  var r={supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()};
+  $('save').disabled=true;say('Sending to QuickBooks…');
+  try{
+    var res=await fetch(location.pathname.replace(/\/$/,'')+'/file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({image:$('prev').src},r))});
+    var out=await res.json(); if(out.error) throw new Error(out.error);
+    r.qb=out.duplicate?'already there':'filed';
+    var a=load();a.push(r);store(a);$('check').hidden=true;render();
+    var done=out.duplicate?'Already in QuickBooks, so not added twice ✓':'In QuickBooks ✓ ('+out.account+')';
+    if(queue.length){say(done);setTimeout(next,1200)}else{say(done);setTimeout(function(){say('')},2500)}
+  }catch(err){say("Couldn't send to QuickBooks: "+err.message,true)}
+  $('save').disabled=false;
 });
 $('cancel').addEventListener('click',function(){$('check').hidden=true;next()});
 $('csv').addEventListener('click',function(){
