@@ -133,3 +133,11 @@
 - Offer: set up QuickBooks to run itself (bank rules, invoice reminders, receipts), plus text-a-receipt and a monthly summary text. £395 setup + £150/month done-for-you (monthly tidy).
 - Doing books for money needs AML supervision first: HMRC (~£300 application + £400/yr + ~£40 approval, fees from 1 Dec 2025) or a body like ICB/IAB/AAT. Register only after a firm yes.
 - Next: get plumber's details, 30-min sit-down with his QuickBooks open, one-page plain offer.
+
+## QuickBooks connector (29 Oct)
+- Intuit developer account (Gio's), workspace "Localdesk", app "Localdesk Books" (development keys). UK sandbox: "Sandbox Company GB".
+- Worker `books` (code in workers/books): /connect?k=ADMIN_KEY -> Intuit Allow -> /callback saves tokens in Durable Object; /companies and /qb/<realmId>/<path> need header X-Key = ADMIN_KEY. Secrets set: QB_CLIENT_ID, QB_CLIENT_SECRET, ADMIN_KEY; QB_ENV=sandbox. Redirect URI on Intuit app: https://books.gpetrucci93.workers.dev/callback
+- Deploy updates with keep_bindings ["secret_text"] so secrets survive.
+- Gio allowed *.gpetrucci93.workers.dev and localdeskai.co.uk in the cloud environment (works from next session). Env secret for host books.gpetrucci93.workers.dev header X-Key should be set.
+- Not yet done: click the connect link for the sandbox company, then test /companies and a query.
+- Receipt demo worker `receipt-demo` (workers/receipt-demo): snap/upload photos or PDFs, Workers AI reads them. Link key is a Worker secret (KEY).
