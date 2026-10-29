@@ -231,9 +231,8 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     if (sent.length >= CODES_PER_HOUR) throw new Error('Too many codes. Try again in an hour');
     const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
     await store.fetch(`https://store/codes/${appKey}`, { method: 'PUT', body: JSON.stringify({ hash: await sha256(code), expires: Date.now() + CODE_MINUTES * 60000, tries: 0, sent: [...sent, Date.now()] }) });
-    // Last line lets phones offer the code straight from the text (one tap on iPhone, automatic on Android).
-    const host = new URL(env.APP_URL || 'https://receipt-demo.gpetrucci93.workers.dev').host;
-    await sendSms(env, client.phone, `${code} is your ${client.name || 'Books'} login code. Don't share it with anyone.\n\n@${host} #${code}`);
+    // Plain "Your ... code is 123456" wording: iPhones and Android keyboards both offer it above the keyboard.
+    await sendSms(env, client.phone, `Your Books login code is ${code}. Don't share it with anyone.`);
     return Response.json({ ok: true });
   }
   if (what === 'login/verify' && request.method === 'POST') {
