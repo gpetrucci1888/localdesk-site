@@ -1,4 +1,4 @@
-// The phone app: one page, four tabs (Overview, Receipts, Owed, Invoice).
+// The phone app: one page, tabs Home, Receipts, (Jobs), Owed, New. LOGIN and NO_LOGIN share its look.
 // Kept as String.raw so the script inside needs no extra escaping. No ${...} or backticks inside.
 export const PAGE = String.raw`<!doctype html>
 <html lang="en"><head>
@@ -58,7 +58,7 @@ li:first-child{border-top:0}
 li small{display:block;color:var(--muted)}
 .late{color:var(--stop);font-weight:700}
 .link{background:none;border:0;color:var(--blue);font-weight:800;padding:0;font-size:15px;margin-top:10px}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:4}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:4}
 nav button{background:none;color:var(--muted);font-size:12px;font-weight:700;padding:6px 4px;border-radius:12px;display:grid;gap:3px;justify-items:center}
 nav svg{width:24px;height:24px;padding:2px 10px;box-sizing:content-box;border-radius:20px}
 nav button[aria-current="page"]{color:var(--ink)}
@@ -68,6 +68,7 @@ nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
 .toast button{background:var(--acc);color:var(--accInk);padding:8px 14px;font-size:15px}
 .why{color:var(--stop);font-weight:700;margin:0 0 10px;font-size:14px}
 [hidden]{display:none!important}
+nav.five{grid-template-columns:repeat(5,1fr)}
 .potrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;padding:12px;border-radius:12px;background:var(--bg);border-left:5px solid var(--acc)}
 .potrow span{display:block;font-size:13px;color:var(--muted)}.potrow b{font-size:20px}.potrow small{color:var(--muted);font-size:12px;text-align:right;max-width:46%}
 .seg{display:flex;background:var(--bg);border-radius:12px;padding:4px;gap:4px;margin-bottom:12px}
@@ -107,7 +108,7 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
 </section>
 
 <section id="tab-receipts" hidden>
-  <div class="card jobsel"><span>Which job?</span><select id="jobPick" aria-label="Which job"><option value="">No job (general)</option></select></div>
+  <div class="card jobsel" id="jobCard" hidden><span>Which job?</span><select id="jobPick" aria-label="Which job"><option value="">No job (general)</option></select></div>
   <div class="snaps"><label class="snap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label><label class="snap alt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Photos or PDFs<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label></div>
   <div class="card"><h2>No receipt? Just say it</h2>
     <div class="btns"><input id="say" placeholder="40 quid diesel at Shell" style="flex:1;font:inherit;font-size:16px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0">
@@ -130,9 +131,10 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
 </section>
 
 <section id="tab-jobs" hidden>
-  <div class="card" id="quotesCard" hidden><h2>Quotes waiting</h2><ul id="quoteList"></ul><p class="msg" id="quoteEmpty" hidden>No quotes waiting for an answer.</p></div>
+  <div class="card"><h2>Quotes waiting</h2><ul id="quoteList"></ul><p class="note" id="quoteEmpty" hidden>No quotes waiting. Make one from New.</p></div>
+  <div class="card" id="bookedCard" hidden><h2>Booked in</h2><ul id="bookedList"></ul><p class="note">Tap "Invoice it" when the job's done.</p></div>
   <div class="card"><h2>Profit per job</h2><p class="sub">Last 12 months</p><ul id="jobList" style="margin-top:6px"></ul></div>
-  <p class="note">Costs only count when a receipt is put against the job. Pick the job on Receipts before you snap, or change it on any receipt.</p>
+  <p class="note">Costs count when a receipt is put against the job (on Receipts). Quotes with no answer after 30 days drop off.</p>
 </section>
 
 <section id="tab-invoice" hidden>
@@ -154,7 +156,7 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
 <nav aria-label="Sections">
   <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>Home</button>
   <button data-tab="receipts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Receipts</button>
-  <button data-tab="jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Jobs</button>
+  <button data-tab="jobs" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Jobs</button>
   <button data-tab="owed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.5 8.5a2.5 2.5 0 0 0-5 .5c0 3-1 4.5-2 6h8M8 12.5h5"/></svg>Owed</button>
   <button data-tab="invoice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>New</button>
 </nav>
@@ -167,18 +169,19 @@ function money(n){return '£'+(Number(n)||0).toLocaleString('en-GB',{minimumFrac
 function ukDate(d){var t=Date.parse(d);return isNaN(t)?(d||''):new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
-async function api(path,opts){var r=await fetch(BASE+'/api/'+path,opts);var d=await r.json().catch(function(){return {error:'No response'}});if(d.error)throw new Error(d.error);return d}
+async function api(path,opts){var r=await fetch(BASE+'/api/'+path,opts);if(r.status===401){location.reload();throw new Error('Logging in again…')}var d=await r.json().catch(function(){return {error:'No response'}});if(d.error)throw new Error(d.error);return d}
 CATS.forEach(function(c){var o=document.createElement('option');o.textContent=c;$('category').appendChild(o)});
 
 // ---- tabs ----
 var TITLES={home:'This month',receipts:'Receipts',jobs:'Jobs',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up'};
 var EXTRAS='{{EXTRAS}}'.split(',').map(function(x){return x.trim()});
 var QUOTES=EXTRAS.indexOf('quotes')>=0;
+if(QUOTES){document.querySelector('nav').classList.add('five');document.querySelector('nav [data-tab=jobs]').hidden=false;$('jobCard').hidden=false}
 function show(tab){
   Object.keys(TITLES).forEach(function(t){$('tab-'+t).hidden=t!==tab});
   document.querySelectorAll('nav button').forEach(function(b){b.setAttribute('aria-current',b.dataset.tab===(tab==='tidy'?'home':tab)?'page':'false')});
   $('title').textContent=tab==='invoice'?(kind==='quote'?'New quote':'New invoice'):TITLES[tab];say('');
-  if(tab==='home'){loadSummary();loadQuarter();loadTodo()} if(tab==='owed')loadOwed(); if(tab==='receipts'){loadJobsPick();loadRecent()} if(tab==='tidy')loadTidy(); if(tab==='jobs')loadJobs(); if(tab==='invoice')loadJobsPick();
+  if(tab==='home'){loadSummary();loadQuarter();loadTodo()} if(tab==='owed')loadOwed(); if(tab==='receipts'){if(QUOTES)loadJobsPick();loadRecent()} if(tab==='tidy')loadTidy(); if(tab==='jobs')loadJobs(); if(tab==='invoice')loadJobsPick();
   try{localStorage.setItem('books-tab',tab)}catch(e){}
 }
 document.addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b)show(b.dataset.tab)});
@@ -248,7 +251,7 @@ async function loadTodo(){
   var items=[];
   var calls=[api('untidy').then(function(l){if(l.length)items.push({tab:'tidy',t:l.length+' expense'+(l.length>1?'s':'')+' to sort',s:'One tap each'})}).catch(function(){}),
     api('owed').then(function(l){var late=l.filter(function(i){return i.daysOverdue>0});if(late.length)items.push({tab:'owed',t:late.length+' invoice'+(late.length>1?'s':'')+' late',s:'Oldest '+late[0].daysOverdue+' days. Tap to remind'})}).catch(function(){})];
-  if(QUOTES)calls.push(api('quotes').then(function(l){if(l.length)items.push({tab:'jobs',t:l.length+' quote'+(l.length>1?'s':'')+' waiting',s:'Won or lost? One tap'})}).catch(function(){}));
+  if(QUOTES)calls.push(api('quotes').then(function(l){var c=l.filter(function(q){return q.status==='waiting'&&q.days>=7});if(c.length)items.push({tab:'jobs',t:c.length+' quote'+(c.length>1?'s':'')+' to chase',s:'No answer for a week. One tap'})}).catch(function(){}));
   await Promise.all(calls);
   $('todo').hidden=!items.length;
   $('todoList').innerHTML=items.map(function(i){return '<li data-tab="'+i.tab+'"><div><b>'+esc(i.t)+'</b><small>'+esc(i.s)+'</small></div><span class="arr">›</span></li>'}).join('');
@@ -299,7 +302,7 @@ document.addEventListener('change',async function(e){
 });
 async function loadJobs(){
   $('jobList').innerHTML='<li><small>Loading…</small></li>';
-  if(QUOTES){$('quotesCard').hidden=false;loadQuotes()}
+  loadQuotes();
   try{var d=await api('jobs');
     $('jobList').innerHTML=d.jobs.map(function(j){
       return '<li><div style="min-width:0"><b>'+esc(j.name)+'</b><small>In '+money(j.in)+' · Costs '+money(j.out)+'</small></div><div class="right"><b class="'+(j.profit<0?'neg':'pos')+'">'+money(j.profit)+'</b><small>'+(j.in>0?Math.round(j.profit/j.in*100)+'% kept':'')+'</small></div></li>'}).join('')||'<li><small>No jobs yet. Invoice someone and they show up here.</small></li>';
@@ -307,18 +310,29 @@ async function loadJobs(){
   }catch(err){$('jobList').innerHTML='';say("Couldn't load jobs: "+err.message,true)}
 }
 async function loadQuotes(){
-  try{var l=await api('quotes');$('quoteEmpty').hidden=l.length>0;
-    $('quoteList').innerHTML=l.map(function(q){return '<li><div style="min-width:0"><b>'+esc(q.customer)+'</b><small>'+money(q.total)+' · '+(q.days?q.days+' day'+(q.days>1?'s':'')+' ago':'today')+(q.description?' · '+esc(q.description):'')+'</small></div><span class="btns"><button class="go small" data-won="'+esc(q.id)+'">Won</button><button class="ghost small" data-lost="'+esc(q.id)+'">Lost</button></span></li>'}).join('');
+  try{var l=await api('quotes');
+    var w=l.filter(function(q){return q.status==='waiting'}),bk=l.filter(function(q){return q.status==='booked'});
+    $('quoteEmpty').hidden=w.length>0;$('bookedCard').hidden=!bk.length;
+    var info=function(q){return '<div style="min-width:0"><b>'+esc(q.customer)+'</b><small>'+money(q.total)+(q.description?' · '+esc(q.description):'')+'</small></div>'};
+    $('quoteList').innerHTML=w.map(function(q){return '<li>'+info(q)+'<span class="btns"><button class="go small" data-won="'+esc(q.id)+'">Won</button>'+(q.days>=3?'<button class="ghost small" data-chase="'+esc(q.id)+'">Chase</button>':'')+'</span></li>'}).join('');
+    $('bookedList').innerHTML=bk.map(function(q){return '<li data-q="'+esc(q.id)+'">'+info(q)+'<span class="btns"><button class="go small" data-bill="'+esc(q.id)+'" data-net="'+q.net+'" data-lines="'+q.lines+'">Invoice it</button></span></li>'}).join('');
   }catch(err){say("Couldn't load quotes: "+err.message,true)}
 }
 document.addEventListener('click',async function(e){
-  var w=e.target.closest('[data-won]'),l=e.target.closest('[data-lost]');if(!w&&!l)return;
-  var li=(w||l).closest('li');li.querySelectorAll('button').forEach(function(x){x.disabled=true});
+  var w=e.target.closest('[data-won]'),c=e.target.closest('[data-chase]'),b=e.target.closest('[data-bill]'),go=e.target.closest('[data-billgo]');
+  if(!w&&!c&&!b&&!go)return;
+  var el=w||c||b||go;
+  if(b){// ask for the final amount (one-line quotes only), then send
+    var li=b.closest('li'),one=b.dataset.lines==='1';
+    b.parentNode.outerHTML='';li.insertAdjacentHTML('afterend','<li class="billrow"><div style="flex:1;min-width:0">'+(one?'<label class="f" style="margin:0">Final amount £ (before VAT)<input id="billAmt" inputmode="decimal" value="'+Number(b.dataset.net).toFixed(2)+'"></label>':'<small>Invoice it as quoted?</small>')+'</div><button class="go small" style="flex:0;align-self:end" data-billgo="'+esc(b.dataset.bill)+'">Send</button></li>');
+    return}
+  el.disabled=true;
   try{
-    if(w){var r=await api('won/'+w.dataset.won,{method:'POST'});say('Nice one. Invoice '+(r.number||'')+' for '+money(r.total)+' made'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓')}
-    else{await api('lost/'+l.dataset.lost,{method:'POST'});say('Marked as lost.')}
-    li.remove();if(!$('quoteList').children.length)$('quoteEmpty').hidden=false;
-  }catch(err){li.querySelectorAll('button').forEach(function(x){x.disabled=false});say(err.message,true)}
+    if(w){await api('won/'+w.dataset.won,{method:'POST'});say('Booked in ✓ Tap "Invoice it" when the job\'s done.');loadQuotes()}
+    else if(c){var r=await api('chase/'+c.dataset.chase,{method:'POST'});c.textContent='Sent ✓';say('Quote sent again to '+r.sentTo)}
+    else{var amt=$('billAmt')?parseFloat($('billAmt').value)||0:0;var r2=await api('invoiceit/'+go.dataset.billgo,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amt})});
+      say('Invoice '+(r2.number?r2.number+' ':'')+'for '+money(r2.total)+' made'+(r2.sentTo?' and emailed to '+r2.sentTo:'')+' ✓');loadQuotes()}
+  }catch(err){el.disabled=false;say(err.message,true)}
 });
 
 // ---- invoice or quote ----
@@ -366,8 +380,8 @@ $('say').addEventListener('keydown',function(e){if(e.key==='Enter')sayIt()});
 // ---- receipts ----
 async function loadRecent(){
   try{var list=await api('recent');
-    if(!custs)await loadJobsPick();
-    $('recent').innerHTML=list.map(function(p){return '<li><div style="min-width:0">'+esc(p.supplier||'Expense')+'<small>'+esc(ukDate(p.date))+'</small><select class="chip" data-setjob="'+esc(p.id)+'" aria-label="Job">'+jobOptions(p.jobId)+'</select></div><div class="right">'+money(p.total)+'</div></li>'}).join('')||'<li><small>Nothing yet.</small></li>';
+    if(!custs&&QUOTES)await loadJobsPick();
+    $('recent').innerHTML=list.map(function(p){return '<li><div style="min-width:0">'+esc(p.supplier||'Expense')+'<small>'+esc(ukDate(p.date))+'</small>'+(QUOTES?'<select class="chip" data-setjob="'+esc(p.id)+'" aria-label="Job">'+jobOptions(p.jobId)+'</select>':'')+'</div><div class="right">'+money(p.total)+'</div></li>'}).join('')||'<li><small>Nothing yet.</small></li>';
   }catch(err){$('recent').innerHTML='<li><small>Couldn\'t load: '+esc(err.message)+'</small></li>'}
 }
 var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
@@ -417,7 +431,7 @@ function showCheck(r,img,why){
 var toastTimer=null,lastFiled=null;
 async function autoFile(r){
   say('Filing…');
-  r.jobId=$('jobPick').value;
+  r.jobId=QUOTES?$('jobPick').value:'';
   var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
   say('');loadRecent();
   if(out.duplicate){toast('Already in QuickBooks: '+(r.supplier||'expense')+' '+money(r.total),null);return}
@@ -434,7 +448,7 @@ $('undo').addEventListener('click',async function(){
   clearTimeout(toastTimer);toastTimer=setTimeout(function(){$('toast').hidden=true},3000);
 });
 $('save').addEventListener('click',async function(){
-  var r={image:$('prev').hidden?'':$('prev').src,supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim(),jobId:$('jobPick').value};
+  var r={image:$('prev').hidden?'':$('prev').src,supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim(),jobId:QUOTES?$('jobPick').value:''};
   $('save').disabled=true;say('Sending to QuickBooks…');
   try{var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
     $('check').hidden=true;loadRecent();say('');
@@ -448,3 +462,38 @@ $('cancel').addEventListener('click',function(){$('check').hidden=true;say('');n
 var start='home';try{start=localStorage.getItem('books-tab')||'home'}catch(e){}
 show(TITLES[start]?start:'home');
 </script></body></html>`;
+
+// Logging in on a new phone: a 6-digit code texted to the client's number. Same head and styles as the app.
+const HEAD = PAGE.slice(0, PAGE.indexOf('<header'));
+export const LOGIN = HEAD + String.raw`<header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1>Log in</h1><p class="sub">Books, on this phone</p></div></div></header>
+<main>
+<div class="card" id="step1"><h2>First time on this phone</h2>
+  <p style="margin:0 0 14px">We'll text a code to your mobile ending <b>{{PHONE_END}}</b>.</p>
+  <button class="go" id="send" style="width:100%">Text me a code</button></div>
+<div class="card" id="step2" hidden><h2>Enter the code</h2>
+  <label class="f">6-digit code<input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" style="font-size:24px;letter-spacing:.3em;text-align:center"></label>
+  <button class="go" id="verify" style="width:100%">Log in</button>
+  <button class="link" id="again">Send a new code</button></div>
+<p class="msg" id="msg" hidden></p>
+<p class="note" style="text-align:center">You'll stay logged in on this phone. Wrong number? Ring Gio on 07700 900000.</p>
+<p class="by">Books by Localdesk</p>
+</main>
+<script>
+var BASE=location.pathname.replace(/\/$/,'');
+var $=function(id){return document.getElementById(id)};
+function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
+async function post(path,body){var r=await fetch(BASE+'/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});var d=await r.json().catch(function(){return {error:'No response'}});if(d.error)throw new Error(d.error);return d}
+async function send(){$('send').disabled=true;say('Sending…');
+  try{await post('login/send');say('Code sent. It can take a few seconds.');$('step1').hidden=true;$('step2').hidden=false;$('code').focus()}
+  catch(e){say(e.message,true)}$('send').disabled=false}
+$('send').addEventListener('click',send);$('again').addEventListener('click',send);
+async function verify(){var c=$('code').value.replace(/\D/g,'');if(c.length!==6){say('The code is 6 numbers',true);return}
+  $('verify').disabled=true;say('Checking…');
+  try{await post('login/verify',{code:c});location.reload()}catch(e){say(e.message,true);$('verify').disabled=false}}
+$('verify').addEventListener('click',verify);
+$('code').addEventListener('input',function(){if($('code').value.replace(/\D/g,'').length===6)verify()});
+</script></body></html>`;
+
+// A client with no phone number saved can't log in yet.
+export const NO_LOGIN = HEAD + String.raw`<header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1>Nearly ready</h1></div></div></header>
+<main><div class="card"><p style="margin:0">Your app isn't switched on yet. Ring Gio on 07700 900000 and he'll sort it.</p></div><p class="by">Books by Localdesk</p></main></body></html>`;

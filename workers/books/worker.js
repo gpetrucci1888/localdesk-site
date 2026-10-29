@@ -27,15 +27,26 @@
 //   POST /tidy/<realmId>/<id>   (X-Key) {category} moves that expense to the right account
 //   GET  /quarter/<realmId>     (X-Key) the Making Tax Digital quarter so far, by category, for the accountant
 //   GET  /monthly/<realmId>     (X-Key) preview of the monthly text; POST sends it (?to= to send elsewhere)
-//   PUT  /client/<realmId>      (X-Key) {name, phone, brand, accountant, extras} changes only the fields given
+//   PUT  /client/<realmId>      (X-Key) {name, phone, brand, accountant, extras, appKey, demo} changes only the fields given
+//                               (demo: true means the app needs no login; only for the practice company)
 //   POST /quote/<realmId>       (X-Key) {customer, email, description, amount, vat, cis, labour, materials} quote, emailed if email given
-//   GET  /quotes/<realmId>      (X-Key) quotes waiting for an answer
-//   POST /won/<realmId>/<id>    (X-Key) quote accepted: turns it into an invoice (emailed if it has an email)
+//   GET  /quotes/<realmId>      (X-Key) quotes waiting for an answer (last 30 days) and booked-in jobs
+//   POST /won/<realmId>/<id>    (X-Key) quote accepted: booked in, nothing sent
+//   POST /chase/<realmId>/<id>  (X-Key) emails the quote to them again
+//   POST /invoiceit/<realmId>/<id> (X-Key) {amount} job done: invoice from the quote (emailed if it has an email)
 //   POST /lost/<realmId>/<id>   (X-Key) quote turned down
 //   GET  /customers/<realmId>   (X-Key) customers, most recent first (the "jobs" receipts can go against)
 //   GET  /jobs/<realmId>        (X-Key) money in, costs and profit per customer, last 12 months
 //   POST /job/<realmId>/<id>    (X-Key) {customerId} puts an expense against a job ("" takes it off)
 //   POST /pack/<realmId>        (X-Key) {period: quarter|lastquarter|taxyear|lasttaxyear} link to the accountant pack
+//   POST /logout/<realmId>      (X-Key) logs that client's app out on every phone
+//
+// The app (one client, over the service binding): /c/... with X-App: <their app key>
+//   GET  /c/app                  business name, brand, extras, whether they're logged in
+//   POST /c/login/send           texts a 6-digit code to the client's phone
+//   POST /c/login/verify         {code} -> {session}; the app keeps it in a cookie for a year
+//   ANY  /c/<what>[/<id>]        same as the admin routes above, for their company only (needs X-Session)
+//
 //   GET  /pack/<id>             (public, by link) the accountant pack: figures, every expense and invoice, receipts
 //   GET  /pack/<id>.csv         the same as a spreadsheet
 //
@@ -67,6 +78,8 @@ export default {
     const url = new URL(request.url);
     const store = env.STORE.get(env.STORE.idFromName('main'));
     const redirectUri = `${url.origin}/callback`;
+    // Calls from the app come over the service binding (host "books"); links we hand out need the public address.
+    const origin = url.hostname === 'books' ? (env.BOOKS_URL || 'https://books.gpetrucci93.workers.dev') : url.origin;
     try {
       if (url.pathname === '/connect') {
         let invite = null;
@@ -119,6 +132,10 @@ export default {
         return new Response(packPage(data, `${url.origin}/pack/${pk[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
       }
 
+      // The app, for one client: X-App (their app key) plus X-Session (from logging in with a texted code).
+      const c = url.pathname.match(/^\/c\/([a-z]+(?:\/[a-z]+)?)(?:\/(\d+))?$/);
+      if (c) return await clientRoute(c[1], c[2], request, url, env, store, origin);
+
       if (request.headers.get('X-Key') !== env.ADMIN_KEY || !env.ADMIN_KEY) return text('Not allowed', 403);
 
       if (url.pathname === '/companies') return store.fetch('https://store/tokens');
@@ -150,49 +167,10 @@ export default {
         return Response.json({ ok: true });
       }
 
-      const f = url.pathname.match(/^\/file\/(\d+)$/);
-      if (f && request.method === 'POST') return Response.json(await fileReceipt(env, store, f[1], await request.json()));
-
-      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind|paid|undo|parse|untidy|tidy|quarter|monthly|client|quote|quotes|won|lost|customers|jobs|job|pack)\/(\d+)(?:\/(\d+))?$/);
+      const a = url.pathname.match(/^\/([a-z]+)\/(\d+)(?:\/(\d+))?$/);
       if (a) {
-        const [, what, realmId, id] = a;
-        if (what === 'summary') return Response.json(await summary(env, store, realmId, url.searchParams.get('month')));
-        if (what === 'owed') return Response.json(await owed(env, store, realmId));
-        if (what === 'recent') return Response.json(await recent(env, store, realmId));
-        if (what === 'invoice' && request.method === 'POST') return Response.json(await newInvoice(env, store, realmId, await request.json()));
-        if (what === 'remind' && request.method === 'POST' && id) return Response.json(await remind(env, store, realmId, id));
-        if (what === 'paid' && request.method === 'POST' && id) return Response.json(await markPaid(env, store, realmId, id, (await request.json()).method));
-        if (what === 'undo' && request.method === 'POST' && id) return Response.json(await undoPurchase(env, store, realmId, id));
-        if (what === 'parse' && request.method === 'POST') return Response.json(await parseSpoken(env, (await request.json()).text));
-        if (what === 'untidy') return Response.json(await untidy(env, store, realmId));
-        if (what === 'tidy' && request.method === 'POST' && id) return Response.json(await tidy(env, store, realmId, id, (await request.json()).category));
-        if (what === 'quarter') return Response.json(await quarter(env, store, realmId, url.searchParams.get('date')));
-        if (what === 'quote' && request.method === 'POST') return Response.json(await newQuote(env, store, realmId, await request.json()));
-        if (what === 'quotes') return Response.json(await quotes(env, store, realmId));
-        if (what === 'won' && request.method === 'POST' && id) return Response.json(await quoteWon(env, store, realmId, id));
-        if (what === 'lost' && request.method === 'POST' && id) return Response.json(await quoteLost(env, store, realmId, id));
-        if (what === 'customers') return Response.json(await customers(env, store, realmId));
-        if (what === 'jobs') return Response.json(await jobs(env, store, realmId));
-        if (what === 'job' && request.method === 'POST' && id) return Response.json(await setJob(env, store, realmId, id, (await request.json()).customerId));
-        if (what === 'pack' && request.method === 'POST') {
-          const p = packPeriod((await request.json()).period);
-          return Response.json({ ...p, url: await packLink(store, url.origin, realmId, p), accountant: ((await getClient(store, realmId)) || {}).accountant || '' });
-        }
-        if (what === 'client' && request.method === 'PUT') {
-          const v = await request.json(), old = (await getClient(store, realmId)) || {};
-          for (const f of ['name', 'phone', 'brand', 'accountant', 'extras']) if (typeof v[f] === 'string') old[f] = v[f];
-          await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(old) });
-          return Response.json(old);
-        }
-        if (what === 'monthly') {
-          const msg = await monthlyText(env, store, realmId, url.searchParams.get('month'));
-          if (request.method !== 'POST') return Response.json({ text: msg });
-          const client = await getClient(store, realmId);
-          const to = url.searchParams.get('to') || (client && client.phone);
-          if (!to) throw new Error('No phone number saved for this client');
-          await sendSms(env, to, msg);
-          return Response.json({ ok: true, sentTo: to, text: msg });
-        }
+        const res = await handle(a[1], a[2], a[3], request, url, env, store, origin);
+        if (res) return res;
       }
 
       const m = url.pathname.match(/^\/qb\/(\d+)\/(.+)$/);
@@ -222,6 +200,133 @@ export default {
     ctx.waitUntil(run(env).catch(err => console.error('scheduled run failed', err && err.stack || err)));
   },
 };
+
+// ---------- the app: one client, logged in by text code ----------
+
+const CLIENT_WHATS = ['file', 'summary', 'owed', 'recent', 'invoice', 'remind', 'paid', 'undo', 'parse', 'untidy', 'tidy', 'quarter',
+  'quote', 'quotes', 'won', 'chase', 'invoiceit', 'customers', 'jobs', 'job', 'pack', 'accountant'];
+// Extras a client pays for on top of the starter. "quotes" = quotes and jobs.
+const EXTRA_ONLY = { quote: 'quotes', quotes: 'quotes', won: 'quotes', chase: 'quotes', invoiceit: 'quotes', jobs: 'quotes', job: 'quotes' };
+const SESSION_DAYS = 365, CODE_MINUTES = 10, CODES_PER_HOUR = 5, CODE_TRIES = 5;
+
+async function clientRoute(what, id, request, url, env, store, origin) {
+  const appKey = request.headers.get('X-App') || '';
+  if (!/^[\w-]{8,}$/.test(appKey)) return text('Not allowed', 403);
+  const res = await store.fetch(`https://store/appkeys/${appKey}`);
+  if (!res.ok) return Response.json({ error: 'Unknown app link' }, { status: 404 });
+  const realmId = (await res.json()).realmId;
+  const client = (await getClient(store, realmId)) || {};
+  const loggedIn = client.demo || await validSession(store, appKey, request.headers.get('X-Session'));
+
+  if (what === 'app') {
+    return Response.json({ realmId, name: client.name || '', brand: client.brand || '', extras: client.extras || '', loggedIn: Boolean(loggedIn),
+      phoneEnd: (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: Boolean(client.phone) });
+  }
+  if (what === 'login/send' && request.method === 'POST') {
+    if (!client.phone) throw new Error('No phone number saved. Ask Gio to add it');
+    const old = await (await store.fetch(`https://store/codes/${appKey}`)).json().catch(() => null);
+    const sent = (old && old.sent || []).filter(t => Date.now() - t < 3600000);
+    if (sent.length >= CODES_PER_HOUR) throw new Error('Too many codes. Try again in an hour');
+    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
+    await store.fetch(`https://store/codes/${appKey}`, { method: 'PUT', body: JSON.stringify({ hash: await sha256(code), expires: Date.now() + CODE_MINUTES * 60000, tries: 0, sent: [...sent, Date.now()] }) });
+    await sendSms(env, client.phone, `Your Books code is ${code}. It runs out in ${CODE_MINUTES} minutes. Don't share it.`);
+    return Response.json({ ok: true });
+  }
+  if (what === 'login/verify' && request.method === 'POST') {
+    const code = String((await request.json()).code || '').replace(/\D/g, '');
+    const st = await (await store.fetch(`https://store/codes/${appKey}`)).json().catch(() => null);
+    if (!st || !st.hash || Date.now() > st.expires) throw new Error('That code has run out. Send a new one');
+    if (st.tries >= CODE_TRIES) throw new Error('Too many wrong tries. Send a new code');
+    if (await sha256(code) !== st.hash) {
+      await store.fetch(`https://store/codes/${appKey}`, { method: 'PUT', body: JSON.stringify({ ...st, tries: st.tries + 1 }) });
+      throw new Error('That code is wrong. Check the text and try again');
+    }
+    await store.fetch(`https://store/codes/${appKey}`, { method: 'PUT', body: JSON.stringify({ sent: st.sent }) });
+    const session = randomKey() + randomKey() + randomKey();
+    await store.fetch(`https://store/sessions/${await sha256(session)}`, { method: 'PUT', body: JSON.stringify({ appKey, created: Date.now() }) });
+    return Response.json({ ok: true, session, days: SESSION_DAYS });
+  }
+
+  if (!loggedIn) return Response.json({ error: 'Please log in again', login: true }, { status: 401 });
+  if (!CLIENT_WHATS.includes(what)) return text('Not found', 404);
+  if (EXTRA_ONLY[what] && !String(client.extras || '').split(',').map(x => x.trim()).includes(EXTRA_ONLY[what])) {
+    return Response.json({ error: 'Not part of your plan. Ask Gio to switch it on.' }, { status: 403 });
+  }
+  if (what === 'accountant' && request.method === 'PUT') {
+    const em = String((await request.json()).accountant || '').trim().slice(0, 200);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) throw new Error('That email doesn\'t look right');
+    await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify({ ...client, accountant: em }) });
+    return Response.json({ ok: true });
+  }
+  return (await handle(what, realmId, id, request, url, env, store, origin)) || text('Not found', 404);
+}
+
+async function validSession(store, appKey, session) {
+  if (!session) return false;
+  const res = await store.fetch(`https://store/sessions/${await sha256(session)}`);
+  if (!res.ok) return false;
+  const v = await res.json();
+  return v.appKey === appKey && Date.now() - v.created < SESSION_DAYS * 86400000;
+}
+
+async function sha256(s) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// One request about one QuickBooks company. Returns null if there's no such route.
+async function handle(what, realmId, id, request, url, env, store, origin) {
+  const post = request.method === 'POST';
+  const body = () => request.json();
+  if (what === 'file' && post) return Response.json(await fileReceipt(env, store, realmId, await body()));
+  if (what === 'summary') return Response.json(await summary(env, store, realmId, url.searchParams.get('month')));
+  if (what === 'owed') return Response.json(await owed(env, store, realmId));
+  if (what === 'recent') return Response.json(await recent(env, store, realmId));
+  if (what === 'invoice' && post) return Response.json(await newInvoice(env, store, realmId, await body()));
+  if (what === 'remind' && post && id) return Response.json(await remind(env, store, realmId, id));
+  if (what === 'paid' && post && id) return Response.json(await markPaid(env, store, realmId, id, (await body()).method));
+  if (what === 'undo' && post && id) return Response.json(await undoPurchase(env, store, realmId, id));
+  if (what === 'parse' && post) return Response.json(await parseSpoken(env, (await body()).text));
+  if (what === 'untidy') return Response.json(await untidy(env, store, realmId));
+  if (what === 'tidy' && post && id) return Response.json(await tidy(env, store, realmId, id, (await body()).category));
+  if (what === 'quarter') return Response.json(await quarter(env, store, realmId, url.searchParams.get('date')));
+  if (what === 'quote' && post) return Response.json(await newQuote(env, store, realmId, await body()));
+  if (what === 'quotes') return Response.json(await quotes(env, store, realmId));
+  if (what === 'won' && post && id) return Response.json(await quoteWon(env, store, realmId, id));
+  if (what === 'chase' && post && id) return Response.json(await quoteChase(env, store, realmId, id));
+  if (what === 'invoiceit' && post && id) return Response.json(await quoteInvoice(env, store, realmId, id, (await body().catch(() => ({}))).amount));
+  if (what === 'lost' && post && id) return Response.json(await quoteLost(env, store, realmId, id));
+  if (what === 'customers') return Response.json(await customers(env, store, realmId));
+  if (what === 'jobs') return Response.json(await jobs(env, store, realmId));
+  if (what === 'job' && post && id) return Response.json(await setJob(env, store, realmId, id, (await body()).customerId));
+  if (what === 'pack' && post) {
+    const p = packPeriod((await body()).period);
+    return Response.json({ ...p, url: await packLink(store, origin, realmId, p), accountant: ((await getClient(store, realmId)) || {}).accountant || '' });
+  }
+  if (what === 'client' && request.method === 'PUT') {
+    const v = await body(), old = (await getClient(store, realmId)) || {};
+    for (const f of ['name', 'phone', 'brand', 'accountant', 'extras', 'appKey']) if (typeof v[f] === 'string') old[f] = v[f];
+    if (typeof v.demo === 'boolean') old.demo = v.demo;
+    if (old.appKey && !/^[\w-]{8,}$/.test(old.appKey)) throw new Error('Bad app key');
+    await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(old) });
+    return Response.json(old);
+  }
+  if (what === 'logout' && post) {
+    const cl = await getClient(store, realmId);
+    if (cl && cl.appKey) await store.fetch(`https://store/sessions-of/${cl.appKey}`, { method: 'DELETE' });
+    return Response.json({ ok: true });
+  }
+  if (what === 'monthly') {
+    const msg = await monthlyText(env, store, realmId, url.searchParams.get('month'));
+    if (!post) return Response.json({ text: msg });
+    const client = await getClient(store, realmId);
+    const to = url.searchParams.get('to') || (client && client.phone);
+    if (!to) throw new Error('No phone number saved for this client');
+    await sendSms(env, to, msg);
+    return Response.json({ ok: true, sentTo: to, text: msg });
+  }
+  return null;
+}
 
 // ---------- filing a receipt ----------
 
@@ -440,26 +545,51 @@ async function newQuote(env, store, realmId, r) {
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
 }
 
+// Waiting: sent, no answer yet (quotes with no answer after QUOTE_DAYS drop off the list).
+// Booked: accepted, job not invoiced yet.
+const QUOTE_DAYS = 30;
 async function quotes(env, store, realmId) {
   const list = (await query(env, store, realmId, 'select * from Estimate orderby TxnDate desc maxresults 200')).Estimate || [];
   const today = Date.now();
-  return list.filter(e => (e.TxnStatus || 'Pending') === 'Pending').map(e => ({
+  return list.map(e => ({
     id: e.Id, number: e.DocNumber || '', customer: (e.CustomerRef && e.CustomerRef.name) || 'Customer',
     date: e.TxnDate, total: Number(e.TotalAmt), email: (e.BillEmail && e.BillEmail.Address) || '',
+    net: round(Number(e.TotalAmt) - Number((e.TxnTaxDetail && e.TxnTaxDetail.TotalTax) || 0)),
+    lines: (e.Line || []).filter(l => l.DetailType === 'SalesItemLineDetail').length,
     description: ((e.Line || []).find(l => l.Description) || {}).Description || '',
     days: Math.max(0, Math.floor((today - Date.parse(e.TxnDate)) / 86400000)),
-  }));
+    status: (e.TxnStatus || 'Pending') === 'Accepted' ? 'booked' : (e.TxnStatus || 'Pending') === 'Pending' ? 'waiting' : 'done',
+  })).filter(q => q.status === 'booked' || (q.status === 'waiting' && q.days <= QUOTE_DAYS));
 }
 
-// Accepted: a matching invoice, linked to the quote, and the quote closed.
 async function quoteWon(env, store, realmId, id) {
   const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
   if ((e.TxnStatus || 'Pending') !== 'Pending') throw new Error('That quote has already been dealt with');
+  await qb(env, store, realmId, 'POST', 'estimate', { Id: e.Id, SyncToken: e.SyncToken, sparse: true, TxnStatus: 'Accepted' });
+  return { ok: true };
+}
+
+async function quoteChase(env, store, realmId, id) {
+  const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
+  const email = e.BillEmail && e.BillEmail.Address;
+  if (!email) throw new Error('No email on this quote, so give them a ring');
+  await qb(env, store, realmId, 'POST', `estimate/${id}/send?sendTo=${encodeURIComponent(email)}`);
+  return { ok: true, sentTo: email };
+}
+
+// Job done: a matching invoice, linked to the quote, and the quote closed. A one-line quote can
+// go out at a different final amount (before VAT) if extras came up.
+async function quoteInvoice(env, store, realmId, id, amount) {
+  const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
+  if (['Closed', 'Rejected'].includes(e.TxnStatus)) throw new Error('That quote has already been dealt with');
+  const lines = (e.Line || []).filter(l => l.DetailType === 'SalesItemLineDetail').map(l => ({ Amount: l.Amount, DetailType: l.DetailType, Description: l.Description, SalesItemLineDetail: { ...l.SalesItemLineDetail } }));
+  const final = round(amount);
+  if (final > 0 && lines.length === 1) { lines[0].Amount = final; lines[0].SalesItemLineDetail.UnitPrice = final; lines[0].SalesItemLineDetail.Qty = 1; }
   const invoice = {
     CustomerRef: e.CustomerRef,
     ...(e.BillEmail ? { BillEmail: e.BillEmail } : {}),
     GlobalTaxCalculation: e.GlobalTaxCalculation,
-    Line: (e.Line || []).filter(l => l.DetailType === 'SalesItemLineDetail').map(l => ({ Amount: l.Amount, DetailType: l.DetailType, Description: l.Description, SalesItemLineDetail: l.SalesItemLineDetail })),
+    Line: lines,
     LinkedTxn: [{ TxnId: e.Id, TxnType: 'Estimate' }],
     ...(e.CustomerMemo ? { CustomerMemo: e.CustomerMemo } : {}),
     ...(e.PrivateNote ? { PrivateNote: e.PrivateNote } : {}),
@@ -914,6 +1044,27 @@ export class Store {
       if (request.method === 'DELETE') { await this.storage.delete(key); return text('ok'); }
       const v = await this.storage.get(key);
       return v && Date.now() - v.created < INVITE_DAYS * 86400000 ? Response.json(v) : text('No invite', 404);
+    }
+    const cd = url.pathname.match(/^\/codes\/([\w-]+)$/);
+    if (cd) {
+      const key = `code:${cd[1]}`;
+      if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v ? Response.json(v) : text('No code', 404);
+    }
+    const se = url.pathname.match(/^\/sessions\/([0-9a-f]{64})$/);
+    if (se) {
+      const key = `session:${se[1]}`;
+      if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v ? Response.json(v) : text('No session', 404);
+    }
+    const so = url.pathname.match(/^\/sessions-of\/([\w-]+)$/);
+    if (so && request.method === 'DELETE') {
+      const all = await this.storage.list({ prefix: 'session:' });
+      const gone = [...all].filter(([, v]) => v.appKey === so[1]).map(([k]) => k);
+      if (gone.length) await this.storage.delete(gone);
+      return text('ok');
     }
     const pk = url.pathname.match(/^\/packs\/([\w-]+)$/);
     if (pk) {
