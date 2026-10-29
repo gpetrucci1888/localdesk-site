@@ -1099,7 +1099,7 @@ const UNDOABLE = ['file', 'tidy', 'job', 'paid', 'status'];
 async function changes(store, realmId) {
   const list = await (await store.fetch(`https://store/log/${realmId}`)).json();
   return list.filter(e => Date.now() - e.at < LOG_DAYS * 86400000)
-    .map(e => ({ id: e.id, at: new Date(e.at).toISOString(), text: e.text, undone: Boolean(e.undone), canUndo: !e.undone && UNDOABLE.includes(e.kind) }));
+    .map(e => ({ id: e.id, kind: e.kind, at: new Date(e.at).toISOString(), text: e.text, undone: Boolean(e.undone), canUndo: !e.undone && UNDOABLE.includes(e.kind) }));
 }
 
 async function revert(env, store, realmId, id) {

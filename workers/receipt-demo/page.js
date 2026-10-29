@@ -89,7 +89,67 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
 .wait{border-left:5px solid var(--acc)}
 .steps{margin:0;padding-left:20px}.steps li{display:list-item;border:0;padding:4px 0}
 .inrow{display:flex;gap:8px;align-items:end}.inrow label.f{margin:0;flex:1;min-width:0}
-.undone{color:var(--muted);text-decoration:line-through}.sendrow select{font:inherit;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
+.undone{color:var(--muted);text-decoration:line-through}
+/* app look: avatars, pills, rows, sheets, switches, skeletons */
+.card{border-radius:20px}
+.stack{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
+.av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;letter-spacing:.02em}
+.av svg{width:22px;height:22px}
+.av.soft{background:var(--bg);color:var(--ink)}
+.r{display:flex;align-items:center;gap:12px;min-width:0}
+.grow{flex:1;min-width:0}
+.grow b,.grow .t{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grow small{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amt{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;font-size:12px;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.pill.bad{background:color-mix(in srgb,var(--stop) 14%,transparent);color:var(--stop)}
+.pill.ok{background:color-mix(in srgb,var(--go) 14%,transparent);color:var(--go)}
+.pill.info{background:color-mix(in srgb,var(--blue) 14%,transparent);color:var(--blue)}
+.ends{display:grid;justify-items:end;gap:4px;flex:none}
+.inv{padding:14px 16px}
+.inv.overdue{box-shadow:inset 4px 0 0 var(--stop),var(--shadow)}
+.acts{display:flex;gap:8px;margin-top:12px}
+.acts button{flex:1;padding:11px 12px;font-size:15px;border-radius:12px}
+.acts .ghost{flex:0 0 auto}
+.list>.r{padding:12px 0;border-top:1px solid var(--line)}
+.list>.r:first-child{border-top:0;padding-top:4px}
+.list>.r:last-child{padding-bottom:2px}
+.hero2{display:grid;gap:4px}
+.hero2 .big{font-size:36px}
+.bar{height:10px;border-radius:6px;background:var(--bg);overflow:hidden;display:flex;margin-top:14px}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
+.legend b{color:var(--ink);font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.tog{appearance:none;-webkit-appearance:none;width:52px;height:32px;border-radius:20px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .2s;margin:0}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0004;transition:transform .2s}
+.tog:checked{background:var(--go)}
+.tog:checked::after{transform:translateX(20px)}
+.tog:disabled{opacity:.6}
+.scrim{position:fixed;inset:0;background:#0008;z-index:20;display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:10px 20px calc(env(safe-area-inset-bottom) + 20px);animation:up .22s cubic-bezier(.2,.8,.2,1);max-height:90vh;overflow:auto}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 16px}
+.sheet h3{font-size:21px;margin:0}
+.sheet .sub{margin:4px 0 16px}
+.opt{display:flex;align-items:center;gap:14px;width:100%;background:var(--bg);color:var(--ink);padding:15px 16px;border-radius:14px;font-size:17px;margin-bottom:10px;text-align:left}
+.opt svg{width:24px;height:24px;flex:none}
+.opt span{flex:1}
+.opt small{display:block;color:var(--muted);font-weight:600;font-size:13px;margin-top:2px}
+.cancel{display:block;width:100%;background:none;color:var(--muted);padding:12px;font-size:16px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
+.split div{background:var(--bg);border-radius:12px;padding:10px 12px}.split span{display:block;font-size:12px;color:var(--muted)}.split b{font-size:18px;font-variant-numeric:tabular-nums}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.skel{height:56px;border-radius:14px;background:linear-gradient(90deg,var(--bg) 25%,var(--line) 50%,var(--bg) 75%);background-size:200% 100%;animation:sh 1.2s infinite linear}
+@keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+.empty{text-align:center;padding:28px 16px;color:var(--muted)}
+.empty .av{margin:0 auto 10px;width:56px;height:56px}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:2px}
+.helpbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.helpbtns a{display:grid;justify-items:center;gap:6px;padding:12px 6px;border-radius:14px;background:var(--bg);color:var(--ink);text-decoration:none;font-weight:800;font-size:14px}
+.helpbtns svg{width:24px;height:24px}
+.chev{color:var(--muted);font-size:22px;flex:none}
+li.q{flex-wrap:wrap}li.q>.btns{width:100%;padding-left:56px}li.q>.btns button{flex:1}.sendrow select{font:inherit;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
 </style></head><body>
 <header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div></div></header>
 <main>
@@ -118,7 +178,7 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
     <button class="link" id="pView">See what they get →</button></div>
   <div class="card"><h2>Help</h2>
     <p style="margin:0 0 10px">Stuck, or something looks wrong? Text or ring Gio on 07700 900000.</p>
-    <div class="btns"><a class="go small" style="text-align:center;text-decoration:none;flex:1" href="sms:+447700900000">Text Gio</a><a class="ghost small" style="text-align:center;text-decoration:none;color:var(--ink);flex:1" href="https://wa.me/447700900000" target="_blank" rel="noopener">WhatsApp</a><a class="ghost small" style="text-align:center;text-decoration:none;color:var(--ink);flex:1" href="tel:+447700900000">Ring</a></div>
+    <div class="helpbtns"><a href="sms:+447700900000"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg>Text</a><a href="https://wa.me/447700900000" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/></svg>WhatsApp</a><a href="tel:+447700900000"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Ring</a></div>
     <button class="link" data-tab="changes">What Books changed in QuickBooks →</button>
     <p class="note">Want to stop? Tell Gio, or disconnect Books in QuickBooks (Apps). Everything already filed stays in your QuickBooks.</p></div>
 </section>
@@ -157,9 +217,12 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
 </section>
 
 <section id="tab-owed" hidden>
-  <div class="card"><h2>Unpaid invoices</h2><ul id="owedList"></ul><p class="msg" id="owedEmpty" hidden>Nobody owes you anything. Nice.</p></div>
-  <div class="card switch"><div><b>Chase late payers for me</b><p class="note" style="margin-top:4px" id="chaseNote">Books emails the invoice again when it's 7, 14 and 28 days late.</p></div><input type="checkbox" id="chase" role="switch" aria-label="Chase late payers for me"></div>
-  <p class="note">"Paid" records the money in QuickBooks. "Remind" emails the invoice to them again.</p>
+  <div class="card hero2"><h2>Owed to you</h2><p class="big" id="owTotal">…</p><p class="sub" id="owSub"></p>
+    <div class="bar" id="owBar" hidden><i id="owBarLate" style="background:var(--stop)"></i><i id="owBarDue" style="background:var(--acc)"></i></div>
+    <div class="legend" id="owLegend" hidden><span><i class="dot" style="background:var(--stop)"></i>Late <b id="owLate"></b></span><span><i class="dot" style="background:var(--acc)"></i>Not due yet <b id="owDue"></b></span></div></div>
+  <div class="stack" id="owedList"></div>
+  <div class="card empty" id="owedEmpty" hidden><div class="av" style="background:var(--go)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></div><b>All paid up</b>Nobody owes you anything. Nice.</div>
+  <div class="card switch"><div><b>Chase late payers for me</b><p class="note" style="margin-top:4px" id="chaseNote">Books emails the invoice again when it's 7, 14 and 28 days late.</p></div><input type="checkbox" class="tog" id="chase" role="switch" aria-label="Chase late payers for me"></div>
 </section>
 
 <section id="tab-jobs" hidden>
@@ -197,7 +260,7 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
 var CATS=["Materials","Tools and equipment","Fuel","Vehicle","Subcontractors","Phone and internet","Office","Food and drink","Other"];
 var BASE=location.pathname.replace(/\/$/,'');
 var $=function(id){return document.getElementById(id)};
-function money(n){return '£'+(Number(n)||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function money(n){n=Number(n)||0;return (n<0?'-':'')+'£'+Math.abs(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function ukDate(d){var t=Date.parse(d);return isNaN(t)?(d||''):new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
@@ -229,36 +292,78 @@ async function loadSummary(){
   }catch(err){say("Couldn't load your figures: "+err.message,true)}
 }
 
+// ---- shared bits: avatars, sheets, confirm ----
+var AVC=['#2f6f5e','#6b4fa3','#b5602c','#2f5fa8','#a33d5c','#4f7d2f','#8a6d1f','#3d6f8a'];
+function initials(n){var w=String(n||'?').replace(/\(.*?\)/g,'').trim().split(/\s+/).filter(function(x){return !/^(ltd|limited|plc|&|and|the)$/i.test(x)});return ((w[0]||'?')[0]+(w.length>1?w[w.length-1][0]:'')).toUpperCase()}
+function avatar(n){var h=0;String(n).split('').forEach(function(c){h=(h*31+c.charCodeAt(0))>>>0});return '<span class="av" style="background:'+AVC[h%AVC.length]+'" aria-hidden="true">'+esc(initials(n))+'</span>'}
+function skel(n){return new Array(n||3).fill('<div class="skel"></div>').join('')}
+var ICON={
+  bank:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></svg>',
+  card:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>',
+  cash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/></svg>'};
+function sheet(html){
+  var bg=document.createElement('div');bg.className='scrim';bg.innerHTML='<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+html+'</div>';
+  bg.addEventListener('click',function(e){if(e.target===bg||e.target.closest('[data-close]'))close()});
+  function close(){bg.remove()}
+  document.body.appendChild(bg);return {el:bg.firstChild,close:close};
+}
+function ask(title,text,ok,danger){return new Promise(function(done){
+  var sh=sheet('<h3>'+esc(title)+'</h3><p class="sub">'+esc(text)+'</p><button class="go" style="width:100%;'+(danger?'background:var(--stop);color:#fff':'')+'" data-yes>'+esc(ok)+'</button><button class="cancel" data-close>Cancel</button>');
+  sh.el.querySelector('[data-yes]').addEventListener('click',function(){sh.close();done(true)});
+  sh.el.parentNode.addEventListener('click',function(e){if(e.target===sh.el.parentNode||e.target.closest('[data-close]'))done(false)});
+})}
+
 // ---- owed ----
+var owedData={};
 async function loadOwed(){
-  $('owedList').innerHTML='<li><small>Loading…</small></li>';
-  try{var list=await api('owed');
-    $('owedEmpty').hidden=list.length>0;
-    $('owedList').innerHTML=list.map(function(i){
-      var late=i.daysOverdue>0?'<span class="late">'+i.daysOverdue+' days late</span>':'Due '+esc(ukDate(i.due));
-      var btn='<span class="btns" data-acts="'+esc(i.id)+'"><button class="go small" data-paid="'+esc(i.id)+'" data-cis="'+(i.cis||0)+'">Paid</button>'+(i.email?'<button class="ghost small" data-remind="'+esc(i.id)+'">Remind</button>':'')+'</span>';
-      return '<li><div><b>'+esc(i.customer)+'</b><small>'+money(i.balance)+' · '+late+'</small></div>'+btn+'</li>'}).join('');
-  }catch(err){$('owedList').innerHTML='';say("Couldn't load invoices: "+err.message,true)}
+  $('owedList').innerHTML=skel(3);$('owedEmpty').hidden=true;
+  try{var list=await api('owed');owedData={};list.forEach(function(i){owedData[i.id]=i});drawOwed(list)}
+  catch(err){$('owedList').innerHTML='';say("Couldn't load invoices: "+err.message,true)}
+}
+function drawOwed(list){
+  var late=list.filter(function(i){return i.daysOverdue>0}),lateSum=late.reduce(function(s,i){return s+i.balance},0),all=list.reduce(function(s,i){return s+i.balance},0);
+  $('owTotal').textContent=money(all);
+  $('owSub').textContent=list.length?(list.length+' unpaid invoice'+(list.length>1?'s':'')+(late.length?', '+late.length+' late':', none late')):'Nothing outstanding';
+  $('owBar').hidden=$('owLegend').hidden=!list.length;
+  $('owBarLate').style.width=(all?lateSum/all*100:0)+'%';$('owBarDue').style.width=(all?(all-lateSum)/all*100:0)+'%';
+  $('owLate').textContent=money(lateSum);$('owDue').textContent=money(all-lateSum);
+  $('owedEmpty').hidden=list.length>0;
+  $('owedList').innerHTML=list.map(function(i){
+    var status=i.daysOverdue>0?'<span class="pill bad">'+i.daysOverdue+(i.daysOverdue===1?' day':' days')+' late</span>':'<span class="pill">Due '+esc(ukDate(i.due).replace(/ \d{4}$/,''))+'</span>';
+    var meta=(i.number?'Invoice '+esc(i.number)+' · ':'')+'sent '+esc(ukDate(i.date).replace(/ \d{4}$/,''))+(i.cis>0?' · <span class="pill info">CIS</span>':'');
+    return '<div class="card inv'+(i.daysOverdue>0?' overdue':'')+'" data-inv-card="'+esc(i.id)+'"><div class="r">'+avatar(i.customer)+'<div class="grow"><b>'+esc(i.customer)+'</b><small>'+meta+'</small></div><div class="ends"><span class="amt">'+money(i.balance)+'</span>'+status+'</div></div>'+
+      '<div class="acts"><button class="go" data-paid="'+esc(i.id)+'">Mark as paid</button>'+(i.email?'<button class="ghost" data-remind="'+esc(i.id)+'">Remind</button>':'')+'</div></div>'}).join('');
 }
 document.addEventListener('click',async function(e){
   var b=e.target.closest('[data-remind]');if(!b)return;
+  var i=owedData[b.dataset.remind];
+  if(!(await ask('Send '+(i?i.customer:'them')+' a reminder?','Emails invoice'+(i&&i.number?' '+i.number:'')+' to '+(i?i.email:'them')+' again, from QuickBooks.','Send reminder')))return;
   b.disabled=true;b.textContent='Sending…';
-  try{var r=await api('remind/'+b.dataset.remind,{method:'POST'});b.textContent='Sent ✓';say('Reminder emailed to '+r.sentTo)}
+  try{var r=await api('remind/'+b.dataset.remind,{method:'POST'});b.textContent='Sent ✓';toast('Reminder emailed to '+r.sentTo,null)}
   catch(err){b.disabled=false;b.textContent='Remind';say(err.message,true)}
 });
 
-document.addEventListener('click',async function(e){
-  var b=e.target.closest('[data-paid]');
-  if(b){var box=b.parentNode,cis=Number(b.dataset.cis)||0,how='<button class="ghost small" data-how="cash" data-inv="'+b.dataset.paid+'">Cash</button><button class="ghost small" data-how="bank" data-inv="'+b.dataset.paid+'">Bank</button><button class="ghost small" data-how="card" data-inv="'+b.dataset.paid+'">Card</button>';
-    if(cis>0){var li0=b.closest('li');box.remove();li0.insertAdjacentHTML('afterend','<li class="cisrow"><div style="flex:1;min-width:0"><label class="f" style="margin:0">CIS they took off £<input data-cisamt="'+b.dataset.paid+'" inputmode="decimal" value="'+cis.toFixed(2)+'"></label></div><span class="btns" style="align-self:end">'+how+'</span></li>')}
-    else box.innerHTML=how;return}
-  var h=e.target.closest('[data-how]');if(!h)return;
-  var li=h.closest('li');li.querySelectorAll('button').forEach(function(x){x.disabled=true});
-  var ci=document.querySelector('[data-cisamt="'+h.dataset.inv+'"]'),cisAmt=ci?parseFloat(ci.value)||0:0;
-  try{var r=await api('paid/'+h.dataset.inv,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:h.dataset.how,cis:cisAmt})});
-    if(li.classList.contains('cisrow')&&li.previousElementSibling)li.previousElementSibling.remove();
-    li.remove();say('Marked as paid: '+money(r.amount||0)+' ('+(r.how||'').toLowerCase()+')'+(r.cis?', '+money(r.cis)+' CIS noted':'')+' ✓');if(!$('owedList').children.length)$('owedEmpty').hidden=false;
-  }catch(err){li.querySelectorAll('button').forEach(function(x){x.disabled=false});say(err.message,true)}
+// Mark as paid: a sheet asks how they paid (and, for a CIS job, how much CIS came off).
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-paid]');if(!b)return;
+  var i=owedData[b.dataset.paid];if(!i)return;
+  var cis=i.cis>0;
+  var sh=sheet('<h3>Mark as paid</h3><p class="sub">'+esc(i.customer)+(i.number?' · invoice '+esc(i.number):'')+' · '+money(i.balance)+'</p>'+
+    (cis?'<label class="f">CIS they took off £<input id="pCis" inputmode="decimal" value="'+i.cis.toFixed(2)+'"></label><div class="split"><div><span>Into your bank</span><b id="pNet"></b></div><div><span>CIS (you claim back)</span><b id="pCisShow"></b></div></div>':'')+
+    '<h2 style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px">How did they pay?</h2>'+
+    '<button class="opt" data-how="bank">'+ICON.bank+'<span>Bank transfer</span></button><button class="opt" data-how="card">'+ICON.card+'<span>Card</span></button><button class="opt" data-how="cash">'+ICON.cash+'<span>Cash<small>Shows as cash to bank until you pay it in</small></span></button>'+
+    '<p class="err" id="pErr" style="margin:4px 0 0"></p><button class="cancel" data-close>Cancel</button>');
+  function sums(){if(!cis)return;var c=Math.min(Math.max(parseFloat($('pCis').value)||0,0),i.balance);$('pNet').textContent=money(i.balance-c);$('pCisShow').textContent=money(c)}
+  if(cis){sums();$('pCis').addEventListener('input',sums)}
+  sh.el.addEventListener('click',async function(ev){
+    var h=ev.target.closest('[data-how]');if(!h)return;
+    var c=cis?Math.max(parseFloat($('pCis').value)||0,0):0;
+    sh.el.querySelectorAll('button').forEach(function(x){x.disabled=true});h.querySelector('span').textContent='Saving…';
+    try{var r=await api('paid/'+i.id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:h.dataset.how,cis:c})});
+      sh.close();delete owedData[i.id];drawOwed(Object.keys(owedData).map(function(k){return owedData[k]}).sort(function(a,b){return b.daysOverdue-a.daysOverdue}));
+      toast('✓ '+i.customer+' paid '+money(r.amount||0)+(r.cis?' + '+money(r.cis)+' CIS':''),null);
+    }catch(err){sh.el.querySelectorAll('button').forEach(function(x){x.disabled=false});$('pErr').textContent=err.message;loadOwed()}
+  });
 });
 
 // ---- invoice ----
@@ -295,7 +400,8 @@ async function loadTodo(){
   if(QUOTES)calls.push(api('quotes').then(function(l){var c=l.filter(function(q){return q.status==='waiting'&&q.days>=7});if(c.length)items.push({tab:'jobs',t:c.length+' quote'+(c.length>1?'s':'')+' to chase',s:'No answer for a week. One tap'})}).catch(function(){}));
   await Promise.all(calls);
   $('todo').hidden=!items.length;
-  $('todoList').innerHTML=items.map(function(i){return '<li data-tab="'+i.tab+'"><div><b>'+esc(i.t)+'</b><small>'+esc(i.s)+'</small></div><span class="arr">›</span></li>'}).join('');
+  var TI={tidy:KIND.tidy,owed:KIND.remind,jobs:KIND.quote};
+  $('todoList').innerHTML=items.map(function(i){return '<li data-tab="'+i.tab+'"><span class="av soft" aria-hidden="true">'+(TI[i.tab]||'')+'</span><div class="grow"><b>'+esc(i.t)+'</b><small>'+esc(i.s)+'</small></div><span class="chev">›</span></li>'}).join('');
 }
 
 // ---- accountant pack ----
@@ -342,11 +448,11 @@ document.addEventListener('change',async function(e){
   s.disabled=false;
 });
 async function loadJobs(){
-  $('jobList').innerHTML='<li><small>Loading…</small></li>';
+  $('jobList').innerHTML=skel(3);
   loadQuotes();
   try{var d=await api('jobs');
     $('jobList').innerHTML=d.jobs.map(function(j){
-      return '<li><div style="min-width:0"><b>'+esc(j.name)+'</b><small>In '+money(j.in)+' · Costs '+money(j.out)+'</small></div><div class="right"><b class="'+(j.profit<0?'neg':'pos')+'">'+money(j.profit)+'</b><small>'+(j.in>0?Math.round(j.profit/j.in*100)+'% kept':'')+'</small></div></li>'}).join('')||'<li><small>No jobs yet. Invoice someone and they show up here.</small></li>';
+      return '<li>'+avatar(j.name)+'<div class="grow"><b>'+esc(j.name)+'</b><small>In '+money(j.in)+' · Costs '+money(j.out)+'</small></div><div class="ends"><span class="amt '+(j.profit<0?'neg':'pos')+'">'+money(j.profit)+'</span>'+(j.in>0?'<span class="pill '+(j.profit<0?'bad':'ok')+'">'+Math.round(j.profit/j.in*100)+'% kept</span>':'')+'</div></li>'}).join('')||'<li><small>No jobs yet. Invoice someone and they show up here.</small></li>';
     if(d.unassigned>0)$('jobList').insertAdjacentHTML('beforeend','<li><div><small>Costs not on a job</small></div><div class="right"><small>'+money(d.unassigned)+'</small></div></li>');
   }catch(err){$('jobList').innerHTML='';say("Couldn't load jobs: "+err.message,true)}
 }
@@ -354,9 +460,9 @@ async function loadQuotes(){
   try{var l=await api('quotes');
     var w=l.filter(function(q){return q.status==='waiting'}),bk=l.filter(function(q){return q.status==='booked'});
     $('quoteEmpty').hidden=w.length>0;$('bookedCard').hidden=!bk.length;
-    var info=function(q){return '<div style="min-width:0"><b>'+esc(q.customer)+'</b><small>'+money(q.total)+(q.description?' · '+esc(q.description):'')+'</small></div>'};
-    $('quoteList').innerHTML=w.map(function(q){return '<li>'+info(q)+'<span class="btns"><button class="go small" data-won="'+esc(q.id)+'">Won</button>'+(q.days>=3?'<button class="ghost small" data-chase="'+esc(q.id)+'">Chase</button>':'')+'</span></li>'}).join('');
-    $('bookedList').innerHTML=bk.map(function(q){return '<li data-q="'+esc(q.id)+'">'+info(q)+'<span class="btns"><button class="go small" data-bill="'+esc(q.id)+'" data-net="'+q.net+'" data-lines="'+q.lines+'">Invoice it</button></span></li>'}).join('');
+    var info=function(q){return avatar(q.customer)+'<div class="grow"><b>'+esc(q.customer)+'</b><small>'+money(q.total)+(q.description?' · '+esc(q.description):'')+'</small>'+(q.status==='waiting'?'<span class="pill'+(q.days>=7?' bad':'')+'" style="margin-top:4px">'+(q.days?q.days+(q.days===1?' day':' days')+' waiting':'Sent today')+'</span>':'')+'</div>'};
+    $('quoteList').innerHTML=w.map(function(q){return '<li class="q">'+info(q)+'<span class="btns"><button class="go small" data-won="'+esc(q.id)+'">Won</button>'+(q.days>=3?'<button class="ghost small" data-chase="'+esc(q.id)+'">Chase</button>':'')+'</span></li>'}).join('');
+    $('bookedList').innerHTML=bk.map(function(q){return '<li class="q" data-q="'+esc(q.id)+'">'+info(q)+'<span class="btns"><button class="go small" data-bill="'+esc(q.id)+'" data-net="'+q.net+'" data-lines="'+q.lines+'">Invoice it</button></span></li>'}).join('');
   }catch(err){say("Couldn't load quotes: "+err.message,true)}
 }
 document.addEventListener('click',async function(e){
@@ -384,7 +490,7 @@ $('kind').addEventListener('click',function(e){var b=e.target.closest('[data-kin
   $('title').textContent=kind==='quote'?'New quote':'New invoice';$('iSend').textContent=kind==='quote'?'Send quote':'Create invoice'});
 
 async function loadTidy(){
-  $('tidyList').innerHTML='<li><small>Loading…</small></li>';
+  $('tidyList').innerHTML=skel(3);
   try{var list=await api('untidy');$('tidyEmpty').hidden=list.length>0;
     $('tidyList').innerHTML=list.map(function(i){
       var opts=CATS.map(function(c){return '<option'+(c===(i.suggested||'Other')?' selected':'')+'>'+c+'</option>'}).join('');
@@ -422,7 +528,7 @@ $('say').addEventListener('keydown',function(e){if(e.key==='Enter')sayIt()});
 async function loadRecent(){
   try{var list=await api('recent');
     if(!custs&&QUOTES)await loadJobsPick();
-    $('recent').innerHTML=list.map(function(p){return '<li><div style="min-width:0">'+esc(p.supplier||'Expense')+'<small>'+esc(ukDate(p.date))+'</small>'+(QUOTES?'<select class="chip" data-setjob="'+esc(p.id)+'" aria-label="Job">'+jobOptions(p.jobId)+'</select>':'')+'</div><div class="right">'+money(p.total)+'</div></li>'}).join('')||'<li><small>Nothing yet.</small></li>';
+    $('recent').innerHTML=list.map(function(p){return '<li>'+avatar(p.supplier||'Expense')+'<div class="grow"><b>'+esc(p.supplier||'Expense')+'</b><small>'+esc(ukDate(p.date))+'</small>'+(QUOTES?'<select class="chip" data-setjob="'+esc(p.id)+'" aria-label="Job">'+jobOptions(p.jobId)+'</select>':'')+'</div><div class="ends"><span class="amt">'+money(p.total)+'</span></div></li>'}).join('')||'<li><small>Nothing yet. Snap your first receipt above.</small></li>';
   }catch(err){$('recent').innerHTML='<li><small>Couldn\'t load: '+esc(err.message)+'</small></li>'}
 }
 var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
@@ -532,17 +638,21 @@ $('cancel').addEventListener('click',function(){$('check').hidden=true;say('');n
 async function loadCis(){try{var c=await api('cis');$('cisCard').hidden=!(c.total>0);$('cisTotal').textContent=money(c.total)}catch(e){$('cisCard').hidden=true}}
 
 // ---- what Books changed ----
+var SVG=function(d){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>'};
+var KIND={file:SVG('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>'),tidy:SVG('<path d="M4 7h16M4 12h10M4 17h6"/>'),job:SVG('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'),
+  paid:SVG('<path d="m5 12 5 5 9-10"/>'),status:SVG('<path d="M5 12h14M13 6l6 6-6 6"/>'),invoice:SVG('<path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4"/>'),quote:SVG('<path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4"/>'),
+  remind:SVG('<path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/>'),chase:SVG('<path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/>')};
 async function loadChanges(){
-  $('changeList').innerHTML='<li><small>Loading…</small></li>';
+  $('changeList').innerHTML=skel(4);
   try{var l=await api('changes');
     $('changeList').innerHTML=l.map(function(c){
       var when=new Date(c.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      return '<li><div style="min-width:0"><span'+(c.undone?' class="undone"':'')+'>'+esc(c.text)+'</span><small>'+esc(when)+(c.undone?' · undone':'')+'</small></div>'+(c.canUndo?'<button class="ghost small" data-revert="'+esc(c.id)+'">Undo</button>':'')+'</li>'}).join('')||'<li><small>Nothing yet.</small></li>';
+      return '<li><span class="av soft" aria-hidden="true">'+(KIND[c.kind]||KIND.file)+'</span><div class="grow"><span class="t'+(c.undone?' undone':'')+'" style="white-space:normal">'+esc(c.text)+'</span><small>'+esc(when)+(c.undone?' · undone':'')+'</small></div>'+(c.canUndo?'<button class="ghost small" data-revert="'+esc(c.id)+'">Undo</button>':'')+'</li>'}).join('')||'<li><small>Nothing yet.</small></li>';
   }catch(err){$('changeList').innerHTML='';say("Couldn't load: "+err.message,true)}
 }
 document.addEventListener('click',async function(e){
   var b=e.target.closest('[data-revert]');if(!b)return;
-  if(!confirm('Undo this in QuickBooks?'))return;
+  if(!(await ask('Undo this?','Books puts it back the way it was in QuickBooks.','Undo it')))return;
   b.disabled=true;b.textContent='…';
   try{await api('revert/'+b.dataset.revert,{method:'POST'});say('Undone in QuickBooks ✓');loadChanges()}
   catch(err){b.disabled=false;b.textContent='Undo';say(err.message,true)}
@@ -554,7 +664,7 @@ $('mDate').value=todayIso();
 async function loadMiles(){
   try{var d=await api('miles');
     $('mSum').textContent=d.trips.length?(d.miles.toLocaleString('en-GB')+' miles this tax year, worth '+money(d.worth)+' at HMRC rates'):'No trips logged this tax year yet.';
-    $('mList').innerHTML=d.trips.slice(-5).reverse().map(function(t){return '<li><div style="min-width:0">'+esc(t.miles)+' miles'+(t.why?' · '+esc(t.why):'')+'<small>'+esc(ukDate(t.date))+' · '+money(t.worth)+'</small></div><button class="ghost small" data-mileoff="'+esc(t.id)+'" aria-label="Delete trip">✕</button></li>'}).join('');
+    $('mList').innerHTML=d.trips.slice(-5).reverse().map(function(t){return '<li><span class="av soft" aria-hidden="true">'+SVG('<path d="M5 17h14v-5l-2-5H7l-2 5z"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/>')+'</span><div class="grow"><b>'+esc(t.miles)+' miles'+(t.why?' · '+esc(t.why):'')+'</b><small>'+esc(ukDate(t.date))+' · '+money(t.worth)+'</small></div><button class="ghost small" data-mileoff="'+esc(t.id)+'" aria-label="Delete trip">✕</button></li>'}).join('');
   }catch(err){$('mSum').textContent="Couldn't load mileage: "+err.message}
 }
 $('mAdd').addEventListener('click',async function(){
@@ -567,7 +677,7 @@ $('mAdd').addEventListener('click',async function(){
 });
 document.addEventListener('click',async function(e){
   var b=e.target.closest('[data-mileoff]');if(!b)return;
-  if(!confirm('Delete this trip?'))return;
+  if(!(await ask('Delete this trip?','It comes off your mileage log.','Delete',true)))return;
   try{await api('mileoff/'+b.dataset.mileoff,{method:'POST'});loadMiles()}catch(err){say(err.message,true)}
 });
 
