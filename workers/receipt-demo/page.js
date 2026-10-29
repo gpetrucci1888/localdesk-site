@@ -20,7 +20,8 @@ h1{font-size:26px;line-height:1.15;margin:2px 0 0;font-weight:800}
 .sub{color:var(--muted);margin:0;font-size:14px}
 .top .sub{color:#ffffffa8}
 main{max-width:520px;margin:0 auto;padding:16px 16px 104px;display:grid;gap:14px}
-section{display:grid;gap:14px}
+section{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+main{grid-template-columns:minmax(0,1fr)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
 .card h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:700}
 .big{font-size:32px;font-weight:800;margin:0;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
@@ -57,9 +58,9 @@ li:first-child{border-top:0}
 li small{display:block;color:var(--muted)}
 .late{color:var(--stop);font-weight:700}
 .link{background:none;border:0;color:var(--blue);font-weight:800;padding:0;font-size:15px;margin-top:10px}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:4}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:4}
 nav button{background:none;color:var(--muted);font-size:12px;font-weight:700;padding:6px 4px;border-radius:12px;display:grid;gap:3px;justify-items:center}
-nav svg{width:24px;height:24px;padding:2px 12px;box-sizing:content-box;border-radius:20px}
+nav svg{width:24px;height:24px;padding:2px 10px;box-sizing:content-box;border-radius:20px}
 nav button[aria-current="page"]{color:var(--ink)}
 nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
 .by{text-align:center;font-size:12px;color:var(--muted);margin:6px 0 0}
@@ -67,6 +68,19 @@ nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
 .toast button{background:var(--acc);color:var(--accInk);padding:8px 14px;font-size:15px}
 .why{color:var(--stop);font-weight:700;margin:0 0 10px;font-size:14px}
 [hidden]{display:none!important}
+.potrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;padding:12px;border-radius:12px;background:var(--bg);border-left:5px solid var(--acc)}
+.potrow span{display:block;font-size:13px;color:var(--muted)}.potrow b{font-size:20px}.potrow small{color:var(--muted);font-size:12px;text-align:right;max-width:46%}
+.seg{display:flex;background:var(--bg);border-radius:12px;padding:4px;gap:4px;margin-bottom:12px}
+.seg button{flex:1;background:none;color:var(--muted);padding:9px;font-size:15px}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1px solid var(--line);border-radius:20px;background:var(--bg);color:var(--ink);max-width:150px;margin-top:4px}
+.todo li{cursor:pointer}.todo li b{font-size:15px}.todo .arr{color:var(--muted);font-size:20px}
+.pos{color:var(--go)}.neg{color:var(--stop)}
+.right{text-align:right;flex:none}
+.jobsel{display:flex;align-items:center;gap:10px}
+.jobsel select{flex:1;width:100%;font:inherit;font-size:16px;padding:11px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
+.jobsel span{font-weight:800;font-size:14px;white-space:nowrap}
+.sendrow{display:flex;gap:8px;margin-top:12px}.sendrow select{font:inherit;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
 </style></head><body>
 <header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div></div></header>
 <main>
@@ -75,13 +89,16 @@ nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
 <section id="tab-home">
   <div class="snaps"><label class="snap" for="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Snap a receipt</label><label class="snap alt" for="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Photos or PDFs</label></div>
   <div class="card"><h2>Profit so far</h2><p class="big" id="profit">…</p>
-    <div class="grid2" style="margin-top:12px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div></div>
-  <div class="card pot"><h2>Put aside for tax</h2><p class="big" id="pot">…</p><p class="note">Rough guide only, about a quarter of profit. Your accountant gives the real figure.</p></div>
-  <div class="card pot" id="tidyCard" hidden style="border-left-color:var(--stop)"><h2>Needs sorting</h2><p style="margin:0"><b id="tidyCount"></b> expense(s) in "Uncategorised".</p><button class="link" data-tab="tidy">Tidy up (one tap each) →</button></div>
+    <div class="grid2" style="margin-top:12px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div>
+    <div class="potrow"><div><span>Put aside for tax</span><b id="pot">…</b></div><small>Rough guide, about a quarter of profit</small></div></div>
+  <div class="card todo" id="todo" hidden><h2>To do</h2><ul id="todoList"></ul></div>
   <div class="card"><h2>Owed to you</h2><p class="big" id="owedTotal">…</p><p class="note" id="owedCount"></p><button class="link" data-tab="owed">See who owes you →</button></div>
-  <div class="card"><h2>Tax quarter (for your accountant)</h2><p class="sub" id="qDates"></p>
-    <div class="grid2" ><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
-    <p class="note" id="qDue"></p><button class="link" id="qCsv">Download for your accountant (CSV)</button></div>
+  <div class="card"><h2>For your accountant</h2><p class="sub" id="qDates"></p>
+    <div class="grid2" style="margin-top:10px"><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
+    <p class="note" id="qDue"></p>
+    <div class="sendrow"><select id="pPeriod" aria-label="Which period"><option value="quarter">This quarter</option><option value="lastquarter">Last quarter</option><option value="taxyear">This tax year</option><option value="lasttaxyear">Last tax year</option></select><button class="go" id="pSend">Send to accountant</button></div>
+    <div id="acctWrap" hidden style="margin-top:12px"><label class="f">Your accountant's email<input id="acctEmail" type="email" inputmode="email" autocomplete="off"></label><button class="go" id="acctGo" style="width:100%">Save and send</button></div>
+    <button class="link" id="pView">See what they get →</button></div>
 </section>
 
 <section id="tab-tidy" hidden>
@@ -90,6 +107,7 @@ nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
 </section>
 
 <section id="tab-receipts" hidden>
+  <div class="card jobsel"><span>Which job?</span><select id="jobPick" aria-label="Which job"><option value="">No job (general)</option></select></div>
   <div class="snaps"><label class="snap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label><label class="snap alt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Photos or PDFs<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label></div>
   <div class="card"><h2>No receipt? Just say it</h2>
     <div class="btns"><input id="say" placeholder="40 quid diesel at Shell" style="flex:1;font:inherit;font-size:16px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0">
@@ -111,9 +129,15 @@ nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
   <p class="note">"Paid" records the money in QuickBooks. "Remind" emails the invoice to them again.</p>
 </section>
 
+<section id="tab-jobs" hidden>
+  <div class="card" id="quotesCard" hidden><h2>Quotes waiting</h2><ul id="quoteList"></ul><p class="msg" id="quoteEmpty" hidden>No quotes waiting for an answer.</p></div>
+  <div class="card"><h2>Profit per job</h2><p class="sub">Last 12 months</p><ul id="jobList" style="margin-top:6px"></ul></div>
+  <p class="note">Costs only count when a receipt is put against the job. Pick the job on Receipts before you snap, or change it on any receipt.</p>
+</section>
+
 <section id="tab-invoice" hidden>
-  <div class="card"><h2>New invoice</h2>
-    <label class="f">Customer name<input id="iCust" autocomplete="off"></label>
+  <div class="card"><div class="seg" id="kind" hidden><button data-kind="invoice" aria-pressed="true">Invoice</button><button data-kind="quote" aria-pressed="false">Quote</button></div>
+    <label class="f">Customer name<input id="iCust" autocomplete="off" list="custList"></label><datalist id="custList"></datalist>
     <label class="f">Their email (to send it)<input id="iEmail" type="email" inputmode="email" autocomplete="off" placeholder="optional"></label>
     <label class="f">What for<input id="iDesc" placeholder="Boiler service"></label>
     <label class="tick"><input type="checkbox" id="iCis">CIS job (for a main contractor)</label>
@@ -128,10 +152,11 @@ nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
 <div class="toast" id="toast" hidden><span id="toastText"></span><button id="undo">Undo</button></div>
 
 <nav aria-label="Sections">
-  <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>Overview</button>
+  <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>Home</button>
   <button data-tab="receipts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Receipts</button>
+  <button data-tab="jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Jobs</button>
   <button data-tab="owed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.5 8.5a2.5 2.5 0 0 0-5 .5c0 3-1 4.5-2 6h8M8 12.5h5"/></svg>Owed</button>
-  <button data-tab="invoice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>Invoice</button>
+  <button data-tab="invoice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>New</button>
 </nav>
 
 <script>
@@ -146,12 +171,14 @@ async function api(path,opts){var r=await fetch(BASE+'/api/'+path,opts);var d=aw
 CATS.forEach(function(c){var o=document.createElement('option');o.textContent=c;$('category').appendChild(o)});
 
 // ---- tabs ----
-var TITLES={home:'This month',receipts:'Receipts',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up'};
+var TITLES={home:'This month',receipts:'Receipts',jobs:'Jobs',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up'};
+var EXTRAS='{{EXTRAS}}'.split(',').map(function(x){return x.trim()});
+var QUOTES=EXTRAS.indexOf('quotes')>=0;
 function show(tab){
   Object.keys(TITLES).forEach(function(t){$('tab-'+t).hidden=t!==tab});
   document.querySelectorAll('nav button').forEach(function(b){b.setAttribute('aria-current',b.dataset.tab===(tab==='tidy'?'home':tab)?'page':'false')});
-  $('title').textContent=TITLES[tab];say('');
-  if(tab==='home'){loadSummary();loadQuarter();loadTidyCount()} if(tab==='owed')loadOwed(); if(tab==='receipts')loadRecent(); if(tab==='tidy')loadTidy();
+  $('title').textContent=tab==='invoice'?(kind==='quote'?'New quote':'New invoice'):TITLES[tab];say('');
+  if(tab==='home'){loadSummary();loadQuarter();loadTodo()} if(tab==='owed')loadOwed(); if(tab==='receipts'){loadJobsPick();loadRecent()} if(tab==='tidy')loadTidy(); if(tab==='jobs')loadJobs(); if(tab==='invoice')loadJobsPick();
   try{localStorage.setItem('books-tab',tab)}catch(e){}
 }
 document.addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b)show(b.dataset.tab)});
@@ -197,9 +224,9 @@ document.addEventListener('click',async function(e){
 // ---- invoice ----
 $('iSend').addEventListener('click',async function(){
   var body={customer:$('iCust').value,email:$('iEmail').value,description:$('iDesc').value,amount:parseFloat($('iAmt').value)||0,vat:$('iVat').checked,cis:$('iCis').checked,labour:parseFloat($('iLab').value)||0,materials:parseFloat($('iMat').value)||0};
-  $('iSend').disabled=true;say('Creating invoice…');
-  try{var r=await api('invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    say('Invoice '+(r.number?r.number+' ':'')+'for '+money(r.total)+' created'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓'+(r.cisDeduction?' They deduct '+money(r.cisDeduction)+' CIS, so expect '+money(r.toReceive)+'.':''));
+  $('iSend').disabled=true;say(kind==='quote'?'Making the quote…':'Creating invoice…');
+  try{var r=await api(kind,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(kind==='quote')say('Quote '+(r.number?r.number+' ':'')+'for '+money(r.total)+' made'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓ It waits on Jobs until you mark it won or lost.');else say('Invoice '+(r.number?r.number+' ':'')+'for '+money(r.total)+' created'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓'+(r.cisDeduction?' They deduct '+money(r.cisDeduction)+' CIS, so expect '+money(r.toReceive)+'.':''));
     ['iCust','iEmail','iDesc','iAmt','iLab','iMat'].forEach(function(id){$(id).value=''});$('iVat').checked=false;$('iCis').checked=false;cisToggle();
   }catch(err){say(err.message,true)}
   $('iSend').disabled=false;
@@ -216,16 +243,91 @@ async function loadQuarter(){
     $('qDue').textContent='Figures due to HMRC by '+ukDate(q.due)+' (your accountant sends them).';
   }catch(err){$('qDates').textContent="Couldn't load: "+err.message}
 }
-$('qCsv').addEventListener('click',function(){
-  if(!quarterData)return;
-  var rows=[['Section','Category','Amount']].concat(quarterData.lines.map(function(l){return [l.section,l.name,l.amount.toFixed(2)]}));
-  rows.push(['','Total income',quarterData.income.toFixed(2)],['','Total expenses',quarterData.expenses.toFixed(2)],['','Profit',quarterData.profit.toFixed(2)]);
-  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\n');
-  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='quarter-'+quarterData.from+'.csv';a.click();
-});
-async function loadTidyCount(){
-  try{var list=await api('untidy');$('tidyCard').hidden=!list.length;$('tidyCount').textContent=list.length}catch(e){}
+// ---- to do (home) ----
+async function loadTodo(){
+  var items=[];
+  var calls=[api('untidy').then(function(l){if(l.length)items.push({tab:'tidy',t:l.length+' expense'+(l.length>1?'s':'')+' to sort',s:'One tap each'})}).catch(function(){}),
+    api('owed').then(function(l){var late=l.filter(function(i){return i.daysOverdue>0});if(late.length)items.push({tab:'owed',t:late.length+' invoice'+(late.length>1?'s':'')+' late',s:'Oldest '+late[0].daysOverdue+' days. Tap to remind'})}).catch(function(){})];
+  if(QUOTES)calls.push(api('quotes').then(function(l){if(l.length)items.push({tab:'jobs',t:l.length+' quote'+(l.length>1?'s':'')+' waiting',s:'Won or lost? One tap'})}).catch(function(){}));
+  await Promise.all(calls);
+  $('todo').hidden=!items.length;
+  $('todoList').innerHTML=items.map(function(i){return '<li data-tab="'+i.tab+'"><div><b>'+esc(i.t)+'</b><small>'+esc(i.s)+'</small></div><span class="arr">›</span></li>'}).join('');
 }
+
+// ---- accountant pack ----
+var lastPack=null;
+async function makePack(){var r=await api('pack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({period:$('pPeriod').value})});lastPack=r;return r}
+function emailPack(r,to){
+  var nice=function(d){return ukDate(d)};
+  var body='Hi,\n\nHere are my books for '+nice(r.from)+' to '+nice(r.to)+':\n'+r.url+'\n\nIt has the figures, every expense with its receipt, and all invoices. There\'s a spreadsheet download at the top.\n\nThanks,\n'+document.querySelector('.biz').textContent;
+  location.href='mailto:'+encodeURIComponent(to||'')+'?subject='+encodeURIComponent('Books: '+nice(r.from)+' to '+nice(r.to))+'&body='+encodeURIComponent(body);
+}
+$('pSend').addEventListener('click',async function(){
+  $('pSend').disabled=true;say('Getting it ready…');
+  try{var r=await makePack();say('');if(r.accountant)emailPack(r,r.accountant);else{$('acctWrap').hidden=false;$('acctEmail').focus()}}
+  catch(err){say(err.message,true)}
+  $('pSend').disabled=false;
+});
+$('acctGo').addEventListener('click',async function(){
+  var em=$('acctEmail').value.trim();if(!/.+@.+\..+/.test(em)){say('Put in their email address',true);return}
+  try{await api('accountant',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountant:em})});$('acctWrap').hidden=true;say('');emailPack(lastPack||await makePack(),em)}
+  catch(err){say(err.message,true)}
+});
+$('pView').addEventListener('click',async function(){
+  var w=window.open('','_blank');
+  try{var r=await makePack();if(w)w.location=r.url;else location.href=r.url}catch(err){if(w)w.close();say(err.message,true)}
+});
+
+// ---- jobs ----
+var custs=null;
+async function loadJobsPick(){
+  if(!custs){try{custs=await api('customers')}catch(e){custs=[]}}
+  var keep=$('jobPick').value||sticky();
+  $('jobPick').innerHTML='<option value="">No job (general)</option>'+custs.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>'}).join('');
+  $('jobPick').value=keep;if($('jobPick').value!==keep)$('jobPick').value='';
+  $('custList').innerHTML=custs.map(function(c){return '<option value="'+esc(c.name)+'">'}).join('');
+}
+// The chosen job sticks for the day.
+function sticky(){try{var v=JSON.parse(localStorage.getItem('books-job')||'{}');return v.day===new Date().toDateString()?v.id:''}catch(e){return ''}}
+$('jobPick').addEventListener('change',function(){try{localStorage.setItem('books-job',JSON.stringify({day:new Date().toDateString(),id:$('jobPick').value}))}catch(e){}});
+function jobOptions(sel){return '<option value="">No job</option>'+(custs||[]).map(function(c){return '<option value="'+esc(c.id)+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')}
+document.addEventListener('change',async function(e){
+  var s=e.target.closest('[data-setjob]');if(!s)return;s.disabled=true;
+  try{var r=await api('job/'+s.dataset.setjob,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:s.value})});say(r.job?'Put against '+r.job+' ✓':'Taken off the job ✓')}
+  catch(err){say(err.message,true)}
+  s.disabled=false;
+});
+async function loadJobs(){
+  $('jobList').innerHTML='<li><small>Loading…</small></li>';
+  if(QUOTES){$('quotesCard').hidden=false;loadQuotes()}
+  try{var d=await api('jobs');
+    $('jobList').innerHTML=d.jobs.map(function(j){
+      return '<li><div style="min-width:0"><b>'+esc(j.name)+'</b><small>In '+money(j.in)+' · Costs '+money(j.out)+'</small></div><div class="right"><b class="'+(j.profit<0?'neg':'pos')+'">'+money(j.profit)+'</b><small>'+(j.in>0?Math.round(j.profit/j.in*100)+'% kept':'')+'</small></div></li>'}).join('')||'<li><small>No jobs yet. Invoice someone and they show up here.</small></li>';
+    if(d.unassigned>0)$('jobList').insertAdjacentHTML('beforeend','<li><div><small>Costs not on a job</small></div><div class="right"><small>'+money(d.unassigned)+'</small></div></li>');
+  }catch(err){$('jobList').innerHTML='';say("Couldn't load jobs: "+err.message,true)}
+}
+async function loadQuotes(){
+  try{var l=await api('quotes');$('quoteEmpty').hidden=l.length>0;
+    $('quoteList').innerHTML=l.map(function(q){return '<li><div style="min-width:0"><b>'+esc(q.customer)+'</b><small>'+money(q.total)+' · '+(q.days?q.days+' day'+(q.days>1?'s':'')+' ago':'today')+(q.description?' · '+esc(q.description):'')+'</small></div><span class="btns"><button class="go small" data-won="'+esc(q.id)+'">Won</button><button class="ghost small" data-lost="'+esc(q.id)+'">Lost</button></span></li>'}).join('');
+  }catch(err){say("Couldn't load quotes: "+err.message,true)}
+}
+document.addEventListener('click',async function(e){
+  var w=e.target.closest('[data-won]'),l=e.target.closest('[data-lost]');if(!w&&!l)return;
+  var li=(w||l).closest('li');li.querySelectorAll('button').forEach(function(x){x.disabled=true});
+  try{
+    if(w){var r=await api('won/'+w.dataset.won,{method:'POST'});say('Nice one. Invoice '+(r.number||'')+' for '+money(r.total)+' made'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓')}
+    else{await api('lost/'+l.dataset.lost,{method:'POST'});say('Marked as lost.')}
+    li.remove();if(!$('quoteList').children.length)$('quoteEmpty').hidden=false;
+  }catch(err){li.querySelectorAll('button').forEach(function(x){x.disabled=false});say(err.message,true)}
+});
+
+// ---- invoice or quote ----
+var kind='invoice';
+if(QUOTES)$('kind').hidden=false;
+$('kind').addEventListener('click',function(e){var b=e.target.closest('[data-kind]');if(!b)return;kind=b.dataset.kind;
+  document.querySelectorAll('[data-kind]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+  $('title').textContent=kind==='quote'?'New quote':'New invoice';$('iSend').textContent=kind==='quote'?'Send quote':'Create invoice'});
+
 async function loadTidy(){
   $('tidyList').innerHTML='<li><small>Loading…</small></li>';
   try{var list=await api('untidy');$('tidyEmpty').hidden=list.length>0;
@@ -264,7 +366,8 @@ $('say').addEventListener('keydown',function(e){if(e.key==='Enter')sayIt()});
 // ---- receipts ----
 async function loadRecent(){
   try{var list=await api('recent');
-    $('recent').innerHTML=list.map(function(p){return '<li><div>'+esc(p.supplier||'Expense')+'<small>'+esc(ukDate(p.date))+'</small></div><div>'+money(p.total)+'</div></li>'}).join('')||'<li><small>Nothing yet.</small></li>';
+    if(!custs)await loadJobsPick();
+    $('recent').innerHTML=list.map(function(p){return '<li><div style="min-width:0">'+esc(p.supplier||'Expense')+'<small>'+esc(ukDate(p.date))+'</small><select class="chip" data-setjob="'+esc(p.id)+'" aria-label="Job">'+jobOptions(p.jobId)+'</select></div><div class="right">'+money(p.total)+'</div></li>'}).join('')||'<li><small>Nothing yet.</small></li>';
   }catch(err){$('recent').innerHTML='<li><small>Couldn\'t load: '+esc(err.message)+'</small></li>'}
 }
 var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
@@ -314,6 +417,7 @@ function showCheck(r,img,why){
 var toastTimer=null,lastFiled=null;
 async function autoFile(r){
   say('Filing…');
+  r.jobId=$('jobPick').value;
   var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
   say('');loadRecent();
   if(out.duplicate){toast('Already in QuickBooks: '+(r.supplier||'expense')+' '+money(r.total),null);return}
@@ -330,7 +434,7 @@ $('undo').addEventListener('click',async function(){
   clearTimeout(toastTimer);toastTimer=setTimeout(function(){$('toast').hidden=true},3000);
 });
 $('save').addEventListener('click',async function(){
-  var r={image:$('prev').hidden?'':$('prev').src,supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()};
+  var r={image:$('prev').hidden?'':$('prev').src,supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim(),jobId:$('jobPick').value};
   $('save').disabled=true;say('Sending to QuickBooks…');
   try{var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
     $('check').hidden=true;loadRecent();say('');

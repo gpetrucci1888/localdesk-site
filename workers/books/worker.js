@@ -3,7 +3,7 @@
 // Holds each client's QuickBooks connection and keeps it alive, so checks and
 // receipt uploads can talk to QuickBooks without anyone logging in again.
 //
-//   POST /invite                (X-Key) {name, phone, env, brand} one-off connect link for a new client (14 days)
+//   POST /invite                (X-Key) {name, phone, env, brand, extras} one-off connect link for a new client (14 days)
 //   GET  /connect?invite=<id>   the client clicks this, then "Allow" at Intuit
 //   GET  /connect?k=ADMIN_KEY   quick connect for Gio (sandbox, for testing)
 //   GET  /callback              Intuit sends them back here; tokens saved, client's app link shown
@@ -27,8 +27,19 @@
 //   POST /tidy/<realmId>/<id>   (X-Key) {category} moves that expense to the right account
 //   GET  /quarter/<realmId>     (X-Key) the Making Tax Digital quarter so far, by category, for the accountant
 //   GET  /monthly/<realmId>     (X-Key) preview of the monthly text; POST sends it (?to= to send elsewhere)
-//   PUT  /client/<realmId>      (X-Key) {name, phone, brand} changes only the fields given
+//   PUT  /client/<realmId>      (X-Key) {name, phone, brand, accountant, extras} changes only the fields given
+//   POST /quote/<realmId>       (X-Key) {customer, email, description, amount, vat, cis, labour, materials} quote, emailed if email given
+//   GET  /quotes/<realmId>      (X-Key) quotes waiting for an answer
+//   POST /won/<realmId>/<id>    (X-Key) quote accepted: turns it into an invoice (emailed if it has an email)
+//   POST /lost/<realmId>/<id>   (X-Key) quote turned down
+//   GET  /customers/<realmId>   (X-Key) customers, most recent first (the "jobs" receipts can go against)
+//   GET  /jobs/<realmId>        (X-Key) money in, costs and profit per customer, last 12 months
+//   POST /job/<realmId>/<id>    (X-Key) {customerId} puts an expense against a job ("" takes it off)
+//   POST /pack/<realmId>        (X-Key) {period: quarter|lastquarter|taxyear|lasttaxyear} link to the accountant pack
+//   GET  /pack/<id>             (public, by link) the accountant pack: figures, every expense and invoice, receipts
+//   GET  /pack/<id>.csv         the same as a spreadsheet
 //
+// On the 8th after each quarter ends (cron) every client gets a text with their accountant pack link.
 // Once a month (cron) every client with a phone gets their monthly text, and OWNER_PHONE gets a
 // short check report. Texts need TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN; SMS_FROM is the sender name.
 //
@@ -85,7 +96,7 @@ export default {
         if (!st.invite) return page('Connected ✓ You can close this page.');
         const inv = await (await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`)).json().catch(() => ({}));
         const existing = await getClient(store, realmId);
-        const client = { name: inv.name || '', phone: inv.phone || '', brand: inv.brand || (existing && existing.brand) || '', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
+        const client = { name: inv.name || '', phone: inv.phone || '', brand: inv.brand || (existing && existing.brand) || '', extras: inv.extras || (existing && existing.extras) || '', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
         await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
         await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
         const app = `${env.APP_URL}/${client.appKey}/`;
@@ -97,6 +108,17 @@ export default {
         return page('Books is disconnected from your QuickBooks.<br><br>We no longer read or change anything in your books. Anything already filed stays in QuickBooks.<br><br><small>Questions: hello@localdeskai.co.uk</small>');
       }
 
+      const pk = url.pathname.match(/^\/pack\/([\w-]{12,})(\.csv|\/r\/(\d+))?$/);
+      if (pk && request.method === 'GET') {
+        const res = await store.fetch(`https://store/packs/${pk[1]}`);
+        if (!res.ok) return page('This link has expired. Ask for a fresh one from the Books app.');
+        const link = await res.json();
+        if (pk[3]) return receiptFile(env, store, link.realmId, pk[3]);
+        const data = await pack(env, store, link.realmId, link.from, link.to);
+        if (pk[2]) return new Response(packCsv(data), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="books-${link.from}-to-${link.to}.csv"` } });
+        return new Response(packPage(data, `${url.origin}/pack/${pk[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+      }
+
       if (request.headers.get('X-Key') !== env.ADMIN_KEY || !env.ADMIN_KEY) return text('Not allowed', 403);
 
       if (url.pathname === '/companies') return store.fetch('https://store/tokens');
@@ -105,7 +127,7 @@ export default {
         const r = await request.json();
         const which = r.env === 'sandbox' ? 'sandbox' : 'production';
         if (!creds(env, which).id) throw new Error(`No ${which} keys set up yet`);
-        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), brand: String(r.brand || ''), env: which, created: Date.now() };
+        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), brand: String(r.brand || ''), extras: String(r.extras || ''), env: which, created: Date.now() };
         await store.fetch(`https://store/invites/${inv.id}`, { method: 'PUT', body: JSON.stringify(inv) });
         return Response.json({ ok: true, link: `${url.origin}/connect?invite=${inv.id}`, expires: new Date(inv.created + INVITE_DAYS * 86400000).toISOString() });
       }
@@ -131,7 +153,7 @@ export default {
       const f = url.pathname.match(/^\/file\/(\d+)$/);
       if (f && request.method === 'POST') return Response.json(await fileReceipt(env, store, f[1], await request.json()));
 
-      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind|paid|undo|parse|untidy|tidy|quarter|monthly|client)\/(\d+)(?:\/(\d+))?$/);
+      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind|paid|undo|parse|untidy|tidy|quarter|monthly|client|quote|quotes|won|lost|customers|jobs|job|pack)\/(\d+)(?:\/(\d+))?$/);
       if (a) {
         const [, what, realmId, id] = a;
         if (what === 'summary') return Response.json(await summary(env, store, realmId, url.searchParams.get('month')));
@@ -145,9 +167,20 @@ export default {
         if (what === 'untidy') return Response.json(await untidy(env, store, realmId));
         if (what === 'tidy' && request.method === 'POST' && id) return Response.json(await tidy(env, store, realmId, id, (await request.json()).category));
         if (what === 'quarter') return Response.json(await quarter(env, store, realmId, url.searchParams.get('date')));
+        if (what === 'quote' && request.method === 'POST') return Response.json(await newQuote(env, store, realmId, await request.json()));
+        if (what === 'quotes') return Response.json(await quotes(env, store, realmId));
+        if (what === 'won' && request.method === 'POST' && id) return Response.json(await quoteWon(env, store, realmId, id));
+        if (what === 'lost' && request.method === 'POST' && id) return Response.json(await quoteLost(env, store, realmId, id));
+        if (what === 'customers') return Response.json(await customers(env, store, realmId));
+        if (what === 'jobs') return Response.json(await jobs(env, store, realmId));
+        if (what === 'job' && request.method === 'POST' && id) return Response.json(await setJob(env, store, realmId, id, (await request.json()).customerId));
+        if (what === 'pack' && request.method === 'POST') {
+          const p = packPeriod((await request.json()).period);
+          return Response.json({ ...p, url: await packLink(store, url.origin, realmId, p), accountant: ((await getClient(store, realmId)) || {}).accountant || '' });
+        }
         if (what === 'client' && request.method === 'PUT') {
           const v = await request.json(), old = (await getClient(store, realmId)) || {};
-          for (const f of ['name', 'phone', 'brand']) if (typeof v[f] === 'string') old[f] = v[f];
+          for (const f of ['name', 'phone', 'brand', 'accountant', 'extras']) if (typeof v[f] === 'string') old[f] = v[f];
           await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(old) });
           return Response.json(old);
         }
@@ -185,7 +218,8 @@ export default {
 
   // 1st of the month: monthly text to each client, check report to Gio.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(monthlyRun(env).catch(err => console.error('monthly run failed', err && err.stack || err)));
+    const run = event.cron === QUARTER_CRON ? quarterRun : monthlyRun;
+    ctx.waitUntil(run(env).catch(err => console.error('scheduled run failed', err && err.stack || err)));
   },
 };
 
@@ -243,6 +277,7 @@ async function fileReceipt(env, store, realmId, r) {
       AccountBasedExpenseLineDetail: { AccountRef: { value: expense.Id }, ...(code ? { TaxCodeRef: { value: code.Id } } : {}) },
     }],
   };
+  if (r.jobId && /^\d+$/.test(String(r.jobId))) purchase.Line[0].AccountBasedExpenseLineDetail.CustomerRef = { value: String(r.jobId) };
   const created = (await qb(env, store, realmId, 'POST', 'purchase', purchase)).Purchase;
 
   let attached = false;
@@ -348,7 +383,9 @@ async function undoPurchase(env, store, realmId, id) {
   return { ok: true };
 }
 
-async function newInvoice(env, store, realmId, r) {
+// The customer and lines for an invoice or quote. CIS job: labour and materials on separate lines;
+// the contractor deducts 20% of the labour only.
+async function saleParts(env, store, realmId, r) {
   const amount = r.cis ? round((Number(r.labour) || 0) + (Number(r.materials) || 0)) : round(r.amount);
   if (!(amount > 0)) throw new Error('Put in an amount');
   const name = (r.customer || '').trim().slice(0, 100);
@@ -362,7 +399,6 @@ async function newInvoice(env, store, realmId, r) {
   if (!item) throw new Error('No service item in QuickBooks to invoice for');
   const codes = (await query(env, store, realmId, 'select Id, Name from TaxCode')).TaxCode || [];
   const code = codes.find(c => c.Name === (r.vat ? '20.0% S' : 'No VAT'));
-  // CIS job: labour and materials on separate lines; the contractor deducts 20% of the labour only.
   const labour = round(r.labour), materials = round(r.materials);
   const cis = Boolean(r.cis) && labour > 0;
   const line = (amt, desc) => ({
@@ -371,7 +407,7 @@ async function newInvoice(env, store, realmId, r) {
   });
   const desc = (r.description || '').trim();
   const cisDeduction = cis ? round(labour * CIS_RATE) : 0;
-  const invoice = {
+  const doc = {
     CustomerRef: { value: cust.Id },
     ...(email ? { BillEmail: { Address: email } } : {}),
     GlobalTaxCalculation: code ? 'TaxExcluded' : 'NotApplicable',
@@ -383,15 +419,120 @@ async function newInvoice(env, store, realmId, r) {
       PrivateNote: `CIS job. Expected deduction £${cisDeduction.toFixed(2)}.`,
     } : {}),
   };
-  const created = (await qb(env, store, realmId, 'POST', 'invoice', invoice)).Invoice;
+  return { doc, email, cisDeduction };
+}
+
+async function newInvoice(env, store, realmId, r) {
+  const { doc, email, cisDeduction } = await saleParts(env, store, realmId, r);
+  const created = (await qb(env, store, realmId, 'POST', 'invoice', doc)).Invoice;
   let sentTo = '';
   if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo, cisDeduction, toReceive: round(Number(created.TotalAmt) - cisDeduction) };
 }
 
+// ---------- quotes ----------
+
+async function newQuote(env, store, realmId, r) {
+  const { doc, email } = await saleParts(env, store, realmId, r);
+  const created = (await qb(env, store, realmId, 'POST', 'estimate', { ...doc, TxnStatus: 'Pending' })).Estimate;
+  let sentTo = '';
+  if (email) { await qb(env, store, realmId, 'POST', `estimate/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
+}
+
+async function quotes(env, store, realmId) {
+  const list = (await query(env, store, realmId, 'select * from Estimate orderby TxnDate desc maxresults 200')).Estimate || [];
+  const today = Date.now();
+  return list.filter(e => (e.TxnStatus || 'Pending') === 'Pending').map(e => ({
+    id: e.Id, number: e.DocNumber || '', customer: (e.CustomerRef && e.CustomerRef.name) || 'Customer',
+    date: e.TxnDate, total: Number(e.TotalAmt), email: (e.BillEmail && e.BillEmail.Address) || '',
+    description: ((e.Line || []).find(l => l.Description) || {}).Description || '',
+    days: Math.max(0, Math.floor((today - Date.parse(e.TxnDate)) / 86400000)),
+  }));
+}
+
+// Accepted: a matching invoice, linked to the quote, and the quote closed.
+async function quoteWon(env, store, realmId, id) {
+  const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
+  if ((e.TxnStatus || 'Pending') !== 'Pending') throw new Error('That quote has already been dealt with');
+  const invoice = {
+    CustomerRef: e.CustomerRef,
+    ...(e.BillEmail ? { BillEmail: e.BillEmail } : {}),
+    GlobalTaxCalculation: e.GlobalTaxCalculation,
+    Line: (e.Line || []).filter(l => l.DetailType === 'SalesItemLineDetail').map(l => ({ Amount: l.Amount, DetailType: l.DetailType, Description: l.Description, SalesItemLineDetail: l.SalesItemLineDetail })),
+    LinkedTxn: [{ TxnId: e.Id, TxnType: 'Estimate' }],
+    ...(e.CustomerMemo ? { CustomerMemo: e.CustomerMemo } : {}),
+    ...(e.PrivateNote ? { PrivateNote: e.PrivateNote } : {}),
+  };
+  const created = (await qb(env, store, realmId, 'POST', 'invoice', invoice)).Invoice;
+  const fresh = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
+  if (fresh.TxnStatus !== 'Closed') await qb(env, store, realmId, 'POST', 'estimate', { Id: fresh.Id, SyncToken: fresh.SyncToken, sparse: true, TxnStatus: 'Closed' }).catch(() => {});
+  let sentTo = '';
+  const email = e.BillEmail && e.BillEmail.Address;
+  if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
+}
+
+async function quoteLost(env, store, realmId, id) {
+  const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
+  await qb(env, store, realmId, 'POST', 'estimate', { Id: e.Id, SyncToken: e.SyncToken, sparse: true, TxnStatus: 'Rejected' });
+  return { ok: true };
+}
+
+// ---------- jobs: profit per customer ----------
+
+async function customers(env, store, realmId) {
+  const list = (await query(env, store, realmId, 'select Id, DisplayName from Customer where Active = true orderby MetaData.LastUpdatedTime desc maxresults 100')).Customer || [];
+  return list.map(c => ({ id: c.Id, name: c.DisplayName }));
+}
+
+// Money in = invoices before VAT. Costs = expense lines put against that customer.
+async function jobs(env, store, realmId) {
+  const since = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+  const [invs, buys, bills] = await Promise.all([
+    query(env, store, realmId, `select * from Invoice where TxnDate >= '${since}' maxresults 1000`).then(d => d.Invoice || []),
+    query(env, store, realmId, `select * from Purchase where TxnDate >= '${since}' maxresults 1000`).then(d => d.Purchase || []),
+    query(env, store, realmId, `select * from Bill where TxnDate >= '${since}' maxresults 1000`).then(d => d.Bill || []),
+  ]);
+  const by = {};
+  const job = (ref, date) => {
+    const j = by[ref.value] || (by[ref.value] = { id: ref.value, name: ref.name || 'Customer', in: 0, out: 0, last: '' });
+    if (date > j.last) j.last = date;
+    return j;
+  };
+  let unassigned = 0;
+  for (const i of invs) if (i.CustomerRef) job(i.CustomerRef, i.TxnDate).in += Number(i.TotalAmt) - Number((i.TxnTaxDetail && i.TxnTaxDetail.TotalTax) || 0);
+  for (const p of [...buys, ...bills]) {
+    for (const l of p.Line || []) {
+      const d = l.AccountBasedExpenseLineDetail || l.ItemBasedExpenseLineDetail;
+      if (!d) continue;
+      if (d.CustomerRef) job(d.CustomerRef, p.TxnDate).out += Number(l.Amount) || 0;
+      else unassigned += Number(l.Amount) || 0;
+    }
+  }
+  const list = Object.values(by).map(j => ({ ...j, in: round(j.in), out: round(j.out), profit: round(j.in - j.out) }))
+    .sort((a, b) => (b.last > a.last ? 1 : -1));
+  return { since, jobs: list, unassigned: round(unassigned) };
+}
+
+async function setJob(env, store, realmId, id, customerId) {
+  const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
+  for (const l of p.Line || []) {
+    const d = l.AccountBasedExpenseLineDetail;
+    if (!d) continue;
+    if (customerId) d.CustomerRef = { value: String(customerId) }; else delete d.CustomerRef;
+  }
+  const saved = (await qb(env, store, realmId, 'POST', 'purchase', p)).Purchase;
+  const ref = (saved.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.CustomerRef).find(Boolean);
+  return { ok: true, job: ref ? ref.name || '' : '' };
+}
+
 async function recent(env, store, realmId) {
-  const list = (await query(env, store, realmId, 'select Id, TxnDate, TotalAmt, EntityRef from Purchase orderby MetaData.CreateTime desc maxresults 10')).Purchase || [];
-  return list.map(p => ({ id: p.Id, date: p.TxnDate, total: Number(p.TotalAmt), supplier: (p.EntityRef && p.EntityRef.name) || '' }));
+  const list = (await query(env, store, realmId, 'select * from Purchase orderby MetaData.CreateTime desc maxresults 10')).Purchase || [];
+  return list.map(p => {
+    const job = (p.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.CustomerRef).find(Boolean);
+    return { id: p.Id, date: p.TxnDate, total: Number(p.TotalAmt), supplier: (p.EntityRef && p.EntityRef.name) || '', jobId: job ? job.value : '', job: job ? job.name || '' : '' };
+  });
 }
 
 // ---------- quick add by voice or typing ----------
@@ -503,6 +644,142 @@ async function quarter(env, store, realmId, dateStr) {
   walk(report.Rows && report.Rows.Row, '');
   const income = round(totals.Income || 0), expenses = round((totals.COGS || 0) + (totals.Expenses || 0) + (totals.OtherExpenses || 0));
   return { ...q, income, expenses, profit: round(income - expenses), lines };
+}
+
+// ---------- accountant pack ----------
+
+const PACK_DAYS = 400;
+const QUARTER_CRON = '0 8 8 1,4,7,10 *';
+
+// UK tax year: 6 April to 5 April.
+function packPeriod(period) {
+  const iso = x => x.toISOString().slice(0, 10);
+  if (period === 'lastquarter') {
+    const q = mtdQuarter();
+    const before = new Date(Date.parse(q.from) - 86400000);
+    const p = mtdQuarter(iso(before));
+    return { from: p.from, to: p.to, label: 'Last quarter' };
+  }
+  if (period === 'taxyear' || period === 'lasttaxyear') {
+    const d = new Date();
+    let y = d.getUTCFullYear();
+    if (d < new Date(Date.UTC(y, 3, 6))) y--;
+    if (period === 'lasttaxyear') y--;
+    return { from: `${y}-04-06`, to: `${y + 1}-04-05`, label: `Tax year ${y}/${String(y + 1).slice(2)}` };
+  }
+  const q = mtdQuarter();
+  return { from: q.from, to: q.to, label: 'This quarter' };
+}
+
+async function packLink(store, origin, realmId, p) {
+  const id = randomKey() + randomKey();
+  await store.fetch(`https://store/packs/${id}`, { method: 'PUT', body: JSON.stringify({ realmId, from: p.from, to: p.to, created: Date.now() }) });
+  return `${origin}/pack/${id}`;
+}
+
+async function pack(env, store, realmId, from, to) {
+  const when = `TxnDate >= '${from}' and TxnDate <= '${to}'`;
+  const [pl, buys, invs, files, client] = await Promise.all([
+    qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${from}&end_date=${to}`),
+    query(env, store, realmId, `select * from Purchase where ${when} orderby TxnDate maxresults 1000`).then(d => d.Purchase || []),
+    query(env, store, realmId, `select * from Invoice where ${when} orderby TxnDate maxresults 1000`).then(d => d.Invoice || []),
+    query(env, store, realmId, 'select Id, AttachableRef from Attachable maxresults 1000').then(d => d.Attachable || []),
+    getClient(store, realmId),
+  ]);
+  const receiptOf = {};
+  for (const a of files) for (const ref of a.AttachableRef || []) if (ref.EntityRef && ref.EntityRef.type === 'Purchase') receiptOf[ref.EntityRef.value] = a.Id;
+  const q = mtdQuarter(from);
+  const lines = [], totals = {};
+  const walk = (rows, section) => {
+    for (const row of rows || []) {
+      const sec = row.group || section;
+      if (row.ColData) { const amt = Number(row.ColData[row.ColData.length - 1].value) || 0; if (amt) lines.push({ section: sec, name: row.ColData[0].value, amount: round(amt) }); }
+      if (row.Rows) walk(row.Rows.Row, sec);
+      if (row.group && row.Summary) totals[row.group] = Number(row.Summary.ColData[row.Summary.ColData.length - 1].value) || 0;
+    }
+  };
+  walk(pl.Rows && pl.Rows.Row, '');
+  const income = round(totals.Income || 0), expenses = round((totals.COGS || 0) + (totals.Expenses || 0) + (totals.OtherExpenses || 0));
+  const tax = t => round((t.TxnTaxDetail && t.TxnTaxDetail.TotalTax) || 0);
+  return {
+    business: (client && client.name) || await qb(env, store, realmId, 'GET', `companyinfo/${realmId}`).then(r => r.CompanyInfo.CompanyName).catch(() => 'Your business'),
+    from, to, income, expenses, profit: round(income - expenses), lines, due: q.from === from && q.to === to ? q.due : '',
+    spent: buys.map(p => ({
+      id: p.Id, date: p.TxnDate, supplier: (p.EntityRef && p.EntityRef.name) || '',
+      category: ((p.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.AccountRef && l.AccountBasedExpenseLineDetail.AccountRef.name).find(Boolean)) || '',
+      total: Number(p.TotalAmt), vat: tax(p), receipt: receiptOf[p.Id] || '',
+    })),
+    invoiced: invs.map(i => ({ date: i.TxnDate, number: i.DocNumber || '', customer: (i.CustomerRef && i.CustomerRef.name) || '', total: Number(i.TotalAmt), vat: tax(i), unpaid: Number(i.Balance) })),
+  };
+}
+
+// A receipt photo, fetched fresh from QuickBooks (its own download links only last 15 minutes).
+async function receiptFile(env, store, realmId, id) {
+  const a = (await qb(env, store, realmId, 'GET', `attachable/${id}`)).Attachable;
+  if (!a || !a.TempDownloadUri) return text('Not found', 404);
+  const res = await fetch(a.TempDownloadUri);
+  return new Response(res.body, { headers: { 'Content-Type': a.ContentType || res.headers.get('Content-Type') || 'application/octet-stream', 'Cache-Control': 'private, max-age=600' } });
+}
+
+function packCsv(d) {
+  const rows = [['Books pack', d.business, `${d.from} to ${d.to}`], [],
+    ['SUMMARY'], ['Income', d.income.toFixed(2)], ['Expenses', d.expenses.toFixed(2)], ['Profit', d.profit.toFixed(2)], [],
+    ['BY CATEGORY'], ['Section', 'Category', 'Amount'], ...d.lines.map(l => [l.section, l.name, l.amount.toFixed(2)]), [],
+    ['EXPENSES'], ['Date', 'Supplier', 'Category', 'VAT', 'Total', 'Receipt'], ...d.spent.map(s => [s.date, s.supplier, s.category, s.vat.toFixed(2), s.total.toFixed(2), s.receipt ? 'Yes' : 'No']), [],
+    ['INVOICES'], ['Date', 'Number', 'Customer', 'VAT', 'Total', 'Unpaid'], ...d.invoiced.map(i => [i.date, i.number, i.customer, i.vat.toFixed(2), i.total.toFixed(2), i.unpaid.toFixed(2)])];
+  return rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+}
+
+function packPage(d, self) {
+  const e = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const m = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dt = s => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const missing = d.spent.filter(s => !s.receipt).length;
+  const sections = {};
+  for (const l of d.lines) (sections[l.section] = sections[l.section] || []).push(l);
+  const label = { Income: 'Income', COGS: 'Cost of sales', Expenses: 'Expenses', OtherExpenses: 'Other expenses', OtherIncome: 'Other income' };
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>${e(d.business)} · Books pack</title><style>
+:root{--ink:#16181b;--muted:#646a73;--line:#e4e6ea;--bg:#f2f3f5;--card:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px;display:grid;gap:16px}
+h1{font-size:26px;margin:0}h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.sub{color:var(--muted);margin:4px 0 0}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;overflow-x:auto}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.tiles div{background:var(--bg);border-radius:12px;padding:10px 12px}.tiles span{display:block;font-size:13px;color:var(--muted)}.tiles b{font-size:20px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:7px 8px;border-top:1px solid var(--line);white-space:nowrap}th{font-size:12px;color:var(--muted);border-top:0}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.btns{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-block;background:var(--ink);color:#fff;text-decoration:none;font-weight:700;padding:10px 14px;border-radius:10px}.btn.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+a{color:#1f5fbf}.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+@media print{body{background:#fff}.btns{display:none}.card{border:0;padding:0}}
+@media (max-width:560px){.tiles{grid-template-columns:1fr}}
+</style></head><body><main>
+<div><h1>${e(d.business)}</h1><p class="sub">Books pack · ${dt(d.from)} to ${dt(d.to)}${d.due ? ` · Making Tax Digital update due ${dt(d.due)}` : ''}</p></div>
+<div class="btns"><a class="btn" href="${self}.csv">Download spreadsheet (CSV)</a><a class="btn alt" href="javascript:print()">Print or save as PDF</a></div>
+<div class="card"><h2>Summary</h2><div class="tiles"><div><span>Income</span><b>${m(d.income)}</b></div><div><span>Expenses</span><b>${m(d.expenses)}</b></div><div><span>Profit</span><b>${m(d.profit)}</b></div></div>
+<p class="note">From QuickBooks, before any adjustments. ${d.spent.length} expenses, ${d.spent.length - missing} with a receipt attached.</p></div>
+<div class="card"><h2>By category</h2><table>${Object.keys(sections).map(k => `<tr><th colspan="2">${e(label[k] || k)}</th></tr>` + sections[k].map(l => `<tr><td>${e(l.name)}</td><td class="n">${m(l.amount)}</td></tr>`).join('')).join('') || '<tr><td>Nothing in this period.</td></tr>'}</table></div>
+<div class="card"><h2>Expenses</h2><table><tr><th>Date</th><th>Supplier</th><th>Category</th><th class="n">VAT</th><th class="n">Total</th><th>Receipt</th></tr>
+${d.spent.map(s => `<tr><td>${dt(s.date)}</td><td>${e(s.supplier)}</td><td>${e(s.category)}</td><td class="n">${m(s.vat)}</td><td class="n">${m(s.total)}</td><td>${s.receipt ? `<a href="${self}/r/${s.receipt}" target="_blank" rel="noopener">View</a>` : '–'}</td></tr>`).join('') || '<tr><td colspan="6">None.</td></tr>'}</table></div>
+<div class="card"><h2>Invoices</h2><table><tr><th>Date</th><th>No.</th><th>Customer</th><th class="n">VAT</th><th class="n">Total</th><th class="n">Unpaid</th></tr>
+${d.invoiced.map(i => `<tr><td>${dt(i.date)}</td><td>${e(i.number)}</td><td>${e(i.customer)}</td><td class="n">${m(i.vat)}</td><td class="n">${m(i.total)}</td><td class="n">${i.unpaid ? m(i.unpaid) : '–'}</td></tr>`).join('') || '<tr><td colspan="6">None.</td></tr>'}</table></div>
+<p class="note">Made by Books (Localdesk). Everything here comes straight from QuickBooks.</p>
+</main></body></html>`;
+}
+
+// 8th of Jan, Apr, Jul, Oct: each client gets their pack link for the quarter that just ended.
+async function quarterRun(env) {
+  const store = env.STORE.get(env.STORE.idFromName('main'));
+  const companies = await (await store.fetch('https://store/tokens')).json();
+  const origin = env.BOOKS_URL || 'https://books.gpetrucci93.workers.dev';
+  const p = packPeriod('lastquarter'), report = [];
+  for (const c of companies) {
+    const client = await getClient(store, c.realmId);
+    try {
+      const link = await packLink(store, origin, c.realmId, p);
+      if (client && client.phone) await sendSms(env, client.phone, `Your books for the quarter to ${new Date(p.to).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })} are ready for your accountant: ${link} (open Books and tap "Send to accountant", or forward this link).`);
+      report.push(`${(client && client.name) || c.realmId}: ${client && client.phone ? 'pack sent' : 'no phone'}.`);
+    } catch (err) { report.push(`${(client && client.name) || c.realmId}: FAILED (${err.message}).`); }
+  }
+  if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books quarter packs: ${report.join(' ') || 'no clients.'}`);
 }
 
 // ---------- monthly text and check report ----------
@@ -638,12 +915,19 @@ export class Store {
       const v = await this.storage.get(key);
       return v && Date.now() - v.created < INVITE_DAYS * 86400000 ? Response.json(v) : text('No invite', 404);
     }
+    const pk = url.pathname.match(/^\/packs\/([\w-]+)$/);
+    if (pk) {
+      const key = `pack:${pk[1]}`;
+      if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v && Date.now() - v.created < PACK_DAYS * 86400000 ? Response.json(v) : text('No pack', 404);
+    }
     const ak = url.pathname.match(/^\/appkeys\/([\w-]+)$/);
     if (ak) {
       const realmId = await this.storage.get(`appkey:${ak[1]}`);
       if (!realmId) return text('Unknown', 404);
       const client = await this.storage.get(`client:${realmId}`);
-      return Response.json({ realmId, name: (client && client.name) || '', brand: (client && client.brand) || '' });
+      return Response.json({ realmId, name: (client && client.name) || '', brand: (client && client.brand) || '', extras: (client && client.extras) || '' });
     }
     const c = url.pathname.match(/^\/clients\/(\d+)$/);
     if (c) {

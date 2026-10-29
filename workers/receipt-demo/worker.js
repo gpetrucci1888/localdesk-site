@@ -6,7 +6,7 @@ import { BRANDS } from './brands.js';
 // GET  /<appKey>/            the app (installable: manifest + icons alongside)
 // POST /<appKey>/read        reads one receipt photo with Workers AI and returns the details as JSON
 // ANY  /<appKey>/api/...     passed to the books connector (service binding BOOKS) for this client's
-//                            QuickBooks company
+//                            QuickBooks company; extras like quotes only if switched on for them
 //
 // Each client's link has its own app key; the connector says which QuickBooks company it belongs
 // to. KEY (with REALM) is the demo link on the practice company. Everything is saved in
@@ -43,7 +43,7 @@ export default {
     const brand = BRANDS[client.brand] || BRANDS.localdesk;
     if (rest === '' && request.method === 'GET') {
       const html = PAGE.replaceAll('{{NAME}}', esc(client.name || 'Your business'))
-        .replaceAll('{{HD}}', brand.hd).replaceAll('{{ACC}}', brand.acc).replaceAll('{{ACCINK}}', brand.accInk)
+        .replaceAll('{{EXTRAS}}', esc(client.extras || '')).replaceAll('{{HD}}', brand.hd).replaceAll('{{ACC}}', brand.acc).replaceAll('{{ACCINK}}', brand.accInk)
         .replace('{{LOGO}}', brand.logo ? `<img class="logo" src="data:image/png;base64,${brand.logo}" alt="">` : '');
       return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
@@ -64,9 +64,15 @@ export default {
       }
     }
 
-    const api = rest.match(/^api\/(file|summary|owed|recent|invoice|parse|untidy|quarter|(?:remind|paid|undo|tidy)\/\d+)$/);
+    if (rest === 'api/accountant' && request.method === 'PUT') {
+      const { accountant } = await request.json();
+      const res = await env.BOOKS.fetch(`https://books/client/${realm}`, { method: 'PUT', headers: { 'X-Key': env.BOOKS_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ accountant: String(accountant || '').trim().slice(0, 200) }) });
+      return json(res.ok ? { ok: true } : { error: 'Could not save it' }, res.ok ? 200 : 500);
+    }
+    const api = rest.match(/^api\/(file|summary|owed|recent|invoice|parse|untidy|quarter|quote|quotes|customers|jobs|pack|(?:remind|paid|undo|tidy|won|lost|job)\/\d+)$/);
     if (api) {
       const [what, id] = api[1].split('/');
+      if (EXTRA_ONLY[what] && !has(client, EXTRA_ONLY[what])) return json({ error: 'Not part of your plan. Ask Gio to switch it on.' }, 403);
       const res = await env.BOOKS.fetch(`https://books/${what}/${realm}${id ? '/' + id : ''}`, {
         method: request.method, headers: { 'X-Key': env.BOOKS_KEY, 'Content-Type': 'application/json' },
         body: request.method === 'GET' ? undefined : request.body,
@@ -107,11 +113,15 @@ async function readReceipt(env, image) {
   throw new Error('Could not read the receipt. ' + tried.join(' | '));
 }
 
+// Extras a client pays for on top of the starter (client record "extras", comma separated).
+const EXTRA_ONLY = { quote: 'quotes', quotes: 'quotes', won: 'quotes', lost: 'quotes' };
+const has = (client, extra) => String(client.extras || '').split(',').map(s => s.trim()).includes(extra);
+
 // Which QuickBooks company (and business name) an app link belongs to; null if none.
 // Remembered while this instance lives.
 const known = new Map();
 async function clientFor(env, key) {
-  if (env.KEY && key === env.KEY) return env.REALM ? { realmId: env.REALM, name: env.DEMO_NAME || 'Carrick Ridge Roofing', brand: env.DEMO_BRAND || '' } : null;
+  if (env.KEY && key === env.KEY) return env.REALM ? { realmId: env.REALM, name: env.DEMO_NAME || 'Carrick Ridge Roofing', brand: env.DEMO_BRAND || '', extras: env.DEMO_EXTRAS || '' } : null;
   if (known.has(key)) return known.get(key);
   const res = await env.BOOKS.fetch(`https://books/app/${key}`, { headers: { 'X-Key': env.BOOKS_KEY } });
   const client = res.ok ? await res.json() : null;
