@@ -3,13 +3,14 @@ import { ICONS } from './icons.js';
 
 // "Books" phone app for a trade client.
 //
-// GET  /<KEY>/              the app (installable: manifest + icons alongside)
-// POST /<KEY>/read          reads one receipt photo with Workers AI and returns the details as JSON
-// ANY  /<KEY>/api/...       passed to the books connector (service binding BOOKS) for this client's
-//                           QuickBooks company (REALM): file, summary, owed, recent, invoice, remind/<id>
+// GET  /<appKey>/            the app (installable: manifest + icons alongside)
+// POST /<appKey>/read        reads one receipt photo with Workers AI and returns the details as JSON
+// ANY  /<appKey>/api/...     passed to the books connector (service binding BOOKS) for this client's
+//                            QuickBooks company
 //
-// The key in the path (the KEY setting on the Worker) keeps strangers out. Everything is saved
-// in QuickBooks; the app itself stores nothing.
+// Each client's link has its own app key; the connector says which QuickBooks company it belongs
+// to. KEY (with REALM) is the demo link on the practice company. Everything is saved in
+// QuickBooks; the app itself stores nothing.
 
 const MODELS = [
   '@cf/meta/llama-4-scout-17b-16e-instruct',
@@ -29,12 +30,14 @@ const PROMPT = `You read UK receipts for a plumber's bookkeeping. Look at the re
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const KEY = env.KEY;
-    if (!KEY) return new Response('Not set up', { status: 503 });
+    const seg = url.pathname.match(/^\/([\w-]{8,})(\/.*)?$/);
+    if (!seg) return new Response('Not found', { status: 404 });
+    const KEY = seg[1];
+    const realm = await realmFor(env, KEY);
+    if (!realm) return new Response('Not found', { status: 404 });
     const app = `/${KEY}/`;
-    if (url.pathname === `/${KEY}`) return Response.redirect(url.origin + app, 301);
-    if (!url.pathname.startsWith(app)) return new Response('Not found', { status: 404 });
-    const rest = url.pathname.slice(app.length);
+    if (!seg[2]) return Response.redirect(url.origin + app, 301);
+    const rest = seg[2].slice(1);
 
     if (rest === '' && request.method === 'GET') {
       return new Response(PAGE, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -58,9 +61,8 @@ export default {
 
     const api = rest.match(/^api\/(file|summary|owed|recent|invoice|parse|untidy|quarter|remind\/\d+|tidy\/\d+)$/);
     if (api) {
-      if (!env.BOOKS || !env.REALM) return json({ error: "QuickBooks isn't connected yet" }, 503);
       const [what, id] = api[1].split('/');
-      const res = await env.BOOKS.fetch(`https://books/${what}/${env.REALM}${id ? '/' + id : ''}`, {
+      const res = await env.BOOKS.fetch(`https://books/${what}/${realm}${id ? '/' + id : ''}`, {
         method: request.method, headers: { 'X-Key': env.BOOKS_KEY, 'Content-Type': 'application/json' },
         body: request.method === 'GET' ? undefined : request.body,
       });
@@ -98,6 +100,17 @@ async function readReceipt(env, image) {
     }
   }
   throw new Error('Could not read the receipt. ' + tried.join(' | '));
+}
+
+// Which QuickBooks company an app link belongs to (null if none). Remembered while this instance lives.
+const known = new Map();
+async function realmFor(env, key) {
+  if (env.KEY && key === env.KEY) return env.REALM || null;
+  if (known.has(key)) return known.get(key);
+  const res = await env.BOOKS.fetch(`https://books/app/${key}`, { headers: { 'X-Key': env.BOOKS_KEY } });
+  const realm = res.ok ? (await res.json()).realmId : null;
+  if (realm) known.set(key, realm);
+  return realm;
 }
 
 function json(obj, status = 200) {

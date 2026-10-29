@@ -3,8 +3,13 @@
 // Holds each client's QuickBooks connection and keeps it alive, so checks and
 // receipt uploads can talk to QuickBooks without anyone logging in again.
 //
-//   GET  /connect?k=ADMIN_KEY   send the client to Intuit to click "Allow"
-//   GET  /callback              Intuit sends them back here; tokens are saved
+//   POST /invite                (X-Key) {name, phone, env} one-off connect link for a new client (14 days)
+//   GET  /connect?invite=<id>   the client clicks this, then "Allow" at Intuit
+//   GET  /connect?k=ADMIN_KEY   quick connect for Gio (sandbox, for testing)
+//   GET  /callback              Intuit sends them back here; tokens saved, client's app link shown
+//   GET  /disconnect            landing page after a client disconnects in QuickBooks
+//   POST /revoke/<realmId>      (X-Key) cut a client off: revoke at Intuit, delete tokens
+//   GET  /app/<appKey>          (X-Key) which company an app link belongs to
 //   GET  /companies             (X-Key header) which QuickBooks companies are connected
 //   ANY  /qb/<realmId>/<path>   (X-Key header) passed through to the QuickBooks API,
 //                               e.g. /qb/123/query?query=select * from Purchase
@@ -25,13 +30,24 @@
 // Once a month (cron) every client with a phone gets their monthly text, and OWNER_PHONE gets a
 // short check report. Texts need TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN; SMS_FROM is the sender name.
 //
-// Settings: QB_CLIENT_ID, QB_CLIENT_SECRET (from the Intuit app), ADMIN_KEY,
-// QB_ENV ("sandbox" or "production"). Tokens live in the Store Durable Object.
+// Settings: QB_CLIENT_ID, QB_CLIENT_SECRET (Intuit development keys, used for sandbox companies),
+// QB_PROD_CLIENT_ID, QB_PROD_CLIENT_SECRET (production keys, for real clients), ADMIN_KEY,
+// APP_URL (where the phone app lives). Each saved connection remembers which keys it used.
+// Tokens, invites and clients live in the Store Durable Object.
 
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const SCOPE = 'com.intuit.quickbooks.accounting';
 const MINOR_VERSION = '75';
+const REVOKE_URL = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
+
+// Development keys only work with sandbox companies; real QuickBooks needs production keys.
+function creds(env, which) {
+  return which === 'production'
+    ? { id: env.QB_PROD_CLIENT_ID, secret: env.QB_PROD_CLIENT_SECRET }
+    : { id: env.QB_CLIENT_ID, secret: env.QB_CLIENT_SECRET };
+}
+const randomKey = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(12)))).replace(/[+/=]/g, c => ({ '+': '-', '/': '_', '=': '' }[c]));
 
 export default {
   async fetch(request, env) {
@@ -40,27 +56,75 @@ export default {
     const redirectUri = `${url.origin}/callback`;
     try {
       if (url.pathname === '/connect') {
-        if (url.searchParams.get('k') !== env.ADMIN_KEY) return text('Not allowed', 403);
+        let invite = null;
+        if (url.searchParams.get('invite')) {
+          const res = await store.fetch(`https://store/invites/${encodeURIComponent(url.searchParams.get('invite'))}`);
+          if (!res.ok) return page('This link has expired or already been used. Ask Gio for a fresh one.');
+          invite = await res.json();
+        } else if (url.searchParams.get('k') !== env.ADMIN_KEY) {
+          return text('Not allowed', 403);
+        }
+        const which = invite ? invite.env : 'sandbox';
         const state = crypto.randomUUID();
-        await store.fetch('https://store/state', { method: 'PUT', body: state });
+        await store.fetch('https://store/state', { method: 'PUT', body: JSON.stringify({ value: state, invite: invite && invite.id, env: which }) });
         const go = new URL(AUTH_URL);
-        go.search = new URLSearchParams({ client_id: env.QB_CLIENT_ID, response_type: 'code', scope: SCOPE, redirect_uri: redirectUri, state }).toString();
+        go.search = new URLSearchParams({ client_id: creds(env, which).id, response_type: 'code', scope: SCOPE, redirect_uri: redirectUri, state }).toString();
         return Response.redirect(go.toString(), 302);
       }
 
       if (url.pathname === '/callback') {
         const ok = await store.fetch('https://store/state', { method: 'POST', body: url.searchParams.get('state') || '' });
         if (!ok.ok) return page('That link has expired. Ask Gio for a fresh one.');
+        const st = await ok.json();
         const code = url.searchParams.get('code'), realmId = url.searchParams.get('realmId');
         if (!code || !realmId) return page('QuickBooks didn\'t connect. Nothing was changed.');
-        const tokens = await tokenRequest(env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
+        const tokens = await tokenRequest(env, st.env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
         await store.fetch(`https://store/tokens/${realmId}`, { method: 'PUT', body: JSON.stringify(tokens) });
-        return page('Connected ✓ You can close this page.');
+        if (!st.invite) return page('Connected ✓ You can close this page.');
+        const inv = await (await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`)).json().catch(() => ({}));
+        const existing = await getClient(store, realmId);
+        const client = { name: inv.name || '', phone: inv.phone || '', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
+        await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
+        await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
+        const app = `${env.APP_URL}/${client.appKey}/`;
+        if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `Books: ${client.name || realmId} just connected their QuickBooks. Their app: ${app}`).catch(() => {});
+        return page(`Connected ✓<br><br>Your Books app:<br><a href="${app}" style="font-weight:800;word-break:break-all">${app}</a><br><br><small>Open it on your phone, then "Add to Home Screen".</small>`);
+      }
+
+      if (url.pathname === '/disconnect') {
+        return page('Books is disconnected from your QuickBooks.<br><br>We no longer read or change anything in your books. Anything already filed stays in QuickBooks.<br><br><small>Questions: hello@localdeskai.co.uk</small>');
       }
 
       if (request.headers.get('X-Key') !== env.ADMIN_KEY || !env.ADMIN_KEY) return text('Not allowed', 403);
 
       if (url.pathname === '/companies') return store.fetch('https://store/tokens');
+
+      if (url.pathname === '/invite' && request.method === 'POST') {
+        const r = await request.json();
+        const which = r.env === 'sandbox' ? 'sandbox' : 'production';
+        if (!creds(env, which).id) throw new Error(`No ${which} keys set up yet`);
+        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), env: which, created: Date.now() };
+        await store.fetch(`https://store/invites/${inv.id}`, { method: 'PUT', body: JSON.stringify(inv) });
+        return Response.json({ ok: true, link: `${url.origin}/connect?invite=${inv.id}`, expires: new Date(inv.created + INVITE_DAYS * 86400000).toISOString() });
+      }
+
+      const ak = url.pathname.match(/^\/app\/([\w-]+)$/);
+      if (ak) {
+        const res = await store.fetch(`https://store/appkeys/${ak[1]}`);
+        return res.ok ? res : Response.json({ error: 'Unknown app link' }, { status: 404 });
+      }
+
+      const rv = url.pathname.match(/^\/revoke\/(\d+)$/);
+      if (rv && request.method === 'POST') {
+        const t = await (await store.fetch(`https://store/tokens/${rv[1]}`)).json().catch(() => null);
+        if (t) {
+          const c = creds(env, t.env);
+          await fetch(REVOKE_URL, { method: 'POST', headers: { Authorization: 'Basic ' + btoa(`${c.id}:${c.secret}`), 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ token: t.refresh_token }) });
+        }
+        await store.fetch(`https://store/tokens/${rv[1]}`, { method: 'DELETE' });
+        await store.fetch(`https://store/clients/${rv[1]}`, { method: 'DELETE' });
+        return Response.json({ ok: true });
+      }
 
       const f = url.pathname.match(/^\/file\/(\d+)$/);
       if (f && request.method === 'POST') return Response.json(await fileReceipt(env, store, f[1], await request.json()));
@@ -92,8 +156,9 @@ export default {
       const m = url.pathname.match(/^\/qb\/(\d+)\/(.+)$/);
       if (m) {
         const [, realmId, path] = m;
-        const access = await accessToken(env, store, realmId);
-        const base = env.QB_ENV === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com';
+        const t = await accessToken(env, store, realmId);
+        const base = t.env === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com';
+        const access = t.access_token;
         const target = new URL(`${base}/v3/company/${realmId}/${path}`);
         url.searchParams.forEach((v, k) => target.searchParams.set(k, v));
         target.searchParams.set('minorversion', MINOR_VERSION);
@@ -243,6 +308,7 @@ async function remind(env, store, realmId, id) {
 }
 
 const CIS_RATE = 0.2;
+const INVITE_DAYS = 14;
 
 async function newInvoice(env, store, realmId, r) {
   const amount = r.cis ? round((Number(r.labour) || 0) + (Number(r.materials) || 0)) : round(r.amount);
@@ -460,8 +526,9 @@ function round(n) { return Math.round((Number(n) || 0) * 100) / 100; }
 
 // One QuickBooks API call. Body may be JSON-able or FormData.
 async function qb(env, store, realmId, method, path, body) {
-  const access = await accessToken(env, store, realmId);
-  const base = env.QB_ENV === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com';
+  const t = await accessToken(env, store, realmId);
+  const base = t.env === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com';
+  const access = t.access_token;
   const sep = path.includes('?') ? '&' : '?';
   const headers = { Authorization: `Bearer ${access}`, Accept: 'application/json' };
   if (body && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
@@ -476,22 +543,25 @@ async function qb(env, store, realmId, method, path, body) {
   return data;
 }
 
-// A fresh access token for this company, refreshing (and saving the new refresh token) when needed.
+// Fresh tokens for this company (with .env), refreshing and saving the new refresh token when needed.
+// Connections saved before env was recorded are sandbox ones.
 async function accessToken(env, store, realmId) {
   const res = await store.fetch(`https://store/tokens/${realmId}`);
   if (!res.ok) throw new Error(`QuickBooks company ${realmId} isn't connected`);
   const t = await res.json();
-  if (t.expires_at - Date.now() > 60_000) return t.access_token;
-  const fresh = await tokenRequest(env, { grant_type: 'refresh_token', refresh_token: t.refresh_token });
+  t.env = t.env || 'sandbox';
+  if (t.expires_at - Date.now() > 60_000) return t;
+  const fresh = await tokenRequest(env, t.env, { grant_type: 'refresh_token', refresh_token: t.refresh_token });
   await store.fetch(`https://store/tokens/${realmId}`, { method: 'PUT', body: JSON.stringify(fresh) });
-  return fresh.access_token;
+  return fresh;
 }
 
-async function tokenRequest(env, params) {
+async function tokenRequest(env, which, params) {
+  const c = creds(env, which);
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: {
-      Authorization: 'Basic ' + btoa(`${env.QB_CLIENT_ID}:${env.QB_CLIENT_SECRET}`),
+      Authorization: 'Basic ' + btoa(`${c.id}:${c.secret}`),
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
     },
@@ -505,6 +575,7 @@ async function tokenRequest(env, params) {
     expires_at: Date.now() + body.expires_in * 1000,
     refresh_expires_at: Date.now() + body.x_refresh_token_expires_in * 1000,
     saved_at: new Date().toISOString(),
+    env: which,
   };
 }
 
@@ -514,16 +585,46 @@ export class Store {
   async fetch(request) {
     const url = new URL(request.url);
     if (url.pathname === '/state') {
-      if (request.method === 'PUT') { await this.storage.put('state', { value: await request.text(), at: Date.now() }); return text('ok'); }
-      const saved = await this.storage.get('state');
-      await this.storage.delete('state');
-      const fresh = saved && saved.value === await request.text() && Date.now() - saved.at < 15 * 60_000;
-      return text(fresh ? 'ok' : 'expired', fresh ? 200 : 400);
+      // Several people may be connecting at once, so each state is kept under its own key.
+      if (request.method === 'PUT') { const st = JSON.parse(await request.text()); await this.storage.put(`state:${st.value}`, { ...st, at: Date.now() }); return text('ok'); }
+      const value = await request.text();
+      const saved = await this.storage.get(`state:${value}`);
+      await this.storage.delete(`state:${value}`);
+      return saved && Date.now() - saved.at < 15 * 60_000 ? Response.json(saved) : text('expired', 400);
+    }
+    const inv = url.pathname.match(/^\/invites\/([\w-]+)$/);
+    if (inv) {
+      const key = `invite:${inv[1]}`;
+      if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+      if (request.method === 'DELETE') { await this.storage.delete(key); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v && Date.now() - v.created < INVITE_DAYS * 86400000 ? Response.json(v) : text('No invite', 404);
+    }
+    const ak = url.pathname.match(/^\/appkeys\/([\w-]+)$/);
+    if (ak) {
+      const realmId = await this.storage.get(`appkey:${ak[1]}`);
+      if (!realmId) return text('Unknown', 404);
+      const client = await this.storage.get(`client:${realmId}`);
+      return Response.json({ realmId, name: (client && client.name) || '' });
     }
     const c = url.pathname.match(/^\/clients\/(\d+)$/);
     if (c) {
-      if (request.method === 'PUT') { await this.storage.put(`client:${c[1]}`, JSON.parse(await request.text())); return text('ok'); }
-      const v = await this.storage.get(`client:${c[1]}`);
+      const key = `client:${c[1]}`;
+      if (request.method === 'PUT') {
+        const v = JSON.parse(await request.text());
+        const old = await this.storage.get(key);
+        if (old && old.appKey && old.appKey !== v.appKey) await this.storage.delete(`appkey:${old.appKey}`);
+        await this.storage.put(key, v);
+        if (v.appKey) await this.storage.put(`appkey:${v.appKey}`, c[1]);
+        return text('ok');
+      }
+      if (request.method === 'DELETE') {
+        const old = await this.storage.get(key);
+        if (old && old.appKey) await this.storage.delete(`appkey:${old.appKey}`);
+        await this.storage.delete(key);
+        return text('ok');
+      }
+      const v = await this.storage.get(key);
       return v ? Response.json(v) : text('No client', 404);
     }
     const m = url.pathname.match(/^\/tokens(?:\/(\d+))?$/);
@@ -534,6 +635,7 @@ export class Store {
     }
     const key = `tokens:${m[1]}`;
     if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+    if (request.method === 'DELETE') { await this.storage.delete(key); return text('ok'); }
     const t = await this.storage.get(key);
     return t ? Response.json(t) : text('Not connected', 404);
   }
