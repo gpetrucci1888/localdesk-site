@@ -4,8 +4,11 @@ import { BRANDS } from './brands.js';
 // "Books" phone app for a trade client.
 //
 // GET  /<appKey>/            the app (installable: manifest + icons alongside)
+// GET  /<appKey>/sw.js       service worker: the app opens with no signal, and receipts wait on the phone until there is
 // POST /<appKey>/read        reads one receipt photo with Workers AI and returns the details as JSON
 // POST /<appKey>/login/send  texts a login code; /login/verify {code} logs this phone in
+// GET  /<appKey>/receiptimg/<id>  the receipt photo on an expense (straight through, not JSON)
+// POST /<appKey>/logout      logs this phone out
 // ANY  /<appKey>/api/...     passed to the books connector (service binding BOOKS) for this client's
 //                            QuickBooks company; extras like quotes only if switched on for them
 //
@@ -50,15 +53,19 @@ export default {
     const brand = BRANDS[client.brand] || BRANDS.localdesk;
     const fill = (html) => html.replaceAll('{{NAME}}', esc(client.name || 'Your business'))
       .replaceAll('{{EXTRAS}}', esc(client.extras || '')).replaceAll('{{PHONE_END}}', esc(client.phoneEnd || ''))
+      .replaceAll('{{VAT}}', client.vat === false ? '0' : '1').replaceAll('{{CHASE}}', client.chase ? '1' : '0')
       .replaceAll('{{HD}}', brand.hd).replaceAll('{{ACC}}', brand.acc).replaceAll('{{ACCINK}}', brand.accInk)
       .replace('{{LOGO}}', brand.logo ? `<img class="logo" src="data:image/png;base64,${brand.logo}" alt="">` : '');
     const html = (body) => new Response(body, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
 
     if (rest === '' && request.method === 'GET') return html(fill(client.loggedIn ? PAGE : client.canLogin ? LOGIN : NO_LOGIN));
     if (rest === 'manifest.json') {
-      return json({ name: `${client.name || 'Books'} · Books`, short_name: 'Books', start_url: app, scope: app, display: 'standalone', background_color: brand.hd, theme_color: brand.hd,
+      return json({ name: `${client.name || 'Books'} · Books`, short_name: 'Books', id: app, start_url: app, scope: app, display: 'standalone', orientation: 'portrait', background_color: brand.hd, theme_color: brand.hd,
+        description: 'Receipts, invoices and money owed, straight into QuickBooks.',
+        shortcuts: [{ name: 'Snap a receipt', url: `${app}?tab=receipts&snap=1` }, { name: 'Who owes me', url: `${app}?tab=owed` }],
         icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }] });
     }
+    if (rest === 'sw.js') return new Response(SW, { headers: { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': app } });
     const icon = rest.match(/^icon-(180|192|512)\.png$/);
     if (icon) return new Response(Uint8Array.from(atob(brand.icons[icon[1]]), c => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } });
 
@@ -75,12 +82,24 @@ export default {
 
     if (!client.loggedIn) return json({ error: 'Please log in again', login: true }, 401);
 
+    if (rest === 'logout' && request.method === 'POST') {
+      await books('bye', { method: 'POST' });
+      return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json', 'Set-Cookie': `bk=; Path=${app}; Max-Age=0; HttpOnly; Secure; SameSite=Lax` } });
+    }
+    const img = rest.match(/^receiptimg\/(\d+)$/);
+    if (img) {
+      const res = await books(`receipt/${img[1]}`);
+      return new Response(res.body, { status: res.status, headers: { 'Content-Type': res.headers.get('Content-Type') || 'image/jpeg', 'Cache-Control': 'private, max-age=600' } });
+    }
+
     if (rest === 'read' && request.method === 'POST') {
       try {
         const { image } = await request.json();
         if (!/^data:image\/(jpeg|png|webp);base64,/.test(image || '')) return json({ error: 'No photo received' }, 400);
         return json(await readReceipt(env, image));
       } catch (err) {
+        // Every reading model failed: that's on us, so Gio hears about it.
+        await books('problem', { method: 'POST', body: JSON.stringify({ what: 'read', message: String(err && err.message || err) }) }).catch(() => {});
         return json({ error: String(err && err.message || err) }, 500);
       }
     }
@@ -130,6 +149,36 @@ async function readReceipt(env, image) {
   }
   throw new Error('Could not read the receipt. ' + tried.join(' | '));
 }
+
+// Opens the app with no signal: the page is fetched fresh when there's a connection and kept
+// for when there isn't. Nothing else is cached; figures always come live from QuickBooks.
+const SW = `const CACHE = 'books-page-v2';
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', e => {
+  const r = e.request;
+  const same = new URL(r.url).origin === location.origin;
+  const keep = r.mode === 'navigate' || (same && /(manifest\\.json|icon-\\d+\\.png)$/.test(r.url));
+  if (r.method !== 'GET' || !keep) return;
+  e.respondWith(fetch(r).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(r, copy)); }
+    return res;
+  }).catch(() => caches.match(r, { ignoreSearch: true }).then(hit => hit || new Response('No signal. Try again in a moment.', { headers: { 'Content-Type': 'text/plain' } }))));
+});
+// Notifications: show them, and open the right screen when tapped.
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data.json(); } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Books', { body: d.body || '', icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag, data: { tab: d.tab || 'home' } }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = self.registration.scope + '?tab=' + ((e.notification.data && e.notification.data.tab) || 'home');
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+    for (const w of ws) if ('focus' in w) { w.navigate(url); return w.focus(); }
+    return self.clients.openWindow(url);
+  }));
+});`;
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 

@@ -41,6 +41,25 @@
 //   POST /pack/<realmId>        (X-Key) {period: quarter|lastquarter|taxyear|lasttaxyear} link to the accountant pack
 //   POST /logout/<realmId>      (X-Key) logs that client's app out on every phone
 //   POST /testlink/<realmId>    (X-Key) an extra app link for that company that always needs a login (for testing)
+//   GET  /changes/<realmId>     (X-Key) everything Books changed in their QuickBooks, newest first (60 days)
+//   POST /revert/<realmId>/<id> (X-Key) undoes one of those changes, where it can be undone
+//   GET  /miles/<realmId>       (X-Key) this tax year's mileage log and what it's worth; POST {date, miles, why} adds a trip
+//   POST /mileoff/<realmId>/<id> (X-Key) deletes a trip
+//   GET  /cis/<realmId>         (X-Key) CIS taken off their pay this tax year (they claim it back)
+//   GET  /health                (X-Key) the daily check: every client's connection, anything stuck
+//   GET  /expenses/<realmId>    (X-Key) ?from&to&q&cat every expense in a period, searchable, with receipt flags
+//   GET  /expense/<realmId>/<id> (X-Key) one expense; POST /fix/<realmId>/<id> {date, supplier, total, vat, category} edits it
+//   GET  /receipt/<realmId>/<id> (X-Key) the receipt photo on an expense
+//   GET  /invoices/<realmId>    (X-Key) ?status=paid|unpaid|all invoices from the last 12 months
+//   GET  /invoicedoc/<realmId>/<id> (X-Key) one invoice with its lines
+//   POST /share/<realmId>       (X-Key) {type: invoice|quote, id} a link the customer can open (page + PDF)
+//   GET  /customerlist/<realmId> (X-Key) customers with what they owe, what they've paid and how to reach them
+//   GET  /customer/<realmId>/<id> (X-Key) one customer with their invoices and quotes
+//   GET  /trend/<realmId>       (X-Key) money in and out for each of the last 6 months
+//   GET  /status/<realmId>      (X-Key) is QuickBooks connected, and as which company
+//   POST /push/<realmId>        (X-Key) {subscription} saves a phone for notifications; POST /unpush {endpoint} removes it
+//   POST /pushtest/<realmId>    (X-Key) sends a test notification to their phones
+//   GET  /d/<id>                (public, by link) an invoice or quote for the customer; /d/<id>.pdf the PDF
 //
 // The app (one client, over the service binding): /c/... with X-App: <their app key>
 //   GET  /c/app                  business name, brand, extras, whether they're logged in
@@ -54,6 +73,14 @@
 // On the 8th after each quarter ends (cron) every client gets a text with their accountant pack link.
 // Once a month (cron) every client with a phone gets their monthly text, and OWNER_PHONE gets a
 // short check report. Texts need TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN; SMS_FROM is the sender name.
+// Every hour (cron) new payments are looked for, and phones with notifications on hear about them.
+// Every morning (cron) each connection is kept fresh and checked, and late invoices and quiet quotes
+// are chased for clients who switched that on. Mondays, OWNER_PHONE gets the weekly check.
+// When something breaks (a connection, QuickBooks, a text) OWNER_PHONE gets a text, at most one
+// per problem every 12 hours.
+//
+// Client settings (PUT /client): vat "yes" | "no" ("" = go by QuickBooks), chase "on" | "off".
+// A client who isn't VAT registered never gets VAT reclaimed on receipts or added to invoices.
 //
 // Settings: QB_CLIENT_ID, QB_CLIENT_SECRET (Intuit development keys, used for sandbox companies),
 // QB_PROD_CLIENT_ID, QB_PROD_CLIENT_SECRET (production keys, for real clients), ADMIN_KEY,
@@ -110,11 +137,13 @@ export default {
         if (!st.invite) return page('Connected ✓ You can close this page.');
         const inv = await (await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`)).json().catch(() => ({}));
         const existing = await getClient(store, realmId);
-        const client = { name: inv.name || '', phone: inv.phone || '', brand: inv.brand || (existing && existing.brand) || '', extras: inv.extras || (existing && existing.extras) || '', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
+        const keep = (f) => inv[f] || (existing && existing[f]) || '';
+        const client = { ...(existing || {}), name: inv.name || '', phone: inv.phone || '', brand: keep('brand'), extras: keep('extras'), vat: keep('vat'), chase: keep('chase') || 'off', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
         await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
         await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
         const app = `${env.APP_URL}/${client.appKey}/`;
         if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `Books: ${client.name || realmId} just connected their QuickBooks. Their app: ${app}`).catch(() => {});
+        if (client.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, client.phone, `Welcome to Books. Your app: ${app} Open it on your phone and tap "Add to Home Screen". Stuck? Text or ring Gio on 07700 900000.`).catch(() => {});
         return page(`Connected ✓<br><br>Your Books app:<br><a href="${app}" style="font-weight:800;word-break:break-all">${app}</a><br><br><small>Open it on your phone, then "Add to Home Screen".</small>`);
       }
 
@@ -133,6 +162,18 @@ export default {
         return new Response(packPage(data, `${url.origin}/pack/${pk[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
       }
 
+      const dl = url.pathname.match(/^\/d\/([\w-]{12,})(\.pdf)?$/);
+      if (dl && request.method === 'GET') {
+        const res = await store.fetch(`https://store/docs/${dl[1]}`);
+        if (!res.ok) return page('This link has expired. Ask for a fresh one.');
+        const link = await res.json();
+        if (dl[2]) {
+          const pdf = await qbRaw(env, store, link.realmId, `${link.type === 'quote' ? 'estimate' : 'invoice'}/${link.id}/pdf`, 'application/pdf');
+          return new Response(pdf.body, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${link.type}-${link.id}.pdf"` } });
+        }
+        return new Response(await docPage(env, store, link, `${url.origin}/d/${dl[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+      }
+
       // The app, for one client: X-App (their app key) plus X-Session (from logging in with a texted code).
       const c = url.pathname.match(/^\/c\/([a-z]+(?:\/[a-z]+)?)(?:\/(\d+))?$/);
       if (c) return await clientRoute(c[1], c[2], request, url, env, store, origin);
@@ -145,7 +186,8 @@ export default {
         const r = await request.json();
         const which = r.env === 'sandbox' ? 'sandbox' : 'production';
         if (!creds(env, which).id) throw new Error(`No ${which} keys set up yet`);
-        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), brand: String(r.brand || ''), extras: String(r.extras || ''), env: which, created: Date.now() };
+        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), brand: String(r.brand || ''), extras: String(r.extras || ''),
+          vat: ['yes', 'no'].includes(r.vat) ? r.vat : '', chase: r.chase === 'on' ? 'on' : '', env: which, created: Date.now() };
         await store.fetch(`https://store/invites/${inv.id}`, { method: 'PUT', body: JSON.stringify(inv) });
         return Response.json({ ok: true, link: `${url.origin}/connect?invite=${inv.id}`, expires: new Date(inv.created + INVITE_DAYS * 86400000).toISOString() });
       }
@@ -156,8 +198,12 @@ export default {
         return res.ok ? res : Response.json({ error: 'Unknown app link' }, { status: 404 });
       }
 
+      if (url.pathname === '/health') return Response.json(await health(env, store));
+
       const rv = url.pathname.match(/^\/revoke\/(\d+)$/);
       if (rv && request.method === 'POST') {
+        const leaving = await getClient(store, rv[1]);
+        if (leaving && leaving.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, leaving.phone, 'Books is now disconnected from your QuickBooks. Everything already filed stays in your QuickBooks, and nothing else will be changed. Thanks for using Books.').catch(() => {});
         const t = await (await store.fetch(`https://store/tokens/${rv[1]}`)).json().catch(() => null);
         if (t) {
           const c = creds(env, t.env);
@@ -191,21 +237,51 @@ export default {
 
       return text('Not found', 404);
     } catch (err) {
-      return text(`Error: ${err && err.message || err}`, 500);
+      const msg = String(err && err.message || err);
+      // Problems on our side (not someone typing something wrong) get texted to Gio.
+      if (SYSTEM_ERROR.test(msg)) {
+        const what = url.pathname.replace(/\/\d+/g, '').replace(/^\/c/, '') || '/';
+        const realm = (url.pathname.match(/\/(\d{5,})/) || [])[1] || '';
+        await alertOwner(env, store, `err:${realm}:${what}`, `Books problem${realm ? ` for ${await clientName(store, realm)}` : ''} (${what}): ${msg.slice(0, 200)}`).catch(() => {});
+      }
+      return text(`Error: ${msg}`, 500);
     }
   },
 
-  // 1st of the month: monthly text to each client, check report to Gio.
+  // 1st of the month: monthly text. 8th after a quarter: accountant packs. Every morning: daily check.
   async scheduled(event, env, ctx) {
-    const run = event.cron === QUARTER_CRON ? quarterRun : monthlyRun;
-    ctx.waitUntil(run(env).catch(err => console.error('scheduled run failed', err && err.stack || err)));
+    const run = event.cron === QUARTER_CRON ? quarterRun : event.cron === DAILY_CRON ? dailyRun : event.cron === HOURLY_CRON ? hourlyRun : monthlyRun;
+    ctx.waitUntil(run(env).catch(async err => {
+      console.error('scheduled run failed', err && err.stack || err);
+      if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books: the ${event.cron} run failed: ${String(err && err.message || err).slice(0, 200)}`).catch(() => {});
+    }));
   },
 };
+
+// Errors that mean something is broken, rather than a missing amount or a typo.
+const SYSTEM_ERROR = /^(QuickBooks \d|QuickBooks company|Text failed|Texts are not set up|Could not understand)/;
+const ALERT_HOURS = 12;
+
+// Texts Gio about a problem, at most once per key every ALERT_HOURS.
+async function alertOwner(env, store, key, msg) {
+  if (!env.OWNER_PHONE) return;
+  const res = await store.fetch(`https://store/alerts/${encodeURIComponent(key)}`, { method: 'POST' });
+  if (!res.ok) return; // already told him recently
+  await sendSms(env, env.OWNER_PHONE, msg);
+}
+
+async function clientName(store, realmId) {
+  const c = await getClient(store, realmId);
+  return (c && c.name) || realmId;
+}
 
 // ---------- the app: one client, logged in by text code ----------
 
 const CLIENT_WHATS = ['file', 'summary', 'owed', 'recent', 'invoice', 'remind', 'paid', 'undo', 'parse', 'untidy', 'tidy', 'quarter',
-  'quote', 'quotes', 'won', 'chase', 'invoiceit', 'customers', 'jobs', 'job', 'pack', 'accountant'];
+  'quote', 'quotes', 'won', 'chase', 'invoiceit', 'customers', 'jobs', 'job', 'pack', 'accountant',
+  'changes', 'revert', 'miles', 'mileoff', 'cis', 'settings', 'problem',
+  'expenses', 'expense', 'fix', 'receipt', 'invoices', 'invoicedoc', 'share', 'customerlist', 'customer', 'trend', 'status',
+  'pushkey', 'push', 'unpush', 'pushtest', 'me'];
 // Extras a client pays for on top of the starter. "quotes" = quotes and jobs.
 const EXTRA_ONLY = { quote: 'quotes', quotes: 'quotes', won: 'quotes', chase: 'quotes', invoiceit: 'quotes', jobs: 'quotes', job: 'quotes' };
 const SESSION_DAYS = 365, CODE_MINUTES = 10, CODES_PER_HOUR = 5, CODE_TRIES = 5;
@@ -221,8 +297,10 @@ async function clientRoute(what, id, request, url, env, store, origin) {
   const loggedIn = (client.demo && appKey === client.appKey) || await validSession(store, appKey, request.headers.get('X-Session'));
 
   if (what === 'app') {
+    if (loggedIn) await store.fetch(`https://store/seen/${realmId}`, { method: 'POST' });
     return Response.json({ realmId, name: client.name || '', brand: client.brand || '', extras: client.extras || '', loggedIn: Boolean(loggedIn),
-      phoneEnd: (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: Boolean(client.phone) });
+      phoneEnd: (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: Boolean(client.phone),
+      vat: await vatRegistered(env, store, realmId, client).catch(() => true), chase: client.chase === 'on' });
   }
   if (what === 'login/send' && request.method === 'POST') {
     if (!client.phone) throw new Error('No phone number saved. Ask Gio to add it');
@@ -251,6 +329,15 @@ async function clientRoute(what, id, request, url, env, store, origin) {
   }
 
   if (!loggedIn) return Response.json({ error: 'Please log in again', login: true }, { status: 401 });
+  // Their own settings, for the Settings screen (only once logged in).
+  if (what === 'me') return Response.json({ name: client.name || '', accountant: client.accountant || '', chase: client.chase === 'on',
+    vat: await vatRegistered(env, store, realmId, client).catch(() => true), phoneEnd: (client.phone || '').replace(/\D/g, '').slice(-3), extras: client.extras || '' });
+  // Log out this phone only (the admin /logout logs out every phone).
+  if (what === 'bye' && request.method === 'POST') {
+    const sess = request.headers.get('X-Session');
+    if (sess) await store.fetch(`https://store/sessions/${await sha256(sess)}`, { method: 'DELETE' });
+    return Response.json({ ok: true });
+  }
   if (!CLIENT_WHATS.includes(what)) return text('Not found', 404);
   if (EXTRA_ONLY[what] && !String(client.extras || '').split(',').map(x => x.trim()).includes(EXTRA_ONLY[what])) {
     return Response.json({ error: 'Not part of your plan. Ask Gio to switch it on.' }, { status: 403 });
@@ -259,6 +346,19 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     const em = String((await request.json()).accountant || '').trim().slice(0, 200);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) throw new Error('That email doesn\'t look right');
     await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify({ ...client, accountant: em }) });
+    return Response.json({ ok: true });
+  }
+  // The only setting a client changes themselves: whether Books chases for them.
+  if (what === 'settings' && request.method === 'PUT') {
+    const v = await request.json();
+    if (typeof v.chase === 'boolean') client.chase = v.chase ? 'on' : 'off';
+    await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
+    return Response.json({ ok: true, chase: client.chase === 'on' });
+  }
+  // The app couldn't do something on its own side (reading a receipt): tell Gio.
+  if (what === 'problem' && request.method === 'POST') {
+    const v = await request.json().catch(() => ({}));
+    await alertOwner(env, store, `app:${realmId}:${String(v.what || '').slice(0, 20)}`, `Books app problem for ${client.name || realmId}: ${String(v.message || '').slice(0, 200)}`).catch(() => {});
     return Response.json({ ok: true });
   }
   return (await handle(what, realmId, id, request, url, env, store, origin)) || text('Not found', 404);
@@ -287,7 +387,28 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
   if (what === 'recent') return Response.json(await recent(env, store, realmId));
   if (what === 'invoice' && post) return Response.json(await newInvoice(env, store, realmId, await body()));
   if (what === 'remind' && post && id) return Response.json(await remind(env, store, realmId, id));
-  if (what === 'paid' && post && id) return Response.json(await markPaid(env, store, realmId, id, (await body()).method));
+  if (what === 'paid' && post && id) { const v = await body(); return Response.json(await markPaid(env, store, realmId, id, v.method, v.cis)); }
+  if (what === 'changes') return Response.json(await changes(store, realmId));
+  if (what === 'revert' && post && id) return Response.json(await revert(env, store, realmId, id));
+  if (what === 'miles' && post) return Response.json(await addTrip(store, realmId, await body()));
+  if (what === 'miles') return Response.json(await miles(store, realmId, url.searchParams.get('year')));
+  if (what === 'mileoff' && post && id) return Response.json(await deleteTrip(store, realmId, id));
+  if (what === 'cis') return Response.json(await cisSuffered(env, store, realmId));
+  if (what === 'expenses') return Response.json(await expenses(env, store, realmId, url.searchParams));
+  if (what === 'expense' && id) return Response.json(await expense(env, store, realmId, id));
+  if (what === 'fix' && post && id) return Response.json(await fixExpense(env, store, realmId, id, await body()));
+  if (what === 'receipt' && id) return receiptOfPurchase(env, store, realmId, id);
+  if (what === 'invoices') return Response.json(await invoices(env, store, realmId, url.searchParams.get('status')));
+  if (what === 'invoicedoc' && id) return Response.json(await invoiceDoc(env, store, realmId, id));
+  if (what === 'share' && post) return Response.json(await shareLink(env, store, origin, realmId, await body()));
+  if (what === 'customerlist') return Response.json(await customerList(env, store, realmId));
+  if (what === 'customer' && id) return Response.json(await customerOne(env, store, realmId, id));
+  if (what === 'trend') return Response.json(await trend(env, store, realmId));
+  if (what === 'status') return Response.json(await status(env, store, realmId));
+  if (what === 'pushkey') return Response.json({ key: env.VAPID_PUBLIC || '' });
+  if (what === 'push' && post) return Response.json(await savePush(store, realmId, (await body()).subscription));
+  if (what === 'unpush' && post) return Response.json(await dropPush(store, realmId, (await body()).endpoint));
+  if (what === 'pushtest' && post) return Response.json({ ok: true, sent: await notify(env, store, realmId, { title: 'Books', body: 'Notifications are on. You\'ll hear when someone pays.', tab: 'home' }) });
   if (what === 'undo' && post && id) return Response.json(await undoPurchase(env, store, realmId, id));
   if (what === 'parse' && post) return Response.json(await parseSpoken(env, (await body()).text));
   if (what === 'untidy') return Response.json(await untidy(env, store, realmId));
@@ -308,7 +429,8 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
   }
   if (what === 'client' && request.method === 'PUT') {
     const v = await body(), old = (await getClient(store, realmId)) || {};
-    for (const f of ['name', 'phone', 'brand', 'accountant', 'extras', 'appKey']) if (typeof v[f] === 'string') old[f] = v[f];
+    for (const f of ['name', 'phone', 'brand', 'accountant', 'extras', 'appKey', 'vat', 'chase']) if (typeof v[f] === 'string') old[f] = v[f];
+    if (old.vat && !['yes', 'no'].includes(old.vat)) throw new Error('vat is "yes", "no" or ""');
     if (typeof v.demo === 'boolean') old.demo = v.demo;
     if (old.appKey && !/^[\w-]{8,}$/.test(old.appKey)) throw new Error('Bad app key');
     await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(old) });
@@ -370,7 +492,9 @@ async function fileReceipt(env, store, realmId, r) {
   if (!bank) throw new Error('No bank account in QuickBooks to pay from');
   const expense = pickAccount(accounts.filter(a => a.AccountType === 'Expense' || a.AccountType === 'Cost of Goods Sold'), r.category);
 
-  const codes = (await q('select Id, Name, Active from TaxCode')).TaxCode || [];
+  // Not VAT registered: the whole amount is the cost and no VAT is reclaimed, whatever the receipt says.
+  const registered = await vatRegistered(env, store, realmId);
+  const codes = registered ? (await q('select Id, Name, Active from TaxCode')).TaxCode || [] : [];
   const net = round(total - vat);
   const rate = net > 0 ? vat / net : 0;
   const codeName = vat <= 0 ? 'No VAT' : Math.abs(rate - 0.05) < 0.01 ? '5.0% R' : '20.0% S';
@@ -403,7 +527,23 @@ async function fileReceipt(env, store, realmId, r) {
     await qb(env, store, realmId, 'POST', 'upload', form);
     attached = true;
   }
+  await logChange(store, realmId, { kind: 'file', ref: created.Id, text: `Filed ${r.supplier || 'an expense'} ${money(created.TotalAmt)} (${expense.Name})` });
   return { ok: true, id: created.Id, total: created.TotalAmt, account: expense.Name, vatCode: code ? code.Name : 'none', attached };
+}
+
+// The client's own setting wins; otherwise go by whether VAT is switched on in their QuickBooks.
+const vatSeen = new Map();
+async function vatRegistered(env, store, realmId, client) {
+  const c = client || (await getClient(store, realmId)) || {};
+  if (c.vat === 'yes') return true;
+  if (c.vat === 'no') return false;
+  const hit = vatSeen.get(realmId);
+  if (hit && Date.now() - hit.at < 3600000) return hit.on;
+  const prefs = ((await query(env, store, realmId, 'select * from Preferences')).Preferences || [])[0] || {};
+  const tp = prefs.TaxPrefs || {};
+  const on = Boolean(tp.UsingSalesTax || tp.PartnerTaxEnabled);
+  vatSeen.set(realmId, { on, at: Date.now() });
+  return on;
 }
 
 async function findOrCreateVendor(env, store, realmId, q, name) {
@@ -446,21 +586,23 @@ async function summary(env, store, realmId, month) {
 }
 
 async function owed(env, store, realmId) {
-  const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail from Invoice where Balance > '0' maxresults 200")).Invoice || [];
+  const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail, PrivateNote from Invoice where Balance > '0' maxresults 200")).Invoice || [];
   const today = Date.now();
+  const cisOf = (i) => Number((String(i.PrivateNote || '').match(/CIS job\. Expected deduction £(\d+(?:\.\d+)?)/) || [])[1]) || 0;
   return list.map(i => ({
     id: i.Id, number: i.DocNumber || '', customer: (i.CustomerRef && i.CustomerRef.name) || 'Customer',
     date: i.TxnDate, due: i.DueDate || i.TxnDate, total: Number(i.TotalAmt), balance: Number(i.Balance),
-    email: (i.BillEmail && i.BillEmail.Address) || '',
+    email: (i.BillEmail && i.BillEmail.Address) || '', cis: Math.min(cisOf(i), Number(i.Balance)),
     daysOverdue: Math.max(0, Math.floor((today - Date.parse(i.DueDate || i.TxnDate)) / 86400000)),
   })).sort((a, b) => b.daysOverdue - a.daysOverdue);
 }
 
-async function remind(env, store, realmId, id) {
+async function remind(env, store, realmId, id, quiet) {
   const inv = (await qb(env, store, realmId, 'GET', `invoice/${id}`)).Invoice;
   const email = inv.BillEmail && inv.BillEmail.Address;
   if (!email) throw new Error('No email address for this customer. Add one in QuickBooks first');
   await qb(env, store, realmId, 'POST', `invoice/${id}/send?sendTo=${encodeURIComponent(email)}`);
+  if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed invoice${num(inv.DocNumber)} to ${email} again` });
   return { ok: true, sentTo: email };
 }
 
@@ -469,23 +611,52 @@ const INVITE_DAYS = 14;
 
 // Paid in full by cash, bank transfer or card. Bank and card go straight to the bank account;
 // cash goes to QuickBooks' Undeposited Funds until it's banked.
-async function markPaid(env, store, realmId, id, method) {
+// CIS job: the contractor pays what's left after taking off CIS. The money received goes to the
+// bank as usual; the CIS taken off is a second payment into the "CIS deductions suffered" account
+// (money HMRC owes back), so the invoice ends up fully paid and the CIS is counted for the tax year.
+async function markPaid(env, store, realmId, id, method, cis) {
   const inv = (await qb(env, store, realmId, 'GET', `invoice/${id}`)).Invoice;
   const balance = Number(inv.Balance);
   if (!(balance > 0)) return { ok: true, alreadyPaid: true };
   const how = { cash: 'Cash', bank: 'Bank transfer', card: 'Card' }[method] || 'Cash';
+  const deducted = Math.min(round(cis), balance);
+  if (deducted < 0) throw new Error('The CIS amount can\'t be below zero');
   let deposit;
   if (method === 'bank' || method === 'card') {
     const banks = (await query(env, store, realmId, "select Id from Account where AccountType = 'Bank' and Active = true")).Account || [];
     if (banks.length) deposit = { value: banks[0].Id };
   }
-  await qb(env, store, realmId, 'POST', 'payment', {
-    CustomerRef: inv.CustomerRef, TotalAmt: balance, TxnDate: new Date().toISOString().slice(0, 10),
-    PrivateNote: `Paid by ${how.toLowerCase()} (marked in Books)`,
-    ...(deposit ? { DepositToAccountRef: deposit } : {}),
-    Line: [{ Amount: balance, LinkedTxn: [{ TxnId: inv.Id, TxnType: 'Invoice' }] }],
-  });
-  return { ok: true, amount: balance, how };
+  const today = new Date().toISOString().slice(0, 10);
+  const pay = (amount, note, to) => qb(env, store, realmId, 'POST', 'payment', {
+    CustomerRef: inv.CustomerRef, TotalAmt: amount, TxnDate: today, PrivateNote: note,
+    ...(to ? { DepositToAccountRef: to } : {}),
+    Line: [{ Amount: amount, LinkedTxn: [{ TxnId: inv.Id, TxnType: 'Invoice' }] }],
+  }).then(d => d.Payment);
+  const received = round(balance - deducted);
+  const refs = [];
+  if (received > 0) refs.push((await pay(received, `Paid by ${how.toLowerCase()} (marked in Books)`, deposit)).Id);
+  if (deducted > 0) refs.push((await pay(deducted, `CIS deducted by the contractor (marked in Books)`, { value: await cisAccount(env, store, realmId) })).Id);
+  const who = (inv.CustomerRef && inv.CustomerRef.name) || 'Customer';
+  await logChange(store, realmId, { kind: 'paid', ref: refs.join(','), text: `Marked ${who} invoice${num(inv.DocNumber)} paid: ${money(received)} ${how.toLowerCase()}${deducted ? `, ${money(deducted)} CIS taken off` : ''}` });
+  return { ok: true, amount: received, cis: deducted, how };
+}
+
+const CIS_ACCOUNT = 'CIS deductions suffered';
+async function cisAccount(env, store, realmId) {
+  const found = ((await query(env, store, realmId, `select Id from Account where Name = '${CIS_ACCOUNT}'`)).Account || [])[0];
+  if (found) return found.Id;
+  return (await qb(env, store, realmId, 'POST', 'account', { Name: CIS_ACCOUNT, AccountType: 'Other Current Asset', AccountSubType: 'OtherCurrentAssets',
+    Description: 'CIS taken off by contractors. Claimed back from HMRC (Self Assessment).' })).Account.Id;
+}
+
+// CIS taken off this tax year: payments into the CIS account.
+async function cisSuffered(env, store, realmId) {
+  const p = packPeriod('taxyear');
+  const acc = ((await query(env, store, realmId, `select Id from Account where Name = '${CIS_ACCOUNT}'`)).Account || [])[0];
+  if (!acc) return { ...p, total: 0, count: 0 };
+  const pays = (await query(env, store, realmId, `select Id, TotalAmt, DepositToAccountRef from Payment where TxnDate >= '${p.from}' and TxnDate <= '${p.to}' maxresults 1000`)).Payment || [];
+  const mine = pays.filter(x => x.DepositToAccountRef && x.DepositToAccountRef.value === acc.Id);
+  return { ...p, total: round(mine.reduce((s, x) => s + Number(x.TotalAmt), 0)), count: mine.length };
 }
 
 // Only expenses this app filed can be undone (they carry our note).
@@ -493,6 +664,7 @@ async function undoPurchase(env, store, realmId, id) {
   const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
   if (!/added from a receipt photo|added in Books/.test(p.PrivateNote || '')) throw new Error('Only expenses added from the app can be undone here');
   await qb(env, store, realmId, 'POST', 'purchase?operation=delete', { Id: p.Id, SyncToken: p.SyncToken });
+  await markUndone(store, realmId, 'file', p.Id);
   return { ok: true };
 }
 
@@ -510,7 +682,8 @@ async function saleParts(env, store, realmId, r) {
   const items = (await query(env, store, realmId, "select Id, Name from Item where Type = 'Service' and Active = true maxresults 50")).Item || [];
   const item = items.find(i => /^(services?|labour)$/i.test(i.Name)) || items[0];
   if (!item) throw new Error('No service item in QuickBooks to invoice for');
-  const codes = (await query(env, store, realmId, 'select Id, Name from TaxCode')).TaxCode || [];
+  const registered = await vatRegistered(env, store, realmId);
+  const codes = registered ? (await query(env, store, realmId, 'select Id, Name from TaxCode')).TaxCode || [] : [];
   const code = codes.find(c => c.Name === (r.vat ? '20.0% S' : 'No VAT'));
   const labour = round(r.labour), materials = round(r.materials);
   const cis = Boolean(r.cis) && labour > 0;
@@ -540,6 +713,7 @@ async function newInvoice(env, store, realmId, r) {
   const created = (await qb(env, store, realmId, 'POST', 'invoice', doc)).Invoice;
   let sentTo = '';
   if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice${num(created.DocNumber)} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo, cisDeduction, toReceive: round(Number(created.TotalAmt) - cisDeduction) };
 }
 
@@ -550,6 +724,7 @@ async function newQuote(env, store, realmId, r) {
   const created = (await qb(env, store, realmId, 'POST', 'estimate', { ...doc, TxnStatus: 'Pending' })).Estimate;
   let sentTo = '';
   if (email) { await qb(env, store, realmId, 'POST', `estimate/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  await logChange(store, realmId, { kind: 'quote', ref: created.Id, text: `Quote${num(created.DocNumber)} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
 }
 
@@ -574,14 +749,16 @@ async function quoteWon(env, store, realmId, id) {
   const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
   if ((e.TxnStatus || 'Pending') !== 'Pending') throw new Error('That quote has already been dealt with');
   await qb(env, store, realmId, 'POST', 'estimate', { Id: e.Id, SyncToken: e.SyncToken, sparse: true, TxnStatus: 'Accepted' });
+  await logChange(store, realmId, { kind: 'status', ref: e.Id, text: `Quote${num(e.DocNumber)} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} marked won` });
   return { ok: true };
 }
 
-async function quoteChase(env, store, realmId, id) {
+async function quoteChase(env, store, realmId, id, quiet) {
   const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
   const email = e.BillEmail && e.BillEmail.Address;
   if (!email) throw new Error('No email on this quote, so give them a ring');
   await qb(env, store, realmId, 'POST', `estimate/${id}/send?sendTo=${encodeURIComponent(email)}`);
+  if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed quote${num(e.DocNumber)} to ${email} again` });
   return { ok: true, sentTo: email };
 }
 
@@ -608,12 +785,14 @@ async function quoteInvoice(env, store, realmId, id, amount) {
   let sentTo = '';
   const email = e.BillEmail && e.BillEmail.Address;
   if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice${num(created.DocNumber)} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} ${money(created.TotalAmt)} from quote${num(e.DocNumber)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
 }
 
 async function quoteLost(env, store, realmId, id) {
   const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
   await qb(env, store, realmId, 'POST', 'estimate', { Id: e.Id, SyncToken: e.SyncToken, sparse: true, TxnStatus: 'Rejected' });
+  await logChange(store, realmId, { kind: 'status', ref: e.Id, text: `Quote${num(e.DocNumber)} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} marked lost` });
   return { ok: true };
 }
 
@@ -653,8 +832,9 @@ async function jobs(env, store, realmId) {
   return { since, jobs: list, unassigned: round(unassigned) };
 }
 
-async function setJob(env, store, realmId, id, customerId) {
+async function setJob(env, store, realmId, id, customerId, quiet) {
   const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
+  const before = (p.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.CustomerRef).find(Boolean);
   for (const l of p.Line || []) {
     const d = l.AccountBasedExpenseLineDetail;
     if (!d) continue;
@@ -662,6 +842,7 @@ async function setJob(env, store, realmId, id, customerId) {
   }
   const saved = (await qb(env, store, realmId, 'POST', 'purchase', p)).Purchase;
   const ref = (saved.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.CustomerRef).find(Boolean);
+  if (!quiet) await logChange(store, realmId, { kind: 'job', ref: `${p.Id}:${before ? before.value : ''}`, text: `${(p.EntityRef && p.EntityRef.name) || 'Expense'} ${money(p.TotalAmt)} ${ref ? `put against ${ref.name || 'a job'}` : 'taken off its job'}` });
   return { ok: true, job: ref ? ref.name || '' : '' };
 }
 
@@ -711,7 +892,7 @@ Today is ${today}. Reply with ONLY a JSON object:
 
 // ---------- tidy up: expenses left in Uncategorised ----------
 
-async function untidy(env, store, realmId) {
+async function untidy(env, store, realmId, countOnly) {
   const list = (await query(env, store, realmId, 'select * from Purchase orderby TxnDate desc maxresults 300')).Purchase || [];
   const items = [];
   for (const p of list) {
@@ -723,7 +904,7 @@ async function untidy(env, store, realmId) {
       }
     }
   }
-  if (items.length && env.AI) {
+  if (items.length && env.AI && !countOnly) {
     try {
       const guesses = await askJson(env, `For each UK trade business expense below, pick the best category from: ${CATEGORIES.join(', ')}.
 Reply with ONLY a JSON array of category names, same order, same length.
@@ -739,13 +920,14 @@ async function tidy(env, store, realmId, id, category) {
   const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
   const accounts = (await query(env, store, realmId, 'select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
   const target = pickAccount(accounts.filter(a => a.AccountType === 'Expense' || a.AccountType === 'Cost of Goods Sold'), category);
-  let changed = 0;
+  let changed = 0, from = '';
   for (const l of p.Line || []) {
     const d = l.AccountBasedExpenseLineDetail;
-    if (d && d.AccountRef && /uncategori[sz]ed/i.test(d.AccountRef.name || '')) { d.AccountRef = { value: target.Id }; changed++; }
+    if (d && d.AccountRef && /uncategori[sz]ed/i.test(d.AccountRef.name || '')) { from = d.AccountRef.value; d.AccountRef = { value: target.Id }; changed++; }
   }
   if (!changed) return { ok: true, account: target.Name, unchanged: true };
   await qb(env, store, realmId, 'POST', 'purchase', p);
+  await logChange(store, realmId, { kind: 'tidy', ref: `${p.Id}:${from}:${target.Id}`, text: `Moved ${(p.EntityRef && p.EntityRef.name) || 'expense'} ${money(p.TotalAmt)} to ${target.Name}` });
   return { ok: true, account: target.Name };
 }
 
@@ -781,7 +963,17 @@ async function quarter(env, store, realmId, dateStr) {
   };
   walk(report.Rows && report.Rows.Row, '');
   const income = round(totals.Income || 0), expenses = round((totals.COGS || 0) + (totals.Expenses || 0) + (totals.OtherExpenses || 0));
-  return { ...q, income, expenses, profit: round(income - expenses), lines };
+  // Ready for the quarterly update? Nothing left uncategorised, and every expense has its receipt.
+  const [buys, files, messy] = await Promise.all([
+    query(env, store, realmId, `select Id from Purchase where TxnDate >= '${q.from}' and TxnDate <= '${q.to}' maxresults 1000`).then(d => d.Purchase || []),
+    query(env, store, realmId, 'select Id, AttachableRef from Attachable maxresults 1000').then(d => d.Attachable || []),
+    untidy(env, store, realmId, true).catch(() => []),
+  ]);
+  const withReceipt = new Set();
+  for (const a of files) for (const ref of a.AttachableRef || []) if (ref.EntityRef && ref.EntityRef.type === 'Purchase') withReceipt.add(ref.EntityRef.value);
+  const toTidy = messy.filter(m => m.date >= q.from && m.date <= q.to).length;
+  const noReceipt = buys.filter(b => !withReceipt.has(b.Id)).length;
+  return { ...q, income, expenses, profit: round(income - expenses), lines, toTidy, noReceipt, ready: !toTidy && !noReceipt };
 }
 
 // ---------- accountant pack ----------
@@ -817,12 +1009,19 @@ async function packLink(store, origin, realmId, p) {
 
 async function pack(env, store, realmId, from, to) {
   const when = `TxnDate >= '${from}' and TxnDate <= '${to}'`;
-  const [pl, buys, invs, files, client] = await Promise.all([
+  const [pl, buys, invs, files, client, trips, cisPays] = await Promise.all([
     qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${from}&end_date=${to}`),
     query(env, store, realmId, `select * from Purchase where ${when} orderby TxnDate maxresults 1000`).then(d => d.Purchase || []),
     query(env, store, realmId, `select * from Invoice where ${when} orderby TxnDate maxresults 1000`).then(d => d.Invoice || []),
     query(env, store, realmId, 'select Id, AttachableRef from Attachable maxresults 1000').then(d => d.Attachable || []),
     getClient(store, realmId),
+    tripsFor(store, realmId, from, to),
+    query(env, store, realmId, `select Id from Account where Name = '${CIS_ACCOUNT}'`).then(async d => {
+      const acc = (d.Account || [])[0];
+      if (!acc) return [];
+      const pays = (await query(env, store, realmId, `select * from Payment where ${when} maxresults 1000`)).Payment || [];
+      return pays.filter(x => x.DepositToAccountRef && x.DepositToAccountRef.value === acc.Id);
+    }),
   ]);
   const receiptOf = {};
   for (const a of files) for (const ref of a.AttachableRef || []) if (ref.EntityRef && ref.EntityRef.type === 'Purchase') receiptOf[ref.EntityRef.value] = a.Id;
@@ -848,6 +1047,9 @@ async function pack(env, store, realmId, from, to) {
       total: Number(p.TotalAmt), vat: tax(p), receipt: receiptOf[p.Id] || '',
     })),
     invoiced: invs.map(i => ({ date: i.TxnDate, number: i.DocNumber || '', customer: (i.CustomerRef && i.CustomerRef.name) || '', total: Number(i.TotalAmt), vat: tax(i), unpaid: Number(i.Balance) })),
+    trips: trips.trips, miles: trips.miles, mileWorth: trips.worth,
+    cis: cisPays.map(x => ({ date: x.TxnDate, customer: (x.CustomerRef && x.CustomerRef.name) || '', amount: Number(x.TotalAmt) })),
+    cisTotal: round(cisPays.reduce((s, x) => s + Number(x.TotalAmt), 0)),
   };
 }
 
@@ -864,7 +1066,9 @@ function packCsv(d) {
     ['SUMMARY'], ['Income', d.income.toFixed(2)], ['Expenses', d.expenses.toFixed(2)], ['Profit', d.profit.toFixed(2)], [],
     ['BY CATEGORY'], ['Section', 'Category', 'Amount'], ...d.lines.map(l => [l.section, l.name, l.amount.toFixed(2)]), [],
     ['EXPENSES'], ['Date', 'Supplier', 'Category', 'VAT', 'Total', 'Receipt'], ...d.spent.map(s => [s.date, s.supplier, s.category, s.vat.toFixed(2), s.total.toFixed(2), s.receipt ? 'Yes' : 'No']), [],
-    ['INVOICES'], ['Date', 'Number', 'Customer', 'VAT', 'Total', 'Unpaid'], ...d.invoiced.map(i => [i.date, i.number, i.customer, i.vat.toFixed(2), i.total.toFixed(2), i.unpaid.toFixed(2)])];
+    ['INVOICES'], ['Date', 'Number', 'Customer', 'VAT', 'Total', 'Unpaid'], ...d.invoiced.map(i => [i.date, i.number, i.customer, i.vat.toFixed(2), i.total.toFixed(2), i.unpaid.toFixed(2)]), [],
+    ['CIS TAKEN OFF BY CONTRACTORS'], ['Date', 'Contractor', 'Amount'], ...d.cis.map(c => [c.date, c.customer, c.amount.toFixed(2)]), ['Total', '', d.cisTotal.toFixed(2)], [],
+    ['MILEAGE (45p a mile for the first 10,000 business miles in the tax year, 25p after)'], ['Date', 'Miles', 'What for', 'Worth'], ...d.trips.map(t => [t.date, String(t.miles), t.why, t.worth.toFixed(2)]), ['Total', String(d.miles), '', d.mileWorth.toFixed(2)]];
   return rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
 }
 
@@ -899,7 +1103,12 @@ a{color:#1f5fbf}.note{font-size:13px;color:var(--muted);margin:8px 0 0}
 ${d.spent.map(s => `<tr><td>${dt(s.date)}</td><td>${e(s.supplier)}</td><td>${e(s.category)}</td><td class="n">${m(s.vat)}</td><td class="n">${m(s.total)}</td><td>${s.receipt ? `<a href="${self}/r/${s.receipt}" target="_blank" rel="noopener">View</a>` : '–'}</td></tr>`).join('') || '<tr><td colspan="6">None.</td></tr>'}</table></div>
 <div class="card"><h2>Invoices</h2><table><tr><th>Date</th><th>No.</th><th>Customer</th><th class="n">VAT</th><th class="n">Total</th><th class="n">Unpaid</th></tr>
 ${d.invoiced.map(i => `<tr><td>${dt(i.date)}</td><td>${e(i.number)}</td><td>${e(i.customer)}</td><td class="n">${m(i.vat)}</td><td class="n">${m(i.total)}</td><td class="n">${i.unpaid ? m(i.unpaid) : '–'}</td></tr>`).join('') || '<tr><td colspan="6">None.</td></tr>'}</table></div>
-<p class="note">Made by Books (Localdesk). Everything here comes straight from QuickBooks.</p>
+${d.cis.length ? `<div class="card"><h2>CIS taken off by contractors</h2><table><tr><th>Date</th><th>Contractor</th><th class="n">Amount</th></tr>
+${d.cis.map(c => `<tr><td>${dt(c.date)}</td><td>${e(c.customer)}</td><td class="n">${m(c.amount)}</td></tr>`).join('')}<tr><th>Total</th><th></th><th class="n">${m(d.cisTotal)}</th></tr></table><p class="note">Paid to HMRC on their behalf. Recorded in QuickBooks under "${CIS_ACCOUNT}".</p></div>` : ''}
+${d.trips.length ? `<div class="card"><h2>Mileage log</h2><table><tr><th>Date</th><th class="n">Miles</th><th>What for</th><th class="n">At HMRC rate</th></tr>
+${d.trips.map(t => `<tr><td>${dt(t.date)}</td><td class="n">${t.miles}</td><td>${e(t.why)}</td><td class="n">${m(t.worth)}</td></tr>`).join('')}<tr><th>Total</th><th class="n">${d.miles}</th><th></th><th class="n">${m(d.mileWorth)}</th></tr></table>
+<p class="note">Logged in the Books app, not in QuickBooks. 45p a mile for the first 10,000 business miles in the tax year, 25p after. Only claimable instead of actual vehicle costs for that vehicle.</p></div>` : ''}
+<p class="note">Made by Books (Localdesk). Everything here comes straight from QuickBooks, apart from the mileage log.</p>
 </main></body></html>`;
 }
 
@@ -918,6 +1127,514 @@ async function quarterRun(env) {
     } catch (err) { report.push(`${(client && client.name) || c.realmId}: FAILED (${err.message}).`); }
   }
   if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books quarter packs: ${report.join(' ') || 'no clients.'}`);
+}
+
+// ---------- change log: everything Books did in their QuickBooks ----------
+
+const LOG_DAYS = 60;
+const logId = () => `${Date.now()}${String(crypto.getRandomValues(new Uint16Array(1))[0] % 1000).padStart(3, '0')}`;
+
+// kind: file | tidy | job | paid | status (can be undone); invoice | quote | remind | chase (sent to someone, so they stay).
+async function logChange(store, realmId, entry) {
+  const id = logId();
+  await store.fetch(`https://store/log/${realmId}/${id}`, { method: 'PUT', body: JSON.stringify({ id, at: Date.now(), ...entry }) }).catch(() => {});
+}
+
+async function markUndone(store, realmId, kind, ref) {
+  const list = await (await store.fetch(`https://store/log/${realmId}`)).json();
+  const e = list.find(x => x.kind === kind && String(x.ref) === String(ref) && !x.undone);
+  if (e) await store.fetch(`https://store/log/${realmId}/${e.id}`, { method: 'PUT', body: JSON.stringify({ ...e, undone: Date.now() }) });
+}
+
+const UNDOABLE = ['file', 'tidy', 'job', 'paid', 'status', 'edit'];
+async function changes(store, realmId) {
+  const list = await (await store.fetch(`https://store/log/${realmId}`)).json();
+  return list.filter(e => Date.now() - e.at < LOG_DAYS * 86400000)
+    .map(e => ({ id: e.id, kind: e.kind, at: new Date(e.at).toISOString(), text: e.text, undone: Boolean(e.undone), canUndo: !e.undone && UNDOABLE.includes(e.kind) }));
+}
+
+async function revert(env, store, realmId, id) {
+  const res = await store.fetch(`https://store/log/${realmId}/${id}`);
+  if (!res.ok) throw new Error('Can\'t find that change');
+  const e = await res.json();
+  if (e.undone) return { ok: true, already: true };
+  if (!UNDOABLE.includes(e.kind)) throw new Error('That one went to someone, so it can\'t be taken back here. Ring Gio if it needs sorting');
+  const ref = String(e.ref || '');
+  if (e.kind === 'file') {
+    await undoPurchase(env, store, realmId, ref);
+    return { ok: true };
+  }
+  if (e.kind === 'tidy') {
+    const [pid, from, to] = ref.split(':');
+    const p = (await qb(env, store, realmId, 'GET', `purchase/${pid}`)).Purchase;
+    for (const l of p.Line || []) { const d = l.AccountBasedExpenseLineDetail; if (d && d.AccountRef && d.AccountRef.value === to) d.AccountRef = { value: from }; }
+    await qb(env, store, realmId, 'POST', 'purchase', p);
+  } else if (e.kind === 'job') {
+    const [pid, prev] = ref.split(':');
+    await setJob(env, store, realmId, pid, prev, true);
+  } else if (e.kind === 'paid') {
+    for (const pid of ref.split(',').filter(Boolean)) {
+      const pay = (await qb(env, store, realmId, 'GET', `payment/${pid}`)).Payment;
+      await qb(env, store, realmId, 'POST', 'payment?operation=delete', { Id: pay.Id, SyncToken: pay.SyncToken });
+    }
+  } else if (e.kind === 'edit') {
+    const before = JSON.parse(ref);
+    const p = (await qb(env, store, realmId, 'GET', `purchase/${before.Id}`)).Purchase;
+    await qb(env, store, realmId, 'POST', 'purchase', { ...p, TxnDate: before.TxnDate, EntityRef: before.EntityRef, GlobalTaxCalculation: before.GlobalTaxCalculation, Line: before.Line });
+  } else if (e.kind === 'status') {
+    const q = (await qb(env, store, realmId, 'GET', `estimate/${ref}`)).Estimate;
+    if (q.TxnStatus === 'Closed') throw new Error('That quote has been invoiced, so it can\'t go back');
+    await qb(env, store, realmId, 'POST', 'estimate', { Id: q.Id, SyncToken: q.SyncToken, sparse: true, TxnStatus: 'Pending' });
+  }
+  await store.fetch(`https://store/log/${realmId}/${e.id}`, { method: 'PUT', body: JSON.stringify({ ...e, undone: Date.now() }) });
+  return { ok: true };
+}
+
+// ---------- mileage log ----------
+
+// HMRC mileage rates for cars and vans: 45p a mile for the first 10,000 business miles in a tax year, 25p after.
+const MILE_RATE = 0.45, MILE_RATE_AFTER = 0.25, MILE_BAND = 10000;
+
+async function addTrip(store, realmId, r) {
+  const n = round(r.miles);
+  if (!(n > 0) || n > 2000) throw new Error('Put in the miles for the trip');
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : new Date().toISOString().slice(0, 10);
+  if (Date.parse(date) > Date.now() + 86400000) throw new Error('That date is in the future');
+  const trip = { id: logId(), date, miles: n, why: String(r.why || '').trim().slice(0, 120) };
+  await store.fetch(`https://store/trips/${realmId}/${trip.id}`, { method: 'PUT', body: JSON.stringify(trip) });
+  return { ok: true, trip };
+}
+
+async function deleteTrip(store, realmId, id) {
+  await store.fetch(`https://store/trips/${realmId}/${id}`, { method: 'DELETE' });
+  return { ok: true };
+}
+
+// This tax year's trips (year=last for last year's), oldest first, each with what it's worth.
+async function miles(store, realmId, year) {
+  const p = packPeriod(year === 'last' ? 'lasttaxyear' : 'taxyear');
+  return { ...p, ...(await tripsFor(store, realmId, p.from, p.to)) };
+}
+
+// Trips between two dates. The 45p band runs over the whole tax year, so it's counted from 6 April.
+async function tripsFor(store, realmId, from, to) {
+  const all = await (await store.fetch(`https://store/trips/${realmId}`)).json();
+  const y = Number(from.slice(0, 4)) - (from.slice(5) < '04-06' ? 1 : 0);
+  const yearFrom = `${y}-04-06`;
+  const year = all.filter(t => t.date >= yearFrom && t.date <= to).sort((a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
+  let run = 0;
+  for (const t of year) {
+    const at45 = Math.max(0, Math.min(t.miles, MILE_BAND - run));
+    t.worth = round(at45 * MILE_RATE + (t.miles - at45) * MILE_RATE_AFTER);
+    run += t.miles;
+  }
+  const trips = year.filter(t => t.date >= from);
+  return { trips, miles: round(trips.reduce((s, t) => s + t.miles, 0)), worth: round(trips.reduce((s, t) => s + t.worth, 0)) };
+}
+
+// ---------- daily check, chasing and the weekly report ----------
+
+const DAILY_CRON = '0 7 * * *';
+const CHASE_INVOICE_DAYS = [7, 14, 28]; // days late
+const CHASE_QUOTE_DAYS = [3, 7];        // days since the quote
+const CHASES_PER_DAY = 10;
+
+async function dailyRun(env) {
+  const store = env.STORE.get(env.STORE.idFromName('main'));
+  const report = await health(env, store, { refresh: true, chase: true });
+  if (new Date().getUTCDay() === 1 && env.OWNER_PHONE) {
+    const lines = report.clients.map(c => c.ok
+      ? `${c.name}: ${c.filed} filed, ${c.toTidy} to sort, ${c.late} late${c.chased ? `, ${c.chased} chased` : ''}, app ${c.seenDays == null ? 'never opened' : c.seenDays === 0 ? 'used today' : `last used ${c.seenDays}d ago`}.`
+      : `${c.name}: NOT CONNECTED (${c.problem}).`);
+    await sendSms(env, env.OWNER_PHONE, `Books weekly check: ${lines.join(' ') || 'no clients connected.'}`);
+  }
+}
+
+// Each client's connection, kept fresh, plus what needs doing. With chase, also chases for clients who switched it on.
+async function health(env, store, opts = {}) {
+  const companies = await (await store.fetch('https://store/tokens')).json();
+  const clients = [];
+  for (const c of companies) {
+    const client = (await getClient(store, c.realmId)) || {};
+    const row = { realmId: c.realmId, name: client.name || c.realmId, ok: true };
+    try {
+      // Intuit drops a connection that isn't used for 100 days; refreshing well before keeps it alive.
+      await accessToken(env, store, c.realmId, opts.refresh && Date.parse(c.refresh_expires_at) - Date.now() < 30 * 86400000);
+      const [messy, late, log, seen] = await Promise.all([
+        untidy(env, store, c.realmId).catch(() => []),
+        owed(env, store, c.realmId).then(l => l.filter(i => i.daysOverdue > 0)),
+        store.fetch(`https://store/log/${c.realmId}`).then(r => r.json()),
+        store.fetch(`https://store/seen/${c.realmId}`).then(r => r.json()).catch(() => null),
+      ]);
+      const week = Date.now() - 7 * 86400000;
+      row.toTidy = messy.length; row.late = late.length;
+      row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length;
+      row.seenDays = seen && seen.at ? Math.floor((Date.now() - seen.at) / 86400000) : null;
+      if (opts.chase && client.chase === 'on') row.chasedToday = await chaseAll(env, store, c.realmId, client, late);
+      row.chased = log.filter(e => e.kind === 'chase' && e.at > week).length + (row.chasedToday || 0);
+      if (opts.chase) {
+        const bits = [];
+        if (late.length) bits.push(`${late.length} invoice${late.length > 1 ? 's' : ''} late (${money(late.reduce((t, i) => t + i.balance, 0))})`);
+        if (messy.length) bits.push(`${messy.length} expense${messy.length > 1 ? 's' : ''} to sort`);
+        if (row.chasedToday) bits.push(`Books chased ${row.chasedToday} for you`);
+        if (bits.length) await notify(env, store, c.realmId, { title: 'Books', body: bits.join(' · '), tab: late.length ? 'owed' : 'home' }).catch(() => 0);
+      }
+    } catch (err) {
+      row.ok = false; row.problem = String(err && err.message || err).slice(0, 120);
+      await alertOwner(env, store, `conn:${c.realmId}`, `Books: ${row.name}'s QuickBooks isn't working (${row.problem}). They may need a fresh connect link.`).catch(() => {});
+    }
+    clients.push(row);
+  }
+  return { checked: new Date().toISOString(), clients };
+}
+
+// Emails late invoices (and quiet quotes, if they have quotes) again through QuickBooks, a few times at most.
+async function chaseAll(env, store, realmId, client, late) {
+  const due = [];
+  for (const i of late) if (i.email) due.push({ key: `inv-${i.id}`, days: i.daysOverdue, steps: CHASE_INVOICE_DAYS, send: () => remind(env, store, realmId, i.id, true), text: `Chased ${i.customer} for invoice ${i.number} (${i.daysOverdue} days late) by email` });
+  if (String(client.extras || '').split(',').map(x => x.trim()).includes('quotes')) {
+    for (const q of await quotes(env, store, realmId)) {
+      if (q.status === 'waiting' && q.email) due.push({ key: `quote-${q.id}`, days: q.days, steps: CHASE_QUOTE_DAYS, send: () => quoteChase(env, store, realmId, q.id, true), text: `Chased ${q.customer} about quote ${q.number} (${q.days} days, no answer) by email` });
+    }
+  }
+  let sent = 0;
+  for (const d of due) {
+    if (sent >= CHASES_PER_DAY) break;
+    const done = await store.fetch(`https://store/chased/${realmId}/${d.key}`).then(r => r.json()).catch(() => []);
+    const reached = d.steps.filter(s => d.days >= s);
+    // Only the latest step that's due, once. Switching chasing on doesn't fire off a backlog.
+    if (!reached.length || done.includes(reached[reached.length - 1])) continue;
+    try {
+      await d.send();
+      await store.fetch(`https://store/chased/${realmId}/${d.key}`, { method: 'PUT', body: JSON.stringify(reached) });
+      await logChange(store, realmId, { kind: 'chase', text: d.text });
+      sent++;
+    } catch (err) { /* e.g. no email any more; try again tomorrow */ }
+  }
+  return sent;
+}
+
+// ---------- everything, not just the latest: expenses, invoices, customers ----------
+
+const isoDay = (d) => d.toISOString().slice(0, 10);
+
+// Expenses in a period (default: last 12 months), newest first. q searches supplier, note and category.
+async function expenses(env, store, realmId, params) {
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.get('to') || '') ? params.get('to') : isoDay(new Date());
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(params.get('from') || '') ? params.get('from') : isoDay(new Date(Date.now() - 365 * 86400000));
+  const [buys, files] = await Promise.all([
+    query(env, store, realmId, `select * from Purchase where TxnDate >= '${from}' and TxnDate <= '${to}' orderby TxnDate desc maxresults 1000`).then(d => d.Purchase || []),
+    query(env, store, realmId, 'select Id, AttachableRef from Attachable maxresults 1000').then(d => d.Attachable || []),
+  ]);
+  const withReceipt = new Set();
+  for (const a of files) for (const ref of a.AttachableRef || []) if (ref.EntityRef && ref.EntityRef.type === 'Purchase') withReceipt.add(ref.EntityRef.value);
+  let items = buys.map(p => purchaseRow(p, withReceipt.has(p.Id)));
+  const accounts = [...new Set(items.map(i => i.account).filter(Boolean))].sort();
+  const q = String(params.get('q') || '').trim().toLowerCase();
+  if (q) items = items.filter(i => `${i.supplier} ${i.note} ${i.account} ${i.job}`.toLowerCase().includes(q));
+  const cat = params.get('cat');
+  if (cat) items = items.filter(i => i.account === cat);
+  return { from, to, items, total: round(items.reduce((s, i) => s + i.total, 0)), accounts };
+}
+
+function purchaseRow(p, hasReceipt) {
+  const lines = (p.Line || []).filter(l => l.AccountBasedExpenseLineDetail);
+  const d = (lines[0] || {}).AccountBasedExpenseLineDetail || {};
+  return {
+    id: p.Id, date: p.TxnDate, supplier: (p.EntityRef && p.EntityRef.name) || '', total: Number(p.TotalAmt),
+    vat: round((p.TxnTaxDetail && p.TxnTaxDetail.TotalTax) || 0), account: (d.AccountRef && d.AccountRef.name) || '',
+    note: [...new Set([lines.map(l => l.Description).filter(Boolean).join(', '), String(p.PrivateNote || '').replace(/\s*\((added from a receipt photo|added in Books)\)/, '').trim()].filter(Boolean))].join(' · '),
+    job: (d.CustomerRef && d.CustomerRef.name) || '', jobId: (d.CustomerRef && d.CustomerRef.value) || '',
+    hasReceipt: Boolean(hasReceipt), lines: lines.length, fromApp: /added from a receipt photo|added in Books/.test(p.PrivateNote || ''),
+  };
+}
+
+async function expense(env, store, realmId, id) {
+  const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
+  const att = (await query(env, store, realmId, `select Id from Attachable where AttachableRef.EntityRef.Type = 'Purchase' and AttachableRef.EntityRef.value = '${id}'`).catch(() => ({}))).Attachable || [];
+  const row = purchaseRow(p, att.length > 0);
+  const cat = Object.keys(ACCOUNT_NAMES).find(c => (ACCOUNT_NAMES[c] || []).some(n => row.account.toLowerCase().includes(n))) || 'Other';
+  return { ...row, category: cat, editable: row.lines === 1, net: round(row.total - row.vat) };
+}
+
+// Edit a one-line expense: date, supplier, total, VAT, category. The old version is kept so it can be undone.
+async function fixExpense(env, store, realmId, id, r) {
+  const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
+  const lines = (p.Line || []).filter(l => l.AccountBasedExpenseLineDetail);
+  if (lines.length !== 1 || (p.Line || []).length !== 1) throw new Error('This one has more than one line. Change it in QuickBooks');
+  const before = { Id: p.Id, TxnDate: p.TxnDate, EntityRef: p.EntityRef, GlobalTaxCalculation: p.GlobalTaxCalculation, Line: p.Line };
+  const total = round(r.total), vat = Math.max(0, round(r.vat));
+  if (!(total > 0)) throw new Error('Put in the total');
+  if (vat >= total) throw new Error('The VAT can\'t be more than the total');
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : p.TxnDate;
+  const q = (sql) => query(env, store, realmId, sql);
+  const vendorId = r.supplier && r.supplier.trim() && r.supplier.trim() !== (p.EntityRef && p.EntityRef.name)
+    ? await findOrCreateVendor(env, store, realmId, q, r.supplier.trim().slice(0, 100)) : p.EntityRef && p.EntityRef.value;
+  const line = JSON.parse(JSON.stringify(lines[0]));
+  const d = line.AccountBasedExpenseLineDetail;
+  if (r.category && CATEGORIES.includes(r.category)) {
+    const accounts = (await q('select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
+    d.AccountRef = { value: pickAccount(accounts.filter(a => a.AccountType === 'Expense' || a.AccountType === 'Cost of Goods Sold'), r.category).Id };
+  }
+  const registered = await vatRegistered(env, store, realmId);
+  const codes = registered ? (await q('select Id, Name from TaxCode')).TaxCode || [] : [];
+  const net = round(total - vat), rate = net > 0 ? vat / net : 0;
+  const code = codes.find(c => c.Name === (vat <= 0 ? 'No VAT' : Math.abs(rate - 0.05) < 0.01 ? '5.0% R' : '20.0% S'));
+  if (code) d.TaxCodeRef = { value: code.Id }; else delete d.TaxCodeRef;
+  line.Amount = code ? net : total;
+  const saved = (await qb(env, store, realmId, 'POST', 'purchase', {
+    ...p, TxnDate: date, EntityRef: vendorId ? { value: vendorId, type: 'Vendor' } : p.EntityRef,
+    GlobalTaxCalculation: code ? 'TaxExcluded' : 'NotApplicable', Line: [line], TxnTaxDetail: undefined,
+  })).Purchase;
+  await logChange(store, realmId, { kind: 'edit', ref: JSON.stringify(before), text: `Changed ${(saved.EntityRef && saved.EntityRef.name) || 'expense'}: ${money(p.TotalAmt)} → ${money(saved.TotalAmt)}` });
+  return { ok: true, total: Number(saved.TotalAmt) };
+}
+
+// The receipt photo on an expense, fetched fresh (QuickBooks' own links only last 15 minutes).
+async function receiptOfPurchase(env, store, realmId, id) {
+  const att = ((await query(env, store, realmId, `select * from Attachable where AttachableRef.EntityRef.Type = 'Purchase' and AttachableRef.EntityRef.value = '${id}'`)).Attachable || [])[0];
+  if (!att || !att.TempDownloadUri) return text('No receipt', 404);
+  const res = await fetch(att.TempDownloadUri);
+  return new Response(res.body, { headers: { 'Content-Type': att.ContentType || res.headers.get('Content-Type') || 'image/jpeg', 'Cache-Control': 'private, max-age=600' } });
+}
+
+async function invoices(env, store, realmId, which) {
+  const since = isoDay(new Date(Date.now() - 365 * 86400000));
+  const list = (await query(env, store, realmId, `select * from Invoice where TxnDate >= '${since}' orderby TxnDate desc maxresults 500`)).Invoice || [];
+  const rows = list.map(i => ({
+    id: i.Id, number: i.DocNumber || '', customer: (i.CustomerRef && i.CustomerRef.name) || 'Customer', customerId: (i.CustomerRef && i.CustomerRef.value) || '',
+    date: i.TxnDate, due: i.DueDate || i.TxnDate, total: Number(i.TotalAmt), balance: Number(i.Balance), email: (i.BillEmail && i.BillEmail.Address) || '',
+    paid: Number(i.Balance) <= 0,
+  }));
+  return which === 'paid' ? rows.filter(r => r.paid) : which === 'unpaid' ? rows.filter(r => !r.paid) : rows;
+}
+
+async function invoiceDoc(env, store, realmId, id) {
+  const i = (await qb(env, store, realmId, 'GET', `invoice/${id}`)).Invoice;
+  return docData(i, 'invoice');
+}
+
+function docData(x, type) {
+  return {
+    id: x.Id, type, number: x.DocNumber || '', customer: (x.CustomerRef && x.CustomerRef.name) || 'Customer', customerId: (x.CustomerRef && x.CustomerRef.value) || '',
+    date: x.TxnDate, due: x.DueDate || '', email: (x.BillEmail && x.BillEmail.Address) || '',
+    lines: (x.Line || []).filter(l => l.DetailType === 'SalesItemLineDetail').map(l => ({ description: l.Description || '', amount: Number(l.Amount) })),
+    net: round(Number(x.TotalAmt) - Number((x.TxnTaxDetail && x.TxnTaxDetail.TotalTax) || 0)), vat: round((x.TxnTaxDetail && x.TxnTaxDetail.TotalTax) || 0),
+    total: Number(x.TotalAmt), balance: x.Balance != null ? Number(x.Balance) : null, memo: (x.CustomerMemo && x.CustomerMemo.value) || '', status: x.TxnStatus || '',
+  };
+}
+
+// A link the customer can open: the invoice or quote as a page, with its PDF. Lives as long as a pack link.
+async function shareLink(env, store, origin, realmId, r) {
+  const type = r.type === 'quote' ? 'quote' : 'invoice';
+  if (!/^\d+$/.test(String(r.id || ''))) throw new Error('Which one?');
+  const doc = type === 'quote' ? (await qb(env, store, realmId, 'GET', `estimate/${r.id}`)).Estimate : (await qb(env, store, realmId, 'GET', `invoice/${r.id}`)).Invoice;
+  const id = randomKey() + randomKey();
+  await store.fetch(`https://store/docs/${id}`, { method: 'PUT', body: JSON.stringify({ realmId, type, id: String(r.id), created: Date.now() }) });
+  const cust = doc.CustomerRef ? (await qb(env, store, realmId, 'GET', `customer/${doc.CustomerRef.value}`).catch(() => ({}))).Customer || {} : {};
+  return { ok: true, url: `${origin}/d/${id}`, phone: phoneOf(cust), customer: (doc.CustomerRef && doc.CustomerRef.name) || '', total: Number(doc.TotalAmt), number: doc.DocNumber || '' };
+}
+
+const phoneOf = (c) => ((c.Mobile && c.Mobile.FreeFormNumber) || (c.PrimaryPhone && c.PrimaryPhone.FreeFormNumber) || '').trim();
+
+async function docPage(env, store, link, self) {
+  const raw = link.type === 'quote'
+    ? (await qb(env, store, link.realmId, 'GET', `estimate/${link.id}`)).Estimate
+    : (await qb(env, store, link.realmId, 'GET', `invoice/${link.id}?include=invoiceLink`)).Invoice;
+  const d = docData(raw, link.type);
+  const client = (await getClient(store, link.realmId)) || {};
+  const biz = client.name || await qb(env, store, link.realmId, 'GET', `companyinfo/${link.realmId}`).then(r => r.CompanyInfo.CompanyName).catch(() => '');
+  const e = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const m = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const dt = s => s ? new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const paid = link.type === 'invoice' && d.balance === 0;
+  const pay = link.type === 'invoice' && !paid && raw.InvoiceLink ? raw.InvoiceLink : '';
+  const title = link.type === 'quote' ? 'Quote' : 'Invoice';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>${e(title)}${d.number ? ' ' + e(d.number) : ''} · ${e(biz)}</title><style>
+:root{--ink:#16181b;--muted:#646a73;--line:#e4e6ea;--bg:#f2f3f5;--card:#fff;--go:#1f7a4d}
+@media (prefers-color-scheme:dark){:root{--ink:#eceef1;--muted:#a1a7b0;--line:#2c3035;--bg:#101113;--card:#1b1d20;--go:#5cc78f}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:620px;margin:0 auto;padding:24px 16px 48px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px}
+.biz{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-size:28px;margin:4px 0 0}.sub{color:var(--muted);margin:2px 0 0}
+.total{font-size:40px;font-weight:800;margin:6px 0 0;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse}td{padding:10px 0;border-top:1px solid var(--line);vertical-align:top}td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;padding-left:12px}
+tr.sum td{border-top:0;padding:4px 0;color:var(--muted)}tr.big td{font-weight:800;color:var(--ink);font-size:18px;border-top:1px solid var(--line);padding-top:10px}
+.btn{display:block;text-align:center;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:800;padding:15px;border-radius:14px}
+.btn.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.paid{display:inline-block;background:color-mix(in srgb,var(--go) 15%,transparent);color:var(--go);font-weight:800;padding:4px 12px;border-radius:20px;margin-top:8px}
+.note{font-size:14px;color:var(--muted);margin:0}
+</style></head><body><main>
+<div class="card"><p class="biz">${e(biz)}</p><h1>${e(title)}${d.number ? ' ' + e(d.number) : ''}</h1><p class="sub">For ${e(d.customer)} · ${e(dt(d.date))}</p>
+<p class="total">${m(paid ? d.total : (d.balance != null ? d.balance : d.total))}</p>
+${paid ? '<span class="paid">Paid, thank you</span>' : link.type === 'invoice' && d.due ? `<p class="sub">Due by ${e(dt(d.due))}</p>` : link.type === 'quote' ? '<p class="sub">Quote</p>' : ''}</div>
+<div class="card"><table>${d.lines.map(l => `<tr><td>${e(l.description || 'Work')}</td><td class="n">${m(l.amount)}</td></tr>`).join('')}
+${d.vat ? `<tr class="sum"><td>Before VAT</td><td class="n">${m(d.net)}</td></tr><tr class="sum"><td>VAT</td><td class="n">${m(d.vat)}</td></tr>` : ''}
+<tr class="big"><td>Total</td><td class="n">${m(d.total)}</td></tr></table>${d.memo ? `<p class="note" style="margin-top:12px">${e(d.memo)}</p>` : ''}</div>
+${pay ? `<a class="btn" href="${e(pay)}">Pay now by card</a>` : ''}
+<a class="btn${pay ? ' alt' : ''}" href="${self}.pdf">Download PDF</a>
+<p class="note" style="text-align:center">Sent by ${e(biz)} using Books</p>
+</main></body></html>`;
+}
+
+async function customerList(env, store, realmId) {
+  const since = isoDay(new Date(Date.now() - 365 * 86400000));
+  const [custs, invs] = await Promise.all([
+    query(env, store, realmId, 'select * from Customer where Active = true maxresults 1000').then(d => d.Customer || []),
+    query(env, store, realmId, `select * from Invoice where TxnDate >= '${since}' maxresults 1000`).then(d => d.Invoice || []),
+  ]);
+  const paid = {}, last = {};
+  for (const i of invs) {
+    const c = i.CustomerRef && i.CustomerRef.value; if (!c) continue;
+    paid[c] = (paid[c] || 0) + Number(i.TotalAmt) - Number(i.Balance);
+    if (!last[c] || i.TxnDate > last[c]) last[c] = i.TxnDate;
+  }
+  return custs.map(c => ({
+    id: c.Id, name: c.DisplayName, owes: round(c.Balance), paid: round(paid[c.Id] || 0), last: last[c.Id] || '',
+    phone: phoneOf(c), email: (c.PrimaryEmailAddr && c.PrimaryEmailAddr.Address) || '',
+  })).sort((a, b) => (b.owes > 0) - (a.owes > 0) || (b.last > a.last ? 1 : b.last < a.last ? -1 : 0) || a.name.localeCompare(b.name));
+}
+
+async function customerOne(env, store, realmId, id) {
+  const [c, invs, ests] = await Promise.all([
+    qb(env, store, realmId, 'GET', `customer/${id}`).then(d => d.Customer),
+    query(env, store, realmId, `select * from Invoice where CustomerRef = '${id}' orderby TxnDate desc maxresults 100`).then(d => d.Invoice || []),
+    query(env, store, realmId, `select * from Estimate where CustomerRef = '${id}' orderby TxnDate desc maxresults 50`).then(d => d.Estimate || []).catch(() => []),
+  ]);
+  const addr = c.BillAddr ? [c.BillAddr.Line1, c.BillAddr.City, c.BillAddr.PostalCode].filter(Boolean).join(', ') : '';
+  return {
+    id: c.Id, name: c.DisplayName, owes: round(c.Balance), phone: phoneOf(c), email: (c.PrimaryEmailAddr && c.PrimaryEmailAddr.Address) || '', address: addr,
+    paid: round(invs.reduce((s, i) => s + Number(i.TotalAmt) - Number(i.Balance), 0)),
+    invoices: invs.map(i => ({ id: i.Id, number: i.DocNumber || '', date: i.TxnDate, total: Number(i.TotalAmt), balance: Number(i.Balance) })),
+    quotes: ests.map(q => ({ id: q.Id, number: q.DocNumber || '', date: q.TxnDate, total: Number(q.TotalAmt), status: q.TxnStatus || 'Pending' })),
+  };
+}
+
+// Money in and out for each of the last 6 months (this one so far), from QuickBooks' profit and loss.
+async function trend(env, store, realmId) {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+  const report = await qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${isoDay(start)}&end_date=${isoDay(now)}&summarize_column_by=Month`);
+  const cols = ((report.Columns && report.Columns.Column) || []).slice(1);
+  const months = [];
+  for (let k = 0; k < 6; k++) {
+    const d = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + k, 1));
+    months.push({ month: isoDay(d).slice(0, 7), label: d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }), in: 0, out: 0 });
+  }
+  const totals = {};
+  for (const row of (report.Rows && report.Rows.Row) || []) {
+    const cd = row.Summary && row.Summary.ColData;
+    if (row.group && cd) totals[row.group] = cd.slice(1).map(c => Number(c.value) || 0);
+  }
+  months.forEach((m, k) => {
+    if (k >= cols.length) return;
+    m.in = round((totals.Income || [])[k] || 0);
+    m.out = round(((totals.COGS || [])[k] || 0) + ((totals.Expenses || [])[k] || 0) + ((totals.OtherExpenses || [])[k] || 0));
+    m.profit = round(m.in - m.out);
+  });
+  months.forEach(m => { if (m.profit == null) m.profit = round(m.in - m.out); });
+  return { months };
+}
+
+async function status(env, store, realmId) {
+  const t = await (await store.fetch(`https://store/tokens/${realmId}`)).json().catch(() => null);
+  try {
+    const info = (await qb(env, store, realmId, 'GET', `companyinfo/${realmId}`)).CompanyInfo;
+    return { connected: true, company: info.CompanyName, sandbox: (t && t.env) !== 'production', since: t && t.saved_at };
+  } catch (err) {
+    return { connected: false, problem: String(err.message).slice(0, 120) };
+  }
+}
+
+// ---------- notifications (Web Push) ----------
+
+async function savePush(store, realmId, sub) {
+  if (!sub || !/^https:\/\//.test(sub.endpoint || '') || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) throw new Error('This phone can\'t take notifications');
+  await store.fetch(`https://store/pushsubs/${realmId}/${await sha256(sub.endpoint)}`, { method: 'PUT', body: JSON.stringify({ endpoint: sub.endpoint, keys: sub.keys, at: Date.now() }) });
+  return { ok: true };
+}
+
+async function dropPush(store, realmId, endpoint) {
+  if (endpoint) await store.fetch(`https://store/pushsubs/${realmId}/${await sha256(endpoint)}`, { method: 'DELETE' });
+  return { ok: true };
+}
+
+// Sends one notification to every phone this client turned them on for. Returns how many got it.
+async function notify(env, store, realmId, msg) {
+  if (!env.VAPID_PUBLIC || !env.VAPID_PRIVATE_JWK) return 0;
+  const subs = await (await store.fetch(`https://store/pushsubs/${realmId}`)).json();
+  let sent = 0;
+  for (const sub of subs) {
+    try {
+      const res = await webPush(env, sub, JSON.stringify(msg));
+      if (res.status === 404 || res.status === 410) await dropPush(store, realmId, sub.endpoint); // phone turned them off
+      else if (res.ok) sent++;
+    } catch (err) { console.error('push failed', err && err.message); }
+  }
+  return sent;
+}
+
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+const joinBytes = (...parts) => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; };
+const enc = (s) => new TextEncoder().encode(s);
+async function hmac(key, data) {
+  const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', k, data));
+}
+
+// RFC 8291 (aes128gcm) payload encryption plus a VAPID (RFC 8292) signature.
+async function webPush(env, sub, payload) {
+  const uaPublic = unb64u(sub.keys.p256dh), authSecret = unb64u(sub.keys.auth);
+  const eph = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const asPublic = new Uint8Array(await crypto.subtle.exportKey('raw', eph.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, eph.privateKey, 256));
+  const prkKey = await hmac(authSecret, shared);
+  const ikm = await hmac(prkKey, joinBytes(enc('WebPush: info\0'), uaPublic, asPublic, new Uint8Array([1])));
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const prk = await hmac(salt, ikm);
+  const cek = (await hmac(prk, joinBytes(enc('Content-Encoding: aes128gcm\0'), new Uint8Array([1])))).slice(0, 16);
+  const nonce = (await hmac(prk, joinBytes(enc('Content-Encoding: nonce\0'), new Uint8Array([1])))).slice(0, 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, joinBytes(enc(payload), new Uint8Array([2]))));
+  const header = new Uint8Array(21); header.set(salt); new DataView(header.buffer).setUint32(16, 4096); header[20] = asPublic.length;
+  const body = joinBytes(header, asPublic, sealed);
+
+  const aud = new URL(sub.endpoint).origin;
+  const jwtHead = b64u(enc(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const jwtBody = b64u(enc(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'mailto:hello@localdeskai.co.uk' })));
+  const signKey = await crypto.subtle.importKey('jwk', JSON.parse(env.VAPID_PRIVATE_JWK), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, signKey, enc(`${jwtHead}.${jwtBody}`));
+  return fetch(sub.endpoint, {
+    method: 'POST', body,
+    headers: { Authorization: `vapid t=${jwtHead}.${jwtBody}.${b64u(sig)}, k=${env.VAPID_PUBLIC}`, 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'normal' },
+  });
+}
+
+// Every hour: new payments in QuickBooks (not ones they marked in the app themselves) become a notification.
+const HOURLY_CRON = '0 * * * *';
+async function hourlyRun(env) {
+  if (!env.VAPID_PUBLIC) return;
+  const store = env.STORE.get(env.STORE.idFromName('main'));
+  const companies = await (await store.fetch('https://store/tokens')).json();
+  for (const c of companies) {
+    const subs = await (await store.fetch(`https://store/pushsubs/${c.realmId}`)).json();
+    if (!subs.length) continue;
+    const since = await store.fetch(`https://store/paycheck/${c.realmId}`).then(r => (r.ok ? r.text() : ''));
+    const now = new Date().toISOString();
+    await store.fetch(`https://store/paycheck/${c.realmId}`, { method: 'PUT', body: now });
+    if (!since) continue; // first look: start from now
+    try {
+      const pays = (await query(env, store, c.realmId, `select * from Payment where MetaData.CreateTime > '${since}' maxresults 50`)).Payment || [];
+      for (const p of pays) {
+        if (/marked in Books/.test(p.PrivateNote || '')) continue;
+        await notify(env, store, c.realmId, { title: 'Payment in', body: `${(p.CustomerRef && p.CustomerRef.name) || 'A customer'} paid ${money(p.TotalAmt)}`, tab: 'owed' });
+      }
+    } catch (err) { console.error('payment check failed', c.realmId, err && err.message); }
+  }
 }
 
 // ---------- monthly text and check report ----------
@@ -976,6 +1693,17 @@ async function sendSms(env, to, body) {
 }
 
 function round(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+const money = n => '£' + (Number(n) || 0).toFixed(2);
+const num = n => (n ? ` ${n}` : '');
+
+// A QuickBooks call whose answer isn't JSON (PDFs).
+async function qbRaw(env, store, realmId, path, accept) {
+  const t = await accessToken(env, store, realmId);
+  const base = t.env === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com';
+  const res = await fetch(`${base}/v3/company/${realmId}/${path}?minorversion=${MINOR_VERSION}`, { headers: { Authorization: `Bearer ${t.access_token}`, Accept: accept } });
+  if (!res.ok) throw new Error(`QuickBooks ${res.status}: couldn't get that document`);
+  return res;
+}
 
 // One QuickBooks API call. Body may be JSON-able or FormData.
 async function qb(env, store, realmId, method, path, body) {
@@ -998,13 +1726,19 @@ async function qb(env, store, realmId, method, path, body) {
 
 // Fresh tokens for this company (with .env), refreshing and saving the new refresh token when needed.
 // Connections saved before env was recorded are sandbox ones.
-async function accessToken(env, store, realmId) {
+async function accessToken(env, store, realmId, force) {
   const res = await store.fetch(`https://store/tokens/${realmId}`);
   if (!res.ok) throw new Error(`QuickBooks company ${realmId} isn't connected`);
   const t = await res.json();
   t.env = t.env || 'sandbox';
-  if (t.expires_at - Date.now() > 60_000) return t;
-  const fresh = await tokenRequest(env, t.env, { grant_type: 'refresh_token', refresh_token: t.refresh_token });
+  if (!force && t.expires_at - Date.now() > 60_000) return t;
+  let fresh;
+  try {
+    fresh = await tokenRequest(env, t.env, { grant_type: 'refresh_token', refresh_token: t.refresh_token });
+  } catch (err) {
+    await alertOwner(env, store, `conn:${realmId}`, `Books: ${await clientName(store, realmId)}'s QuickBooks connection has dropped (${String(err.message).slice(0, 120)}). Send them a fresh connect link.`).catch(() => {});
+    throw err;
+  }
   await store.fetch(`https://store/tokens/${realmId}`, { method: 'PUT', body: JSON.stringify(fresh) });
   return fresh;
 }
@@ -1064,6 +1798,7 @@ export class Store {
     if (se) {
       const key = `session:${se[1]}`;
       if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+      if (request.method === 'DELETE') { await this.storage.delete(key); return text('ok'); }
       const v = await this.storage.get(key);
       return v ? Response.json(v) : text('No session', 404);
     }
@@ -1073,6 +1808,71 @@ export class Store {
       const gone = [...all].filter(([, v]) => v.appKey === so[1]).map(([k]) => k);
       if (gone.length) await this.storage.delete(gone);
       return text('ok');
+    }
+    const al = url.pathname.match(/^\/alerts\/(.+)$/);
+    if (al) {
+      // 200 = go ahead and send; 409 = already sent one within ALERT_HOURS.
+      const key = `alert:${decodeURIComponent(al[1])}`, last = await this.storage.get(key);
+      if (last && Date.now() - last < ALERT_HOURS * 3600000) return text('recent', 409);
+      await this.storage.put(key, Date.now());
+      return text('ok');
+    }
+    const sn = url.pathname.match(/^\/seen\/(\d+)$/);
+    if (sn) {
+      const key = `seen:${sn[1]}`;
+      if (request.method === 'POST') { await this.storage.put(key, Date.now()); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v ? Response.json({ at: v }) : text('never', 404);
+    }
+    // Change log and trips: one key each, listed newest or oldest first per company.
+    const lg = url.pathname.match(/^\/(log|trips)\/(\d+)(?:\/(\d+))?$/);
+    if (lg) {
+      const prefix = `${lg[1]}:${lg[2]}:`;
+      if (!lg[3]) {
+        const all = await this.storage.list(lg[1] === 'log' ? { prefix, reverse: true, limit: 200 } : { prefix, limit: 5000 });
+        return Response.json([...all.values()]);
+      }
+      const key = prefix + lg[3];
+      if (request.method === 'PUT') {
+        await this.storage.put(key, JSON.parse(await request.text()));
+        if (lg[1] === 'log') { // keep 90 days
+          const old = await this.storage.list({ prefix, end: prefix + String(Date.now() - 90 * 86400000), limit: 100 });
+          if (old.size) await this.storage.delete([...old.keys()]);
+        }
+        return text('ok');
+      }
+      if (request.method === 'DELETE') { await this.storage.delete(key); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v ? Response.json(v) : text('Not found', 404);
+    }
+    const ch = url.pathname.match(/^\/chased\/(\d+)\/([\w-]+)$/);
+    if (ch) {
+      const key = `chased:${ch[1]}:${ch[2]}`;
+      if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+      return Response.json((await this.storage.get(key)) || []);
+    }
+    const dc = url.pathname.match(/^\/docs\/([\w-]+)$/);
+    if (dc) {
+      const key = `doc:${dc[1]}`;
+      if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v && Date.now() - v.created < PACK_DAYS * 86400000 ? Response.json(v) : text('No doc', 404);
+    }
+    // Phones with notifications on: one key per phone, per company.
+    const ps = url.pathname.match(/^\/pushsubs\/(\d+)(?:\/([0-9a-f]{64}))?$/);
+    if (ps) {
+      const prefix = `push:${ps[1]}:`;
+      if (!ps[2]) return Response.json([...(await this.storage.list({ prefix })).values()]);
+      if (request.method === 'PUT') { await this.storage.put(prefix + ps[2], JSON.parse(await request.text())); return text('ok'); }
+      if (request.method === 'DELETE') { await this.storage.delete(prefix + ps[2]); return text('ok'); }
+      return text('Not found', 404);
+    }
+    const lc = url.pathname.match(/^\/paycheck\/(\d+)$/);
+    if (lc) {
+      const key = `paycheck:${lc[1]}`;
+      if (request.method === 'PUT') { await this.storage.put(key, await request.text()); return text('ok'); }
+      const v = await this.storage.get(key);
+      return v ? text(v) : text('', 404);
     }
     const pk = url.pathname.match(/^\/packs\/([\w-]+)$/);
     if (pk) {
