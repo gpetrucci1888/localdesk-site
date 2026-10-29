@@ -89,6 +89,7 @@ h1{font-size:22px;margin:4px 0 0}
 .sub{color:var(--muted);margin:0}
 .snap{display:block;text-align:center;background:var(--acc);color:#1d1f23;font-weight:800;font-size:20px;padding:22px;border-radius:14px;cursor:pointer}
 .snap input{display:none}
+.snap.alt{background:var(--card);color:var(--ink);border:1.5px solid var(--line);font-size:17px;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
 .card h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
 img.prev{width:100%;max-height:260px;object-fit:contain;border-radius:10px;background:#0001}
@@ -111,6 +112,7 @@ li small{display:block;color:var(--muted)}
 </style></head><body><main>
 <div><h1>Receipts</h1><p class="sub">Snap a receipt. It's read and filed for you.</p></div>
 <label class="snap">📷 Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label>
+<label class="snap alt">🖼️ Add from photos<input id="pick" type="file" accept="image/*" multiple></label>
 <p class="msg" id="msg" hidden></p>
 <section class="card" id="check" hidden>
   <h2>Check it's right</h2>
@@ -147,23 +149,30 @@ function render(){
 }
 function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
 function shrink(file){return new Promise(function(ok,no){var img=new Image();img.onload=function(){var s=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.82))};img.onerror=no;img.src=URL.createObjectURL(file)})}
-$('file').addEventListener('change',async function(e){
-  var f=e.target.files[0]; if(!f) return; e.target.value='';
-  $('check').hidden=true; say('Reading your receipt…');
+var queue=[];
+function addFiles(e){
+  queue=queue.concat(Array.prototype.slice.call(e.target.files)); e.target.value='';
+  if($('check').hidden) next();
+}
+$('file').addEventListener('change',addFiles);
+$('pick').addEventListener('change',addFiles);
+async function next(){
+  var f=queue.shift(); if(!f){return}
+  $('check').hidden=true; say('Reading your receipt…'+(queue.length?' ('+queue.length+' more to go)':''));
   try{
     var data=await shrink(f); $('prev').src=data;
     var res=await fetch(location.pathname.replace(/\\/$/,'')+'/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:data})});
     var r=await res.json(); if(r.error) throw new Error(r.error);
-    if(!r.readable){say("Couldn't read that one. Try again in better light, with the whole receipt in shot.",true);return}
+    if(!r.readable){say("Couldn't read that one. Try again in better light, with the whole receipt in shot.",true);setTimeout(next,2500);return}
     $('supplier').value=r.supplier;$('date').value=r.date;$('category').value=r.category;$('total').value=r.total.toFixed(2);$('vat').value=r.vat.toFixed(2);$('items').value=r.items;
     say('');$('check').hidden=false;$('check').scrollIntoView({behavior:'smooth'});
-  }catch(err){say('Something went wrong: '+err.message,true)}
-});
+  }catch(err){say('Something went wrong: '+err.message,true);setTimeout(next,2500)}
+}
 $('save').addEventListener('click',function(){
   var a=load();a.push({supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()});
-  store(a);$('check').hidden=true;say('Filed ✓');setTimeout(function(){say('')},1800);render();
+  store(a);$('check').hidden=true;render();if(queue.length){next()}else{say('Filed ✓');setTimeout(function(){say('')},1800)}
 });
-$('cancel').addEventListener('click',function(){$('check').hidden=true});
+$('cancel').addEventListener('click',function(){$('check').hidden=true;next()});
 $('csv').addEventListener('click',function(){
   var rows=[['Date','Supplier','Category','Description','Total','VAT']].concat(load().map(function(r){return [r.date,r.supplier,r.category,r.items,r.total.toFixed(2),r.vat.toFixed(2)]}));
   var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\\n');
