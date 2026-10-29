@@ -110,9 +110,9 @@ li{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:
 li small{display:block;color:var(--muted)}
 .link{background:none;border:0;color:var(--muted);font-weight:700;font-size:14px;padding:6px;text-decoration:underline}
 </style></head><body><main>
-<div><h1>Receipts</h1><p class="sub">Snap a receipt. It's read and filed for you.</p></div>
+<div><h1>Receipts</h1><p class="sub">Snap a receipt, or add photos and PDFs. They're read and filed for you.</p></div>
 <label class="snap">📷 Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label>
-<label class="snap alt">🖼️ Add from photos<input id="pick" type="file" accept="image/*" multiple></label>
+<label class="snap alt">🖼️ Add photos or PDFs<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label>
 <p class="msg" id="msg" hidden></p>
 <section class="card" id="check" hidden>
   <h2>Check it's right</h2>
@@ -148,7 +148,19 @@ function render(){
   $('empty').hidden=all.length>0;
 }
 function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
-function shrink(file){return new Promise(function(ok,no){var img=new Image();img.onload=function(){var s=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.82))};img.onerror=no;img.src=URL.createObjectURL(file)})}
+var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+function loadPdfJs(){return window.pdfjsLib?Promise.resolve(window.pdfjsLib):new Promise(function(ok,no){var sc=document.createElement('script');sc.src=PDFJS+'pdf.min.js';sc.onload=function(){pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';ok(pdfjsLib)};sc.onerror=function(){no(new Error('Could not load the PDF reader'))};document.head.appendChild(sc)})}
+// First page of the PDF, drawn as an image the same size as a photo.
+async function pdfToImage(file){
+  var lib=await loadPdfJs(), doc=await lib.getDocument({data:await file.arrayBuffer()}).promise, page=await doc.getPage(1);
+  var v=page.getViewport({scale:1}), s=1280/Math.max(v.width,v.height), vp=page.getViewport({scale:s});
+  var c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+  var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  return c.toDataURL('image/jpeg',0.85);
+}
+function shrink(file){
+  if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)) return pdfToImage(file);return new Promise(function(ok,no){var img=new Image();img.onload=function(){var s=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',0.82))};img.onerror=no;img.src=URL.createObjectURL(file)})}
 var queue=[];
 function addFiles(e){
   queue=queue.concat(Array.prototype.slice.call(e.target.files)); e.target.value='';
