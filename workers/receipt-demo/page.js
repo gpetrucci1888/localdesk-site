@@ -81,25 +81,51 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
 .jobsel{display:flex;align-items:center;gap:10px}
 .jobsel select{flex:1;width:100%;font:inherit;font-size:16px;padding:11px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
 .jobsel span{font-weight:800;font-size:14px;white-space:nowrap}
-.sendrow{display:flex;gap:8px;margin-top:12px}.sendrow select{font:inherit;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
+.sendrow{display:flex;gap:8px;margin-top:12px}
+.ready{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px;font-weight:700}
+.ready.ok{color:var(--go)}.ready.no{color:var(--stop)}
+.switch{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.switch input{width:48px;height:28px;accent-color:var(--hd);flex:none}
+.wait{border-left:5px solid var(--acc)}
+.steps{margin:0;padding-left:20px}.steps li{display:list-item;border:0;padding:4px 0}
+.inrow{display:flex;gap:8px;align-items:end}.inrow label.f{margin:0;flex:1;min-width:0}
+.undone{color:var(--muted);text-decoration:line-through}.sendrow select{font:inherit;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
 </style></head><body>
 <header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div></div></header>
 <main>
 <p class="msg" id="msg" hidden></p>
 
 <section id="tab-home">
+  <div class="card wait" id="waitCard" hidden><h2>Waiting for signal</h2><p style="margin:0" id="waitText"></p><button class="link" id="waitGo">Send them now →</button></div>
+  <div class="card" id="startCard" hidden><h2>Getting started</h2><ol class="steps">
+    <li>Add Books to your home screen (Share, then "Add to Home Screen").</li>
+    <li>Snap your next receipt. Books reads it and files it in QuickBooks.</li>
+    <li>Add your accountant's email (bottom of this page).</li></ol>
+    <button class="link" id="startDone">Got it, hide this</button></div>
   <div class="snaps"><label class="snap" for="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Snap a receipt</label><label class="snap alt" for="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Photos or PDFs</label></div>
   <div class="card"><h2>Profit so far</h2><p class="big" id="profit">…</p>
     <div class="grid2" style="margin-top:12px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div>
     <div class="potrow"><div><span>Put aside for tax</span><b id="pot">…</b></div><small>Rough guide, about a quarter of profit</small></div></div>
   <div class="card todo" id="todo" hidden><h2>To do</h2><ul id="todoList"></ul></div>
+  <div class="card" id="cisCard" hidden><h2>CIS taken off this tax year</h2><p class="big" id="cisTotal">…</p><p class="note">Contractors paid this to HMRC for you. It comes off your tax bill (or comes back to you) through your tax return.</p></div>
   <div class="card"><h2>Owed to you</h2><p class="big" id="owedTotal">…</p><p class="note" id="owedCount"></p><button class="link" data-tab="owed">See who owes you →</button></div>
   <div class="card"><h2>For your accountant</h2><p class="sub" id="qDates"></p>
     <div class="grid2" style="margin-top:10px"><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
     <p class="note" id="qDue"></p>
+    <p class="ready" id="qReady" hidden></p>
     <div class="sendrow"><select id="pPeriod" aria-label="Which period"><option value="quarter">This quarter</option><option value="lastquarter">Last quarter</option><option value="taxyear">This tax year</option><option value="lasttaxyear">Last tax year</option></select><button class="go" id="pSend">Send to accountant</button></div>
     <div id="acctWrap" hidden style="margin-top:12px"><label class="f">Your accountant's email<input id="acctEmail" type="email" inputmode="email" autocomplete="off"></label><button class="go" id="acctGo" style="width:100%">Save and send</button></div>
     <button class="link" id="pView">See what they get →</button></div>
+  <div class="card"><h2>Help</h2>
+    <p style="margin:0 0 10px">Stuck, or something looks wrong? Text or ring Gio on 07700 900000.</p>
+    <div class="btns"><a class="go small" style="text-align:center;text-decoration:none;flex:1" href="sms:+447700900000">Text Gio</a><a class="ghost small" style="text-align:center;text-decoration:none;color:var(--ink);flex:1" href="https://wa.me/447700900000" target="_blank" rel="noopener">WhatsApp</a><a class="ghost small" style="text-align:center;text-decoration:none;color:var(--ink);flex:1" href="tel:+447700900000">Ring</a></div>
+    <button class="link" data-tab="changes">What Books changed in QuickBooks →</button>
+    <p class="note">Want to stop? Tell Gio, or disconnect Books in QuickBooks (Apps). Everything already filed stays in your QuickBooks.</p></div>
+</section>
+
+<section id="tab-changes" hidden>
+  <div class="card"><h2>Last 60 days</h2><ul id="changeList"></ul></div>
+  <p class="note">Everything Books did in your QuickBooks. "Undo" puts it back. Anything emailed to a customer can't be taken back here.</p>
 </section>
 
 <section id="tab-tidy" hidden>
@@ -123,10 +149,16 @@ select.chip{font:inherit;font-size:13px;font-weight:700;padding:4px 8px;border:1
     <div class="btns"><button class="go" id="save">Send it</button><button class="ghost" id="cancel">Skip</button></div>
   </div>
   <div class="card"><h2>Latest in QuickBooks</h2><ul id="recent"></ul></div>
+  <div class="card"><h2>Mileage</h2>
+    <div class="inrow"><label class="f">Miles<input id="mMiles" inputmode="decimal" placeholder="24"></label><label class="f" style="flex:2">What for<input id="mWhy" placeholder="Mrs Smith, boiler"></label></div>
+    <div class="inrow" style="margin-top:10px"><label class="f">Date<input id="mDate" type="date"></label><button class="go" id="mAdd" style="flex:0">Add</button></div>
+    <p class="sub" id="mSum" style="margin-top:12px"></p><ul id="mList"></ul>
+    <p class="note">Business trips only, not home to a regular base. Worth 45p a mile for the first 10,000 miles in the tax year, 25p after. Goes in your accountant pack. Your accountant decides whether you claim this or your actual van costs.</p></div>
 </section>
 
 <section id="tab-owed" hidden>
   <div class="card"><h2>Unpaid invoices</h2><ul id="owedList"></ul><p class="msg" id="owedEmpty" hidden>Nobody owes you anything. Nice.</p></div>
+  <div class="card switch"><div><b>Chase late payers for me</b><p class="note" style="margin-top:4px" id="chaseNote">Books emails the invoice again when it's 7, 14 and 28 days late.</p></div><input type="checkbox" id="chase" role="switch" aria-label="Chase late payers for me"></div>
   <p class="note">"Paid" records the money in QuickBooks. "Remind" emails the invoice to them again.</p>
 </section>
 
@@ -173,15 +205,16 @@ async function api(path,opts){var r=await fetch(BASE+'/api/'+path,opts);if(r.sta
 CATS.forEach(function(c){var o=document.createElement('option');o.textContent=c;$('category').appendChild(o)});
 
 // ---- tabs ----
-var TITLES={home:'This month',receipts:'Receipts',jobs:'Jobs',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up'};
+var TITLES={home:'This month',receipts:'Receipts',jobs:'Jobs',owed:'Who owes you',invoice:'New invoice',tidy:'Tidy up',changes:'What Books changed'};
+var VAT='{{VAT}}'==='1';
 var EXTRAS='{{EXTRAS}}'.split(',').map(function(x){return x.trim()});
 var QUOTES=EXTRAS.indexOf('quotes')>=0;
 if(QUOTES){document.querySelector('nav').classList.add('five');document.querySelector('nav [data-tab=jobs]').hidden=false;$('jobCard').hidden=false}
 function show(tab){
   Object.keys(TITLES).forEach(function(t){$('tab-'+t).hidden=t!==tab});
-  document.querySelectorAll('nav button').forEach(function(b){b.setAttribute('aria-current',b.dataset.tab===(tab==='tidy'?'home':tab)?'page':'false')});
+  document.querySelectorAll('nav button').forEach(function(b){b.setAttribute('aria-current',b.dataset.tab===(tab==='tidy'||tab==='changes'?'home':tab)?'page':'false')});
   $('title').textContent=tab==='invoice'?(kind==='quote'?'New quote':'New invoice'):TITLES[tab];say('');
-  if(tab==='home'){loadSummary();loadQuarter();loadTodo()} if(tab==='owed')loadOwed(); if(tab==='receipts'){if(QUOTES)loadJobsPick();loadRecent()} if(tab==='tidy')loadTidy(); if(tab==='jobs')loadJobs(); if(tab==='invoice')loadJobsPick();
+  if(tab==='home'){loadSummary();loadQuarter();loadTodo();loadCis();showWaiting()} if(tab==='owed')loadOwed(); if(tab==='receipts'){if(QUOTES)loadJobsPick();loadRecent();loadMiles()} if(tab==='changes')loadChanges(); if(tab==='tidy')loadTidy(); if(tab==='jobs')loadJobs(); if(tab==='invoice')loadJobsPick();
   try{localStorage.setItem('books-tab',tab)}catch(e){}
 }
 document.addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b)show(b.dataset.tab)});
@@ -203,7 +236,7 @@ async function loadOwed(){
     $('owedEmpty').hidden=list.length>0;
     $('owedList').innerHTML=list.map(function(i){
       var late=i.daysOverdue>0?'<span class="late">'+i.daysOverdue+' days late</span>':'Due '+esc(ukDate(i.due));
-      var btn='<span class="btns" data-acts="'+esc(i.id)+'"><button class="go small" data-paid="'+esc(i.id)+'">Paid</button>'+(i.email?'<button class="ghost small" data-remind="'+esc(i.id)+'">Remind</button>':'')+'</span>';
+      var btn='<span class="btns" data-acts="'+esc(i.id)+'"><button class="go small" data-paid="'+esc(i.id)+'" data-cis="'+(i.cis||0)+'">Paid</button>'+(i.email?'<button class="ghost small" data-remind="'+esc(i.id)+'">Remind</button>':'')+'</span>';
       return '<li><div><b>'+esc(i.customer)+'</b><small>'+money(i.balance)+' · '+late+'</small></div>'+btn+'</li>'}).join('');
   }catch(err){$('owedList').innerHTML='';say("Couldn't load invoices: "+err.message,true)}
 }
@@ -216,11 +249,15 @@ document.addEventListener('click',async function(e){
 
 document.addEventListener('click',async function(e){
   var b=e.target.closest('[data-paid]');
-  if(b){var box=b.parentNode;box.innerHTML='<button class="ghost small" data-how="cash" data-inv="'+b.dataset.paid+'">Cash</button><button class="ghost small" data-how="bank" data-inv="'+b.dataset.paid+'">Bank</button><button class="ghost small" data-how="card" data-inv="'+b.dataset.paid+'">Card</button>';return}
+  if(b){var box=b.parentNode,cis=Number(b.dataset.cis)||0,how='<button class="ghost small" data-how="cash" data-inv="'+b.dataset.paid+'">Cash</button><button class="ghost small" data-how="bank" data-inv="'+b.dataset.paid+'">Bank</button><button class="ghost small" data-how="card" data-inv="'+b.dataset.paid+'">Card</button>';
+    if(cis>0){var li0=b.closest('li');box.remove();li0.insertAdjacentHTML('afterend','<li class="cisrow"><div style="flex:1;min-width:0"><label class="f" style="margin:0">CIS they took off £<input data-cisamt="'+b.dataset.paid+'" inputmode="decimal" value="'+cis.toFixed(2)+'"></label></div><span class="btns" style="align-self:end">'+how+'</span></li>')}
+    else box.innerHTML=how;return}
   var h=e.target.closest('[data-how]');if(!h)return;
   var li=h.closest('li');li.querySelectorAll('button').forEach(function(x){x.disabled=true});
-  try{var r=await api('paid/'+h.dataset.inv,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:h.dataset.how})});
-    li.remove();say('Marked as paid: '+money(r.amount||0)+' ('+(r.how||'').toLowerCase()+') ✓');if(!$('owedList').children.length)$('owedEmpty').hidden=false;
+  var ci=document.querySelector('[data-cisamt="'+h.dataset.inv+'"]'),cisAmt=ci?parseFloat(ci.value)||0:0;
+  try{var r=await api('paid/'+h.dataset.inv,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:h.dataset.how,cis:cisAmt})});
+    if(li.classList.contains('cisrow')&&li.previousElementSibling)li.previousElementSibling.remove();
+    li.remove();say('Marked as paid: '+money(r.amount||0)+' ('+(r.how||'').toLowerCase()+')'+(r.cis?', '+money(r.cis)+' CIS noted':'')+' ✓');if(!$('owedList').children.length)$('owedEmpty').hidden=false;
   }catch(err){li.querySelectorAll('button').forEach(function(x){x.disabled=false});say(err.message,true)}
 });
 
@@ -235,6 +272,7 @@ $('iSend').addEventListener('click',async function(){
   $('iSend').disabled=false;
 });
 
+if(!VAT){$('iVat').closest('label').hidden=true;$('iVat').checked=false}
 function cisToggle(){var on=$('iCis').checked;$('cisWrap').hidden=!on;$('amtWrap').hidden=on}
 $('iCis').addEventListener('change',cisToggle);
 
@@ -243,7 +281,10 @@ var quarterData=null;
 async function loadQuarter(){
   try{var q=await api('quarter');quarterData=q;
     $('qDates').textContent=ukDate(q.from)+' to '+ukDate(q.to);$('qIn').textContent=money(q.income);$('qOut').textContent=money(q.expenses);
-    $('qDue').textContent='Figures due to HMRC by '+ukDate(q.due)+' (your accountant sends them).';
+    $('qDue').textContent='Making Tax Digital update due '+ukDate(q.due)+'. Your accountant sends it from QuickBooks.';
+    var bits=[];if(q.toTidy)bits.push(q.toTidy+' to sort');if(q.noReceipt)bits.push(q.noReceipt+' expense'+(q.noReceipt>1?'s':'')+' with no receipt');
+    $('qReady').hidden=false;$('qReady').className='ready '+(q.ready?'ok':'no');
+    $('qReady').textContent=q.ready?'✓ Ready: everything sorted, every receipt attached.':'Before it goes: '+bits.join(', ')+'.';
   }catch(err){$('qDates').textContent="Couldn't load: "+err.message}
 }
 // ---- to do (home) ----
@@ -402,23 +443,51 @@ function addFiles(e){queue=queue.concat(Array.prototype.slice.call(e.target.file
 $('file').addEventListener('change',addFiles);$('pick').addEventListener('change',addFiles);
 async function next(){
   var f=queue.shift();if(!f)return;
-  $('check').hidden=true;say('Reading your receipt…'+(queue.length?' ('+queue.length+' more to go)':''));
+  $('check').hidden=true;
+  if(!navigator.onLine&&!f.waitId){await park(f);setTimeout(next,300);return}
+  say('Reading your receipt…'+(queue.length?' ('+queue.length+' more to go)':''));
   try{
     var data=await shrink(f);$('prev').src=data;$('prev').hidden=false;
     var r=await (await fetch(BASE+'/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:data})})).json();
+    if(f.waitId){await unpark(f.waitId);showWaiting()}
     if(r.error)throw new Error(r.error);
     if(!r.readable){say("Couldn't read that one. Try again in better light, with the whole receipt in shot.",true);setTimeout(next,2500);return}
-    r.image=data;var problem=unsure(r);
+    r.image=data;if(f.waitId)r.jobId=f.jobId||'';var problem=unsure(r);
     if(problem){showCheck(r,data,problem)}else{say('');await autoFile(r);setTimeout(next,600)}
-  }catch(err){say('Something went wrong: '+err.message,true);setTimeout(next,2500)}
+  }catch(err){
+    if(noSignal(err)&&!f.waitId){await park(f);setTimeout(next,600);return}
+    say('Something went wrong: '+err.message,true);setTimeout(next,2500)}
 }
+
+// ---- no signal: receipts wait on the phone (IndexedDB) and go when there's a connection ----
+function noSignal(err){return !navigator.onLine||err instanceof TypeError||/Failed to fetch|Load failed|NetworkError|Could not load the PDF/i.test(err&&err.message||'')}
+var DB=null;
+function db(){return DB||(DB=new Promise(function(ok,no){var r=indexedDB.open('books',1);r.onupgradeneeded=function(){r.result.createObjectStore('wait',{keyPath:'id',autoIncrement:true})};r.onsuccess=function(){ok(r.result)};r.onerror=function(){DB=null;no(r.error)}}))}
+function idb(mode,fn){return db().then(function(d){return new Promise(function(ok,no){var q=fn(d.transaction('wait',mode).objectStore('wait'));q.onsuccess=function(){ok(q.result)};q.onerror=function(){no(q.error)}})})}
+async function park(f){
+  try{await idb('readwrite',function(s){return s.add({file:f,jobId:QUOTES?$('jobPick').value:'',at:Date.now()})});say('No signal. Saved on this phone. It goes to QuickBooks when you have signal.')}
+  catch(e){say("No signal, and this phone couldn't save it. Keep the paper receipt and try again later.",true)}
+  showWaiting();
+}
+function unpark(id){return idb('readwrite',function(s){return s.delete(id)}).catch(function(){})}
+function waiting(){return idb('readonly',function(s){return s.getAll()}).catch(function(){return []})}
+async function showWaiting(){var l=await waiting();$('waitCard').hidden=!l.length;$('waitText').textContent=l.length+' receipt'+(l.length>1?'s':'')+' saved on this phone, waiting for signal.'}
+var flushing=false;
+async function flush(){
+  if(!navigator.onLine||flushing)return;flushing=true;
+  var l=await waiting();
+  l.forEach(function(w){var f=w.file;f.waitId=w.id;f.jobId=w.jobId;if(!queue.some(function(q){return q.waitId===w.id}))queue.push(f)});
+  flushing=false;if(l.length&&$('check').hidden)next();
+}
+window.addEventListener('online',flush);
+$('waitGo').addEventListener('click',function(){if(!navigator.onLine){say('Still no signal on this phone.',true);return}flush()});
 
 // Only stop and ask when something doesn't add up; otherwise file it straight away.
 function unsure(r){
   if(!(r.total>0))return "Couldn't find the total.";
   if(!r.supplier)return "Couldn't see who it's from.";
   var d=Date.parse(r.date);if(isNaN(d)||d>Date.now()+86400000||d<Date.now()-730*86400000)return 'The date looks odd.';
-  if(r.vat>0){var net=r.total-r.vat,rate=net>0?r.vat/net:0;if(!(Math.abs(rate-0.2)<0.02||Math.abs(rate-0.05)<0.01))return "The VAT doesn't add up.";}
+  if(VAT&&r.vat>0){var net=r.total-r.vat,rate=net>0?r.vat/net:0;if(!(Math.abs(rate-0.2)<0.02||Math.abs(rate-0.05)<0.01))return "The VAT doesn't add up.";}
   return '';
 }
 function showCheck(r,img,why){
@@ -431,7 +500,7 @@ function showCheck(r,img,why){
 var toastTimer=null,lastFiled=null;
 async function autoFile(r){
   say('Filing…');
-  r.jobId=QUOTES?$('jobPick').value:'';
+  if(r.jobId==null)r.jobId=QUOTES?$('jobPick').value:'';
   var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
   say('');loadRecent();
   if(out.duplicate){toast('Already in QuickBooks: '+(r.supplier||'expense')+' '+money(r.total),null);return}
@@ -459,8 +528,71 @@ $('save').addEventListener('click',async function(){
 });
 $('cancel').addEventListener('click',function(){$('check').hidden=true;say('');next()});
 
+// ---- CIS taken off ----
+async function loadCis(){try{var c=await api('cis');$('cisCard').hidden=!(c.total>0);$('cisTotal').textContent=money(c.total)}catch(e){$('cisCard').hidden=true}}
+
+// ---- what Books changed ----
+async function loadChanges(){
+  $('changeList').innerHTML='<li><small>Loading…</small></li>';
+  try{var l=await api('changes');
+    $('changeList').innerHTML=l.map(function(c){
+      var when=new Date(c.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      return '<li><div style="min-width:0"><span'+(c.undone?' class="undone"':'')+'>'+esc(c.text)+'</span><small>'+esc(when)+(c.undone?' · undone':'')+'</small></div>'+(c.canUndo?'<button class="ghost small" data-revert="'+esc(c.id)+'">Undo</button>':'')+'</li>'}).join('')||'<li><small>Nothing yet.</small></li>';
+  }catch(err){$('changeList').innerHTML='';say("Couldn't load: "+err.message,true)}
+}
+document.addEventListener('click',async function(e){
+  var b=e.target.closest('[data-revert]');if(!b)return;
+  if(!confirm('Undo this in QuickBooks?'))return;
+  b.disabled=true;b.textContent='…';
+  try{await api('revert/'+b.dataset.revert,{method:'POST'});say('Undone in QuickBooks ✓');loadChanges()}
+  catch(err){b.disabled=false;b.textContent='Undo';say(err.message,true)}
+});
+
+// ---- mileage ----
+function todayIso(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+$('mDate').value=todayIso();
+async function loadMiles(){
+  try{var d=await api('miles');
+    $('mSum').textContent=d.trips.length?(d.miles.toLocaleString('en-GB')+' miles this tax year, worth '+money(d.worth)+' at HMRC rates'):'No trips logged this tax year yet.';
+    $('mList').innerHTML=d.trips.slice(-5).reverse().map(function(t){return '<li><div style="min-width:0">'+esc(t.miles)+' miles'+(t.why?' · '+esc(t.why):'')+'<small>'+esc(ukDate(t.date))+' · '+money(t.worth)+'</small></div><button class="ghost small" data-mileoff="'+esc(t.id)+'" aria-label="Delete trip">✕</button></li>'}).join('');
+  }catch(err){$('mSum').textContent="Couldn't load mileage: "+err.message}
+}
+$('mAdd').addEventListener('click',async function(){
+  var n=parseFloat($('mMiles').value)||0;if(!(n>0)){say('Put in the miles',true);return}
+  $('mAdd').disabled=true;
+  try{await api('miles',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({miles:n,why:$('mWhy').value,date:$('mDate').value})});
+    $('mMiles').value='';$('mWhy').value='';$('mDate').value=todayIso();say(n+' miles logged ✓');loadMiles()}
+  catch(err){say(err.message,true)}
+  $('mAdd').disabled=false;
+});
+document.addEventListener('click',async function(e){
+  var b=e.target.closest('[data-mileoff]');if(!b)return;
+  if(!confirm('Delete this trip?'))return;
+  try{await api('mileoff/'+b.dataset.mileoff,{method:'POST'});loadMiles()}catch(err){say(err.message,true)}
+});
+
+// ---- chasing ----
+$('chase').checked='{{CHASE}}'==='1';
+if(QUOTES)$('chaseNote').textContent+=' Quotes too, at 3 and 7 days with no answer. Only customers with an email.';
+else $('chaseNote').textContent+=' Only customers with an email.';
+$('chase').addEventListener('change',async function(){
+  var on=$('chase').checked;$('chase').disabled=true;
+  try{var r=await api('settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({chase:on})});$('chase').checked=r.chase;say(r.chase?'Books will chase for you ✓ It checks every morning.':'Chasing switched off.')}
+  catch(err){$('chase').checked=!on;say(err.message,true)}
+  $('chase').disabled=false;
+});
+
+// ---- VAT: not registered means no VAT on receipts or invoices ----
+if(!VAT)$('vat').closest('label').hidden=true;
+
+// ---- getting started ----
+try{$('startCard').hidden=Boolean(localStorage.getItem('books-started'))}catch(e){}
+$('startDone').addEventListener('click',function(){$('startCard').hidden=true;try{localStorage.setItem('books-started','1')}catch(e){}});
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register(BASE+'/sw.js',{scope:BASE+'/'}).catch(function(){});
 var start='home';try{start=localStorage.getItem('books-tab')||'home'}catch(e){}
 show(TITLES[start]?start:'home');
+flush();
 </script></body></html>`;
 
 // Logging in on a new phone: a 6-digit code texted to the client's number. Same head and styles as the app.
