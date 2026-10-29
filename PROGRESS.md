@@ -141,3 +141,4 @@
 - Gio allowed *.gpetrucci93.workers.dev and localdeskai.co.uk in the cloud environment (works from next session). Env secret for host books.gpetrucci93.workers.dev header X-Key should be set.
 - Not yet done: click the connect link for the sandbox company, then test /companies and a query.
 - Receipt demo worker `receipt-demo` (workers/receipt-demo): snap/upload photos or PDFs, Workers AI reads them. Link key is a Worker secret (KEY).
+- 29 Oct: joined up. Receipt page "send to QuickBooks" -> receipt-demo worker (service binding BOOKS, secrets KEY/BOOKS_KEY, REALM=sandbox realm) -> books /file/<realm>: finds/creates supplier, skips duplicates (same supplier+date+total), picks expense account by category, sets UK VAT code (20% S / 5% R / No VAT), pays from first bank account, attaches photo. Tested live in Sandbox Company GB (expenses 183, 184, 185).
