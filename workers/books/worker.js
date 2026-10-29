@@ -1343,7 +1343,7 @@ function purchaseRow(p, hasReceipt) {
   return {
     id: p.Id, date: p.TxnDate, supplier: (p.EntityRef && p.EntityRef.name) || '', total: Number(p.TotalAmt),
     vat: round((p.TxnTaxDetail && p.TxnTaxDetail.TotalTax) || 0), account: (d.AccountRef && d.AccountRef.name) || '',
-    note: [lines.map(l => l.Description).filter(Boolean).join(', '), p.PrivateNote].filter(Boolean).join(' · ').replace(/\s*\((added from a receipt photo|added in Books)\)/, ''),
+    note: [...new Set([lines.map(l => l.Description).filter(Boolean).join(', '), String(p.PrivateNote || '').replace(/\s*\((added from a receipt photo|added in Books)\)/, '').trim()].filter(Boolean))].join(' · '),
     job: (d.CustomerRef && d.CustomerRef.name) || '', jobId: (d.CustomerRef && d.CustomerRef.value) || '',
     hasReceipt: Boolean(hasReceipt), lines: lines.length, fromApp: /added from a receipt photo|added in Books/.test(p.PrivateNote || ''),
   };
