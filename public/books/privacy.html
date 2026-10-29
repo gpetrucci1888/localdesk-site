@@ -50,12 +50,24 @@
       <li><b>Accountant pack:</b> when you tap "Send to accountant" (and once a quarter by text), we make a private link to your figures, expenses with receipt photos, and invoices for that period. Anyone with the link can view it, so only share it with your accountant. Links stop working after about 13 months. If you save your accountant's email in the app, we keep it with your details.</li>
     </ul>
 
+    <h2>What Books keeps itself</h2>
+    <p>Your accounting records stay in QuickBooks. Books keeps a small amount of its own information, so the app can work:</p>
+    <ul>
+      <li><b>Your contact details and settings:</b> your name, mobile number, accountant's email, VAT and chasing choices, and which extras you have.</li>
+      <li><b>A change log:</b> a short line for each thing Books does for you (for example "Filed Shell £40.00"), so you can see it and undo it. This can include supplier names and amounts.</li>
+      <li><b>Your mileage log:</b> the date, miles and reason for each trip you add.</li>
+      <li><b>Log-in records:</b> scrambled (hashed) copies of login codes and of each phone that is logged in.</li>
+      <li><b>Notification details,</b> if you turn notifications on: the address your phone's notification service gives us, so we can send you alerts.</li>
+      <li><b>Links:</b> the private links for accountant packs and for invoices and quotes you send to customers. Anyone with a link can view that page, so only share it with the person it is for. The pages show the figures or invoice straight from QuickBooks at the time they are opened.</li>
+    </ul>
+
     <h2>Who else is involved</h2>
     <table>
       <thead><tr><th>Provider</th><th>What they do</th></tr></thead>
       <tbody>
         <tr><td>Intuit (QuickBooks)</td><td>Holds your books. We connect to it with your permission.</td></tr>
         <tr><td>Cloudflare</td><td>Runs the Books app and connector, stores the connection securely, and runs the AI that reads receipts.</td></tr>
+        <tr><td>Apple, Google or Mozilla</td><td>Run the notification service on your phone or browser. They deliver Books alerts if you turn them on.</td></tr>
         <tr><td>Twilio</td><td>Sends your login codes, the monthly text and the quarterly accountant-pack text.</td></tr>
       </tbody>
     </table>
@@ -67,6 +79,8 @@
       <li><b>Your QuickBooks connection</b> (the access tokens Intuit gives us) is kept until you disconnect or your service ends. It is then deleted.</li>
       <li><b>Your name, mobile number and app link</b> are kept while you're a client, and deleted within 30 days of the service ending.</li>
       <li><b>Short technical logs</b> may be kept by Cloudflare for a few days to keep the service running and secure.</li>
+      <li><b>Change log, mileage log, notification details and login records</b> are kept while you're a client and deleted within 30 days of the service ending.</li>
+      <li><b>Accountant-pack and invoice or quote links</b> stop working after about 13 months.</li>
       <li>Everything filed into QuickBooks stays in your QuickBooks. That's yours.</li>
     </ul>
 
