@@ -18,6 +18,8 @@
 //   GET  /summary/<realmId>     (X-Key) this month: money in, money out, profit, owed, rough tax pot
 //   GET  /owed/<realmId>        (X-Key) unpaid invoices, most overdue first
 //   POST /remind/<realmId>/<id> (X-Key) emails that invoice to the customer again
+//   POST /paid/<realmId>/<id>   (X-Key) {method: cash|bank|card} records the invoice as paid in full
+//   POST /undo/<realmId>/<id>   (X-Key) deletes an expense the app has just filed (the Undo button)
 //   POST /invoice/<realmId>     (X-Key) {customer, email, description, amount, vat} new invoice, emailed if there's an address
 //   GET  /recent/<realmId>      (X-Key) the last few expenses
 //   POST /parse/<realmId>       (X-Key) {text} "40 quid diesel at Shell" -> receipt fields to check and file
@@ -129,7 +131,7 @@ export default {
       const f = url.pathname.match(/^\/file\/(\d+)$/);
       if (f && request.method === 'POST') return Response.json(await fileReceipt(env, store, f[1], await request.json()));
 
-      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind|parse|untidy|tidy|quarter|monthly|client)\/(\d+)(?:\/(\d+))?$/);
+      const a = url.pathname.match(/^\/(summary|owed|recent|invoice|remind|paid|undo|parse|untidy|tidy|quarter|monthly|client)\/(\d+)(?:\/(\d+))?$/);
       if (a) {
         const [, what, realmId, id] = a;
         if (what === 'summary') return Response.json(await summary(env, store, realmId, url.searchParams.get('month')));
@@ -137,6 +139,8 @@ export default {
         if (what === 'recent') return Response.json(await recent(env, store, realmId));
         if (what === 'invoice' && request.method === 'POST') return Response.json(await newInvoice(env, store, realmId, await request.json()));
         if (what === 'remind' && request.method === 'POST' && id) return Response.json(await remind(env, store, realmId, id));
+        if (what === 'paid' && request.method === 'POST' && id) return Response.json(await markPaid(env, store, realmId, id, (await request.json()).method));
+        if (what === 'undo' && request.method === 'POST' && id) return Response.json(await undoPurchase(env, store, realmId, id));
         if (what === 'parse' && request.method === 'POST') return Response.json(await parseSpoken(env, (await request.json()).text));
         if (what === 'untidy') return Response.json(await untidy(env, store, realmId));
         if (what === 'tidy' && request.method === 'POST' && id) return Response.json(await tidy(env, store, realmId, id, (await request.json()).category));
@@ -225,7 +229,7 @@ async function fileReceipt(env, store, realmId, r) {
     AccountRef: { value: bank.Id },
     EntityRef: { value: vendorId, type: 'Vendor' },
     TxnDate: date,
-    PrivateNote: `${r.items || ''} (added from a receipt photo)`.trim().slice(0, 4000),
+    PrivateNote: `${r.items || ''} (${r.image ? 'added from a receipt photo' : 'added in Books'})`.trim().slice(0, 4000),
     GlobalTaxCalculation: code ? 'TaxExcluded' : 'NotApplicable',
     Line: [{
       Amount: code ? net : total,
@@ -309,6 +313,35 @@ async function remind(env, store, realmId, id) {
 
 const CIS_RATE = 0.2;
 const INVITE_DAYS = 14;
+
+// Paid in full by cash, bank transfer or card. Bank and card go straight to the bank account;
+// cash goes to QuickBooks' Undeposited Funds until it's banked.
+async function markPaid(env, store, realmId, id, method) {
+  const inv = (await qb(env, store, realmId, 'GET', `invoice/${id}`)).Invoice;
+  const balance = Number(inv.Balance);
+  if (!(balance > 0)) return { ok: true, alreadyPaid: true };
+  const how = { cash: 'Cash', bank: 'Bank transfer', card: 'Card' }[method] || 'Cash';
+  let deposit;
+  if (method === 'bank' || method === 'card') {
+    const banks = (await query(env, store, realmId, "select Id from Account where AccountType = 'Bank' and Active = true")).Account || [];
+    if (banks.length) deposit = { value: banks[0].Id };
+  }
+  await qb(env, store, realmId, 'POST', 'payment', {
+    CustomerRef: inv.CustomerRef, TotalAmt: balance, TxnDate: new Date().toISOString().slice(0, 10),
+    PrivateNote: `Paid by ${how.toLowerCase()} (marked in Books)`,
+    ...(deposit ? { DepositToAccountRef: deposit } : {}),
+    Line: [{ Amount: balance, LinkedTxn: [{ TxnId: inv.Id, TxnType: 'Invoice' }] }],
+  });
+  return { ok: true, amount: balance, how };
+}
+
+// Only expenses this app filed can be undone (they carry our note).
+async function undoPurchase(env, store, realmId, id) {
+  const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
+  if (!/added from a receipt photo|added in Books/.test(p.PrivateNote || '')) throw new Error('Only expenses added from the app can be undone here');
+  await qb(env, store, realmId, 'POST', 'purchase?operation=delete', { Id: p.Id, SyncToken: p.SyncToken });
+  return { ok: true };
+}
 
 async function newInvoice(env, store, realmId, r) {
   const amount = r.cis ? round((Number(r.labour) || 0) + (Number(r.materials) || 0)) : round(r.amount);

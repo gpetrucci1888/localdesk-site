@@ -33,17 +33,18 @@ export default {
     const seg = url.pathname.match(/^\/([\w-]{8,})(\/.*)?$/);
     if (!seg) return new Response('Not found', { status: 404 });
     const KEY = seg[1];
-    const realm = await realmFor(env, KEY);
-    if (!realm) return new Response('Not found', { status: 404 });
+    const client = await clientFor(env, KEY);
+    if (!client) return new Response('Not found', { status: 404 });
+    const realm = client.realmId;
     const app = `/${KEY}/`;
     if (!seg[2]) return Response.redirect(url.origin + app, 301);
     const rest = seg[2].slice(1);
 
     if (rest === '' && request.method === 'GET') {
-      return new Response(PAGE, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+      return new Response(PAGE.replaceAll('{{NAME}}', esc(client.name || 'Your business')), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
     if (rest === 'manifest.json') {
-      return json({ name: 'Books', short_name: 'Books', start_url: app, scope: app, display: 'standalone', background_color: '#f3f4f6', theme_color: '#f2b705',
+      return json({ name: `${client.name || 'Books'} · Books`, short_name: 'Books', start_url: app, scope: app, display: 'standalone', background_color: '#f3f4f6', theme_color: '#f2b705',
         icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }] });
     }
     const icon = rest.match(/^icon-(180|192|512)\.png$/);
@@ -59,7 +60,7 @@ export default {
       }
     }
 
-    const api = rest.match(/^api\/(file|summary|owed|recent|invoice|parse|untidy|quarter|remind\/\d+|tidy\/\d+)$/);
+    const api = rest.match(/^api\/(file|summary|owed|recent|invoice|parse|untidy|quarter|(?:remind|paid|undo|tidy)\/\d+)$/);
     if (api) {
       const [what, id] = api[1].split('/');
       const res = await env.BOOKS.fetch(`https://books/${what}/${realm}${id ? '/' + id : ''}`, {
@@ -102,16 +103,19 @@ async function readReceipt(env, image) {
   throw new Error('Could not read the receipt. ' + tried.join(' | '));
 }
 
-// Which QuickBooks company an app link belongs to (null if none). Remembered while this instance lives.
+// Which QuickBooks company (and business name) an app link belongs to; null if none.
+// Remembered while this instance lives.
 const known = new Map();
-async function realmFor(env, key) {
-  if (env.KEY && key === env.KEY) return env.REALM || null;
+async function clientFor(env, key) {
+  if (env.KEY && key === env.KEY) return env.REALM ? { realmId: env.REALM, name: env.DEMO_NAME || 'Carrick Ridge Roofing' } : null;
   if (known.has(key)) return known.get(key);
   const res = await env.BOOKS.fetch(`https://books/app/${key}`, { headers: { 'X-Key': env.BOOKS_KEY } });
-  const realm = res.ok ? (await res.json()).realmId : null;
-  if (realm) known.set(key, realm);
-  return realm;
+  const client = res.ok ? await res.json() : null;
+  if (client && client.realmId) known.set(key, client);
+  return client && client.realmId ? client : null;
 }
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json' } });

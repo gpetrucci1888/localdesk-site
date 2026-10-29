@@ -6,7 +6,7 @@ export const PAGE = String.raw`<!doctype html>
 <meta name="robots" content="noindex"><meta name="theme-color" content="#f2b705">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Books">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png">
-<title>Books</title>
+<title>{{NAME}} · Books</title>
 <style>
 :root{--bg:#f3f4f6;--card:#fff;--ink:#1d1f23;--muted:#5b616b;--line:#dfe2e6;--acc:#f2b705;--go:#1f7a4d;--stop:#b5402c;--blue:#2459a8}
 @media (prefers-color-scheme:dark){:root{--bg:#15171a;--card:#1f2226;--ink:#eceef1;--muted:#a5abb4;--line:#353a40;--go:#5cc78f;--stop:#f08a76;--blue:#8fb4f0}}
@@ -51,13 +51,20 @@ nav button{background:none;color:var(--muted);font-size:12px;font-weight:700;pad
 nav button span{font-size:22px;line-height:1}
 nav button[aria-current="page"]{color:var(--ink)}
 nav button[aria-current="page"] span{transform:scale(1.1)}
+.biz{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.by{text-align:center;font-size:12px;color:var(--muted);margin:8px 0 0}
+.toast{position:fixed;left:12px;right:12px;bottom:76px;max-width:496px;margin:0 auto;background:#1d1f23;color:#fff;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 6px 20px #0004;z-index:5}
+.toast button{background:#fff;color:#1d1f23;padding:8px 12px;font-size:15px}
+.why{color:var(--stop);font-weight:700;margin:0 0 10px;font-size:14px}
 [hidden]{display:none!important}
 </style></head><body>
 <main>
-<header><div><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div></header>
+<header><div><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div></header>
 <p class="msg" id="msg" hidden></p>
 
 <section id="tab-home">
+  <label class="snap" for="file">📷 Snap a receipt</label>
+  <label class="snap alt" for="pick" style="margin:10px 0 14px">🖼️ Add photos or PDFs</label>
   <div class="card"><h2>Profit so far</h2><p class="big" id="profit">…</p>
     <div class="grid2" style="margin-top:10px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div></div>
   <div class="card pot" style="margin-top:14px"><h2>Put aside for tax</h2><p class="big" id="pot">…</p><p class="note">Rough guide only, about a quarter of profit. Your accountant gives the real figure.</p></div>
@@ -80,20 +87,20 @@ nav button[aria-current="page"] span{transform:scale(1.1)}
     <div class="btns"><input id="say" placeholder="40 quid diesel at Shell" style="flex:1;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);min-width:0">
     <button class="ghost" id="mic" title="Speak" hidden>🎙️</button><button class="go" id="sayGo" style="flex:0">Add</button></div></div>
   <div class="card" id="check" hidden style="margin-top:14px">
-    <h2>Check it's right</h2>
+    <h2>Check this one</h2><p class="why" id="why"></p>
     <img class="prev" id="prev" alt="Your receipt"><div style="height:10px"></div>
     <label class="f">Supplier<input id="supplier"></label>
     <div class="grid2"><label class="f">Date<input id="date" type="date"></label><label class="f">Category<select id="category"></select></label></div>
     <div class="grid2"><label class="f">Total £<input id="total" inputmode="decimal"></label><label class="f">VAT £<input id="vat" inputmode="decimal"></label></div>
     <label class="f">What for<input id="items"></label>
-    <div class="btns"><button class="go" id="save">Looks right, send it</button><button class="ghost" id="cancel">Skip</button></div>
+    <div class="btns"><button class="go" id="save">Send it</button><button class="ghost" id="cancel">Skip</button></div>
   </div>
   <div class="card" style="margin-top:14px"><h2>Latest in QuickBooks</h2><ul id="recent"></ul></div>
 </section>
 
 <section id="tab-owed" hidden>
   <div class="card"><h2>Unpaid invoices</h2><ul id="owedList"></ul><p class="msg" id="owedEmpty" hidden>Nobody owes you anything. Nice.</p></div>
-  <p class="note">"Remind" emails the invoice to them again from QuickBooks.</p>
+  <p class="note">"Paid" records the money in QuickBooks. "Remind" emails the invoice to them again.</p>
 </section>
 
 <section id="tab-invoice" hidden>
@@ -108,7 +115,9 @@ nav button[aria-current="page"] span{transform:scale(1.1)}
     <button class="go" id="iSend" style="width:100%">Create invoice</button>
   </div>
 </section>
+<p class="by">Books by Localdesk</p>
 </main>
+<div class="toast" id="toast" hidden><span id="toastText"></span><button id="undo">Undo</button></div>
 
 <nav aria-label="Sections">
   <button data-tab="home" aria-current="page"><span>🏠</span>Overview</button>
@@ -156,7 +165,7 @@ async function loadOwed(){
     $('owedEmpty').hidden=list.length>0;
     $('owedList').innerHTML=list.map(function(i){
       var late=i.daysOverdue>0?'<span class="late">'+i.daysOverdue+' days late</span>':'Due '+esc(ukDate(i.due));
-      var btn=i.email?'<button class="ghost small" data-remind="'+esc(i.id)+'">Remind</button>':'<small>No email</small>';
+      var btn='<span class="btns" data-acts="'+esc(i.id)+'"><button class="go small" data-paid="'+esc(i.id)+'">Paid</button>'+(i.email?'<button class="ghost small" data-remind="'+esc(i.id)+'">Remind</button>':'')+'</span>';
       return '<li><div><b>'+esc(i.customer)+'</b><small>'+money(i.balance)+' · '+late+'</small></div>'+btn+'</li>'}).join('');
   }catch(err){$('owedList').innerHTML='';say("Couldn't load invoices: "+err.message,true)}
 }
@@ -165,6 +174,16 @@ document.addEventListener('click',async function(e){
   b.disabled=true;b.textContent='Sending…';
   try{var r=await api('remind/'+b.dataset.remind,{method:'POST'});b.textContent='Sent ✓';say('Reminder emailed to '+r.sentTo)}
   catch(err){b.disabled=false;b.textContent='Remind';say(err.message,true)}
+});
+
+document.addEventListener('click',async function(e){
+  var b=e.target.closest('[data-paid]');
+  if(b){var box=b.parentNode;box.innerHTML='<button class="ghost small" data-how="cash" data-inv="'+b.dataset.paid+'">Cash</button><button class="ghost small" data-how="bank" data-inv="'+b.dataset.paid+'">Bank</button><button class="ghost small" data-how="card" data-inv="'+b.dataset.paid+'">Card</button>';return}
+  var h=e.target.closest('[data-how]');if(!h)return;
+  var li=h.closest('li');li.querySelectorAll('button').forEach(function(x){x.disabled=true});
+  try{var r=await api('paid/'+h.dataset.inv,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:h.dataset.how})});
+    li.remove();say('Marked as paid: '+money(r.amount||0)+' ('+(r.how||'').toLowerCase()+') ✓');if(!$('owedList').children.length)$('owedEmpty').hidden=false;
+  }catch(err){li.querySelectorAll('button').forEach(function(x){x.disabled=false});say(err.message,true)}
 });
 
 // ---- invoice ----
@@ -227,9 +246,8 @@ if(Rec){$('mic').hidden=false;$('mic').addEventListener('click',function(){
 async function sayIt(){
   var t=$('say').value.trim();if(!t)return;say('Working it out…');
   try{var r=await api('parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});
-    $('prev').removeAttribute('src');$('prev').hidden=true;
-    $('supplier').value=r.supplier;$('date').value=r.date;$('category').value=r.category;$('total').value=r.total.toFixed(2);$('vat').value=r.vat.toFixed(2);$('items').value=r.items;
-    say('');$('check').hidden=false;$('say').value='';$('check').scrollIntoView({behavior:'smooth'});
+    $('say').value='';r.image='';
+    if(r.total>0){say('');await autoFile(r)}else{showCheck(r,'',"Couldn't work out the amount. Put it in below.")}
   }catch(err){say(err.message,true)}
 }
 $('sayGo').addEventListener('click',sayIt);
@@ -265,17 +283,51 @@ async function next(){
     var r=await (await fetch(BASE+'/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:data})})).json();
     if(r.error)throw new Error(r.error);
     if(!r.readable){say("Couldn't read that one. Try again in better light, with the whole receipt in shot.",true);setTimeout(next,2500);return}
-    $('supplier').value=r.supplier;$('date').value=r.date;$('category').value=r.category;$('total').value=r.total.toFixed(2);$('vat').value=r.vat.toFixed(2);$('items').value=r.items;
-    say('');$('check').hidden=false;$('check').scrollIntoView({behavior:'smooth'});
+    r.image=data;var problem=unsure(r);
+    if(problem){showCheck(r,data,problem)}else{say('');await autoFile(r);setTimeout(next,600)}
   }catch(err){say('Something went wrong: '+err.message,true);setTimeout(next,2500)}
 }
+
+// Only stop and ask when something doesn't add up; otherwise file it straight away.
+function unsure(r){
+  if(!(r.total>0))return "Couldn't find the total.";
+  if(!r.supplier)return "Couldn't see who it's from.";
+  var d=Date.parse(r.date);if(isNaN(d)||d>Date.now()+86400000||d<Date.now()-730*86400000)return 'The date looks odd.';
+  if(r.vat>0){var net=r.total-r.vat,rate=net>0?r.vat/net:0;if(!(Math.abs(rate-0.2)<0.02||Math.abs(rate-0.05)<0.01))return "The VAT doesn't add up.";}
+  return '';
+}
+function showCheck(r,img,why){
+  if(img){$('prev').src=img;$('prev').hidden=false}else{$('prev').removeAttribute('src');$('prev').hidden=true}
+  $('supplier').value=r.supplier||'';$('date').value=r.date||'';$('category').value=r.category||'Other';$('total').value=(r.total||0).toFixed(2);$('vat').value=(r.vat||0).toFixed(2);$('items').value=r.items||'';
+  $('why').textContent=why||'';say('');
+  if($('tab-receipts').hidden)show('receipts');
+  $('check').hidden=false;$('check').scrollIntoView({behavior:'smooth'});
+}
+var toastTimer=null,lastFiled=null;
+async function autoFile(r){
+  say('Filing…');
+  var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
+  say('');loadRecent();
+  if(out.duplicate){toast('Already in QuickBooks: '+(r.supplier||'expense')+' '+money(r.total),null);return}
+  toast('✓ '+(r.supplier||'Expense')+' '+money(r.total)+' filed',out.id);
+}
+function toast(text,id){
+  clearTimeout(toastTimer);lastFiled=id;$('toastText').textContent=text;$('undo').hidden=!id;$('toast').hidden=false;
+  toastTimer=setTimeout(function(){$('toast').hidden=true;lastFiled=null},id?8000:3000);
+}
+$('undo').addEventListener('click',async function(){
+  if(!lastFiled)return;var id=lastFiled;lastFiled=null;$('undo').hidden=true;$('toastText').textContent='Undoing…';
+  try{await api('undo/'+id,{method:'POST'});$('toastText').textContent='Undone. Not in QuickBooks.';loadRecent();loadSummary()}
+  catch(err){$('toastText').textContent="Couldn't undo: "+err.message}
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){$('toast').hidden=true},3000);
+});
 $('save').addEventListener('click',async function(){
   var r={image:$('prev').hidden?'':$('prev').src,supplier:$('supplier').value.trim(),date:$('date').value,category:$('category').value,total:parseFloat($('total').value)||0,vat:parseFloat($('vat').value)||0,items:$('items').value.trim()};
   $('save').disabled=true;say('Sending to QuickBooks…');
   try{var out=await api('file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
-    $('check').hidden=true;loadRecent();
-    var done=out.duplicate?'Already in QuickBooks, so not added twice ✓':'In QuickBooks ✓';
-    say(done);if(queue.length)setTimeout(next,1200);
+    $('check').hidden=true;loadRecent();say('');
+    if(out.duplicate)toast('Already in QuickBooks, so not added twice',null);else toast('✓ '+(r.supplier||'Expense')+' '+money(r.total)+' filed',out.id);
+    if(queue.length)setTimeout(next,1200);
   }catch(err){say("Couldn't send it: "+err.message,true)}
   $('save').disabled=false;
 });
