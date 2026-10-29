@@ -108,6 +108,7 @@ var CATS=["Materials","Tools and equipment","Fuel","Vehicle","Subcontractors","P
 var BASE=location.pathname.replace(/\/$/,'');
 var $=function(id){return document.getElementById(id)};
 function money(n){return '£'+(Number(n)||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function ukDate(d){var t=Date.parse(d);return isNaN(t)?(d||''):new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
 async function api(path,opts){var r=await fetch(BASE+'/api/'+path,opts);var d=await r.json().catch(function(){return {error:'No response'}});if(d.error)throw new Error(d.error);return d}
@@ -140,7 +141,7 @@ async function loadOwed(){
   try{var list=await api('owed');
     $('owedEmpty').hidden=list.length>0;
     $('owedList').innerHTML=list.map(function(i){
-      var late=i.daysOverdue>0?'<span class="late">'+i.daysOverdue+' days late</span>':'Due '+esc(i.due);
+      var late=i.daysOverdue>0?'<span class="late">'+i.daysOverdue+' days late</span>':'Due '+esc(ukDate(i.due));
       var btn=i.email?'<button class="ghost small" data-remind="'+esc(i.id)+'">Remind</button>':'<small>No email</small>';
       return '<li><div><b>'+esc(i.customer)+'</b><small>'+money(i.balance)+' · '+late+'</small></div>'+btn+'</li>'}).join('');
   }catch(err){$('owedList').innerHTML='';say("Couldn't load invoices: "+err.message,true)}
@@ -157,7 +158,7 @@ $('iSend').addEventListener('click',async function(){
   var body={customer:$('iCust').value,email:$('iEmail').value,description:$('iDesc').value,amount:parseFloat($('iAmt').value)||0,vat:$('iVat').checked};
   $('iSend').disabled=true;say('Creating invoice…');
   try{var r=await api('invoice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    say('Invoice '+(r.number||'')+' for '+money(r.total)+' created'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓');
+    say('Invoice '+(r.number?r.number+' ':'')+'for '+money(r.total)+' created'+(r.sentTo?' and emailed to '+r.sentTo:'')+' ✓');
     ['iCust','iEmail','iDesc','iAmt'].forEach(function(id){$(id).value=''});$('iVat').checked=false;
   }catch(err){say(err.message,true)}
   $('iSend').disabled=false;
@@ -166,7 +167,7 @@ $('iSend').addEventListener('click',async function(){
 // ---- receipts ----
 async function loadRecent(){
   try{var list=await api('recent');
-    $('recent').innerHTML=list.map(function(p){return '<li><div>'+esc(p.supplier||'Expense')+'<small>'+esc(p.date)+'</small></div><div>'+money(p.total)+'</div></li>'}).join('')||'<li><small>Nothing yet.</small></li>';
+    $('recent').innerHTML=list.map(function(p){return '<li><div>'+esc(p.supplier||'Expense')+'<small>'+esc(ukDate(p.date))+'</small></div><div>'+money(p.total)+'</div></li>'}).join('')||'<li><small>Nothing yet.</small></li>';
   }catch(err){$('recent').innerHTML='<li><small>Couldn\'t load: '+esc(err.message)+'</small></li>'}
 }
 var PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
