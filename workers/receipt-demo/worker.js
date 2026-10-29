@@ -1,5 +1,5 @@
 import { PAGE } from './page.js';
-import { ICONS } from './icons.js';
+import { BRANDS } from './brands.js';
 
 // "Books" phone app for a trade client.
 //
@@ -40,15 +40,19 @@ export default {
     if (!seg[2]) return Response.redirect(url.origin + app, 301);
     const rest = seg[2].slice(1);
 
+    const brand = BRANDS[client.brand] || BRANDS.localdesk;
     if (rest === '' && request.method === 'GET') {
-      return new Response(PAGE.replaceAll('{{NAME}}', esc(client.name || 'Your business')), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+      const html = PAGE.replaceAll('{{NAME}}', esc(client.name || 'Your business'))
+        .replaceAll('{{HD}}', brand.hd).replaceAll('{{ACC}}', brand.acc).replaceAll('{{ACCINK}}', brand.accInk)
+        .replace('{{LOGO}}', brand.logo ? `<img class="logo" src="data:image/png;base64,${brand.logo}" alt="">` : '');
+      return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
     if (rest === 'manifest.json') {
-      return json({ name: `${client.name || 'Books'} · Books`, short_name: 'Books', start_url: app, scope: app, display: 'standalone', background_color: '#f3f4f6', theme_color: '#f2b705',
+      return json({ name: `${client.name || 'Books'} · Books`, short_name: 'Books', start_url: app, scope: app, display: 'standalone', background_color: brand.hd, theme_color: brand.hd,
         icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }] });
     }
     const icon = rest.match(/^icon-(180|192|512)\.png$/);
-    if (icon) return new Response(Uint8Array.from(atob(ICONS[icon[1]]), c => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } });
+    if (icon) return new Response(Uint8Array.from(atob(brand.icons[icon[1]]), c => c.charCodeAt(0)), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } });
 
     if (rest === 'read' && request.method === 'POST') {
       try {
@@ -107,7 +111,7 @@ async function readReceipt(env, image) {
 // Remembered while this instance lives.
 const known = new Map();
 async function clientFor(env, key) {
-  if (env.KEY && key === env.KEY) return env.REALM ? { realmId: env.REALM, name: env.DEMO_NAME || 'Carrick Ridge Roofing' } : null;
+  if (env.KEY && key === env.KEY) return env.REALM ? { realmId: env.REALM, name: env.DEMO_NAME || 'Carrick Ridge Roofing', brand: env.DEMO_BRAND || '' } : null;
   if (known.has(key)) return known.get(key);
   const res = await env.BOOKS.fetch(`https://books/app/${key}`, { headers: { 'X-Key': env.BOOKS_KEY } });
   const client = res.ok ? await res.json() : null;

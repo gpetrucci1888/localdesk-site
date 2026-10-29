@@ -3,7 +3,7 @@
 // Holds each client's QuickBooks connection and keeps it alive, so checks and
 // receipt uploads can talk to QuickBooks without anyone logging in again.
 //
-//   POST /invite                (X-Key) {name, phone, env} one-off connect link for a new client (14 days)
+//   POST /invite                (X-Key) {name, phone, env, brand} one-off connect link for a new client (14 days)
 //   GET  /connect?invite=<id>   the client clicks this, then "Allow" at Intuit
 //   GET  /connect?k=ADMIN_KEY   quick connect for Gio (sandbox, for testing)
 //   GET  /callback              Intuit sends them back here; tokens saved, client's app link shown
@@ -27,7 +27,7 @@
 //   POST /tidy/<realmId>/<id>   (X-Key) {category} moves that expense to the right account
 //   GET  /quarter/<realmId>     (X-Key) the Making Tax Digital quarter so far, by category, for the accountant
 //   GET  /monthly/<realmId>     (X-Key) preview of the monthly text; POST sends it (?to= to send elsewhere)
-//   PUT  /client/<realmId>      (X-Key) {name, phone} who gets the monthly text
+//   PUT  /client/<realmId>      (X-Key) {name, phone, brand} changes only the fields given
 //
 // Once a month (cron) every client with a phone gets their monthly text, and OWNER_PHONE gets a
 // short check report. Texts need TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN; SMS_FROM is the sender name.
@@ -85,7 +85,7 @@ export default {
         if (!st.invite) return page('Connected ✓ You can close this page.');
         const inv = await (await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`)).json().catch(() => ({}));
         const existing = await getClient(store, realmId);
-        const client = { name: inv.name || '', phone: inv.phone || '', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
+        const client = { name: inv.name || '', phone: inv.phone || '', brand: inv.brand || (existing && existing.brand) || '', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
         await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
         await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
         const app = `${env.APP_URL}/${client.appKey}/`;
@@ -105,7 +105,7 @@ export default {
         const r = await request.json();
         const which = r.env === 'sandbox' ? 'sandbox' : 'production';
         if (!creds(env, which).id) throw new Error(`No ${which} keys set up yet`);
-        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), env: which, created: Date.now() };
+        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), brand: String(r.brand || ''), env: which, created: Date.now() };
         await store.fetch(`https://store/invites/${inv.id}`, { method: 'PUT', body: JSON.stringify(inv) });
         return Response.json({ ok: true, link: `${url.origin}/connect?invite=${inv.id}`, expires: new Date(inv.created + INVITE_DAYS * 86400000).toISOString() });
       }
@@ -145,7 +145,12 @@ export default {
         if (what === 'untidy') return Response.json(await untidy(env, store, realmId));
         if (what === 'tidy' && request.method === 'POST' && id) return Response.json(await tidy(env, store, realmId, id, (await request.json()).category));
         if (what === 'quarter') return Response.json(await quarter(env, store, realmId, url.searchParams.get('date')));
-        if (what === 'client' && request.method === 'PUT') { await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: await request.text() }); return Response.json({ ok: true }); }
+        if (what === 'client' && request.method === 'PUT') {
+          const v = await request.json(), old = (await getClient(store, realmId)) || {};
+          for (const f of ['name', 'phone', 'brand']) if (typeof v[f] === 'string') old[f] = v[f];
+          await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(old) });
+          return Response.json(old);
+        }
         if (what === 'monthly') {
           const msg = await monthlyText(env, store, realmId, url.searchParams.get('month'));
           if (request.method !== 'POST') return Response.json({ text: msg });
@@ -638,7 +643,7 @@ export class Store {
       const realmId = await this.storage.get(`appkey:${ak[1]}`);
       if (!realmId) return text('Unknown', 404);
       const client = await this.storage.get(`client:${realmId}`);
-      return Response.json({ realmId, name: (client && client.name) || '' });
+      return Response.json({ realmId, name: (client && client.name) || '', brand: (client && client.brand) || '' });
     }
     const c = url.pathname.match(/^\/clients\/(\d+)$/);
     if (c) {

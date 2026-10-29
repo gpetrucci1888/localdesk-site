@@ -3,76 +3,85 @@
 export const PAGE = String.raw`<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="robots" content="noindex"><meta name="theme-color" content="#f2b705">
+<meta name="robots" content="noindex"><meta name="theme-color" content="{{HD}}">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Books">
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png">
 <title>{{NAME}} · Books</title>
 <style>
-:root{--bg:#f3f4f6;--card:#fff;--ink:#1d1f23;--muted:#5b616b;--line:#dfe2e6;--acc:#f2b705;--go:#1f7a4d;--stop:#b5402c;--blue:#2459a8}
-@media (prefers-color-scheme:dark){:root{--bg:#15171a;--card:#1f2226;--ink:#eceef1;--muted:#a5abb4;--line:#353a40;--go:#5cc78f;--stop:#f08a76;--blue:#8fb4f0}}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:520px;margin:0 auto;padding:16px 16px 96px;display:grid;gap:14px}
-header{display:flex;justify-content:space-between;align-items:baseline}
-h1{font-size:24px;margin:4px 0 0}
+:root{--hd:{{HD}};--acc:{{ACC}};--accInk:{{ACCINK}};--bg:#f2f3f5;--card:#fff;--ink:#16181b;--muted:#646a73;--line:#e4e6ea;--go:#1f7a4d;--stop:#b5402c;--blue:#1f5fbf;--shadow:0 1px 2px #0000000d,0 4px 14px #0000000a}
+@media (prefers-color-scheme:dark){:root{--bg:#101113;--card:#1b1d20;--ink:#eceef1;--muted:#a1a7b0;--line:#2c3035;--go:#5cc78f;--stop:#f08a76;--blue:#8fb4f0;--shadow:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.top{background:var(--hd);color:#fff;padding:calc(env(safe-area-inset-top) + 18px) 20px 22px;border-radius:0 0 26px 26px}
+.top .in{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:14px}
+.logo{width:58px;height:58px;border-radius:50%;flex:none;box-shadow:0 0 0 2px #ffffff22}
+.biz{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin:0}
+h1{font-size:26px;line-height:1.15;margin:2px 0 0;font-weight:800}
 .sub{color:var(--muted);margin:0;font-size:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
-.card h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
-.big{font-size:30px;font-weight:800;margin:0}
+.top .sub{color:#ffffffa8}
+main{max-width:520px;margin:0 auto;padding:16px 16px 104px;display:grid;gap:14px}
+section{display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.card h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:700}
+.big{font-size:32px;font-weight:800;margin:0;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--bg);border-radius:12px;padding:10px 12px}
 .stat span{display:block;font-size:13px;color:var(--muted)}
-.stat b{font-size:22px}
-.pot{border-left:6px solid var(--acc)}
-.note{font-size:12px;color:var(--muted);margin:6px 0 0}
-.snap{display:block;text-align:center;background:var(--acc);color:#1d1f23;font-weight:800;font-size:20px;padding:20px;border-radius:14px;cursor:pointer}
-.snap.alt{background:var(--card);color:var(--ink);border:1.5px solid var(--line);font-size:17px;padding:15px}
+.stat b{font-size:20px;font-variant-numeric:tabular-nums}
+.pot{border-left:5px solid var(--acc)}
+.note{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+.snaps{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+.snap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;background:var(--acc);color:var(--accInk);font-weight:800;font-size:17px;padding:18px 10px;border-radius:18px;cursor:pointer;box-shadow:var(--shadow);min-height:108px}
+.snap svg{width:34px;height:34px}
+.snap.alt{background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:15px}
+.snap.alt svg{width:28px;height:28px}
 .snap input{display:none}
-img.prev{width:100%;max-height:240px;object-fit:contain;border-radius:10px;background:#0001}
-label.f{display:grid;gap:3px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-label.f input,label.f select{font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;width:100%}
-.tick{display:flex;gap:10px;align-items:center;font-weight:700;margin:4px 0 12px}
-.tick input{width:22px;height:22px}
+img.prev{width:100%;max-height:240px;object-fit:contain;border-radius:12px;background:#0001}
+label.f{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+label.f input,label.f select{font:inherit;font-size:16px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);text-transform:none;letter-spacing:0;font-weight:400;width:100%}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:1px}
+.tick{display:flex;gap:10px;align-items:center;font-weight:700;margin:4px 0 14px}
+.tick input{width:22px;height:22px;accent-color:var(--hd)}
 .btns{display:flex;gap:8px}
-button{font:inherit;font-weight:800;font-size:16px;padding:12px 14px;border-radius:10px;border:0;cursor:pointer}
+button{font:inherit;font-weight:800;font-size:16px;padding:13px 16px;border-radius:12px;border:0;cursor:pointer}
 button:disabled{opacity:.5}
-.go{background:var(--go);color:#fff;flex:1}
+.go{background:var(--hd);color:#fff;flex:1}
+@media (prefers-color-scheme:dark){.go{background:var(--acc);color:var(--accInk)}}
 .ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink)}
-.small{font-size:14px;padding:8px 12px}
-.msg{color:var(--muted);text-align:center;margin:0}
+.small{font-size:14px;padding:8px 12px;border-radius:10px}
+.msg{color:var(--muted);text-align:center;margin:0;background:var(--card);border-radius:12px;padding:10px;border:1px solid var(--line)}
 .err{color:var(--stop)}
 ul{list-style:none;margin:0;padding:0}
-li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
 li:first-child{border-top:0}
 li small{display:block;color:var(--muted)}
 .late{color:var(--stop);font-weight:700}
-.link{background:none;border:0;color:var(--blue);font-weight:800;padding:0;font-size:15px}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding-bottom:env(safe-area-inset-bottom)}
-nav button{background:none;color:var(--muted);font-size:12px;font-weight:700;padding:9px 4px 10px;border-radius:0;display:grid;gap:2px;justify-items:center}
-nav button span{font-size:22px;line-height:1}
+.link{background:none;border:0;color:var(--blue);font-weight:800;padding:0;font-size:15px;margin-top:10px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);z-index:4}
+nav button{background:none;color:var(--muted);font-size:12px;font-weight:700;padding:6px 4px;border-radius:12px;display:grid;gap:3px;justify-items:center}
+nav svg{width:24px;height:24px;padding:2px 12px;box-sizing:content-box;border-radius:20px}
 nav button[aria-current="page"]{color:var(--ink)}
-nav button[aria-current="page"] span{transform:scale(1.1)}
-.biz{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
-.by{text-align:center;font-size:12px;color:var(--muted);margin:8px 0 0}
-.toast{position:fixed;left:12px;right:12px;bottom:76px;max-width:496px;margin:0 auto;background:#1d1f23;color:#fff;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 6px 20px #0004;z-index:5}
-.toast button{background:#fff;color:#1d1f23;padding:8px 12px;font-size:15px}
+nav button[aria-current="page"] svg{background:var(--acc);color:var(--accInk)}
+.by{text-align:center;font-size:12px;color:var(--muted);margin:6px 0 0}
+.toast{position:fixed;left:12px;right:12px;bottom:84px;max-width:496px;margin:0 auto;background:#16181b;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 8px 24px #0005;z-index:5}
+.toast button{background:var(--acc);color:var(--accInk);padding:8px 14px;font-size:15px}
 .why{color:var(--stop);font-weight:700;margin:0 0 10px;font-size:14px}
 [hidden]{display:none!important}
 </style></head><body>
+<header class="top"><div class="in">{{LOGO}}<div><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div></div></header>
 <main>
-<header><div><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div></header>
 <p class="msg" id="msg" hidden></p>
 
 <section id="tab-home">
-  <label class="snap" for="file">📷 Snap a receipt</label>
-  <label class="snap alt" for="pick" style="margin:10px 0 14px">🖼️ Add photos or PDFs</label>
+  <div class="snaps"><label class="snap" for="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Snap a receipt</label><label class="snap alt" for="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Photos or PDFs</label></div>
   <div class="card"><h2>Profit so far</h2><p class="big" id="profit">…</p>
-    <div class="grid2" style="margin-top:10px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div></div>
-  <div class="card pot" style="margin-top:14px"><h2>Put aside for tax</h2><p class="big" id="pot">…</p><p class="note">Rough guide only, about a quarter of profit. Your accountant gives the real figure.</p></div>
-  <div class="card pot" id="tidyCard" hidden style="margin-top:14px;border-left-color:var(--stop)"><h2>Needs sorting</h2><p style="margin:0"><b id="tidyCount"></b> expense(s) in "Uncategorised".</p><button class="link" data-tab="tidy" style="margin-top:8px">Tidy up (one tap each) →</button></div>
-  <div class="card" style="margin-top:14px"><h2>Owed to you</h2><p class="big" id="owedTotal">…</p><p class="note" id="owedCount"></p><button class="link" data-tab="owed" style="margin-top:8px">See who owes you →</button></div>
-  <div class="card" style="margin-top:14px"><h2>Tax quarter (for your accountant)</h2><p class="sub" id="qDates"></p>
-    <div class="grid2" style="margin-top:8px"><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
-    <p class="note" id="qDue"></p><button class="link" id="qCsv" style="margin-top:8px">Download for your accountant (CSV)</button></div>
+    <div class="grid2" style="margin-top:12px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div></div>
+  <div class="card pot"><h2>Put aside for tax</h2><p class="big" id="pot">…</p><p class="note">Rough guide only, about a quarter of profit. Your accountant gives the real figure.</p></div>
+  <div class="card pot" id="tidyCard" hidden style="border-left-color:var(--stop)"><h2>Needs sorting</h2><p style="margin:0"><b id="tidyCount"></b> expense(s) in "Uncategorised".</p><button class="link" data-tab="tidy">Tidy up (one tap each) →</button></div>
+  <div class="card"><h2>Owed to you</h2><p class="big" id="owedTotal">…</p><p class="note" id="owedCount"></p><button class="link" data-tab="owed">See who owes you →</button></div>
+  <div class="card"><h2>Tax quarter (for your accountant)</h2><p class="sub" id="qDates"></p>
+    <div class="grid2" ><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
+    <p class="note" id="qDue"></p><button class="link" id="qCsv">Download for your accountant (CSV)</button></div>
 </section>
 
 <section id="tab-tidy" hidden>
@@ -81,12 +90,11 @@ nav button[aria-current="page"] span{transform:scale(1.1)}
 </section>
 
 <section id="tab-receipts" hidden>
-  <label class="snap">📷 Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label>
-  <label class="snap alt" style="margin-top:10px">🖼️ Add photos or PDFs<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label>
-  <div class="card" style="margin-top:10px"><h2>No receipt? Just say it</h2>
-    <div class="btns"><input id="say" placeholder="40 quid diesel at Shell" style="flex:1;font:inherit;font-size:16px;padding:10px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);min-width:0">
+  <div class="snaps"><label class="snap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Snap a receipt<input id="file" type="file" accept="image/*" capture="environment"></label><label class="snap alt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Photos or PDFs<input id="pick" type="file" accept="image/*,application/pdf,.pdf" multiple></label></div>
+  <div class="card"><h2>No receipt? Just say it</h2>
+    <div class="btns"><input id="say" placeholder="40 quid diesel at Shell" style="flex:1;font:inherit;font-size:16px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0">
     <button class="ghost" id="mic" title="Speak" hidden>🎙️</button><button class="go" id="sayGo" style="flex:0">Add</button></div></div>
-  <div class="card" id="check" hidden style="margin-top:14px">
+  <div class="card" id="check" hidden>
     <h2>Check this one</h2><p class="why" id="why"></p>
     <img class="prev" id="prev" alt="Your receipt"><div style="height:10px"></div>
     <label class="f">Supplier<input id="supplier"></label>
@@ -95,7 +103,7 @@ nav button[aria-current="page"] span{transform:scale(1.1)}
     <label class="f">What for<input id="items"></label>
     <div class="btns"><button class="go" id="save">Send it</button><button class="ghost" id="cancel">Skip</button></div>
   </div>
-  <div class="card" style="margin-top:14px"><h2>Latest in QuickBooks</h2><ul id="recent"></ul></div>
+  <div class="card"><h2>Latest in QuickBooks</h2><ul id="recent"></ul></div>
 </section>
 
 <section id="tab-owed" hidden>
@@ -120,10 +128,10 @@ nav button[aria-current="page"] span{transform:scale(1.1)}
 <div class="toast" id="toast" hidden><span id="toastText"></span><button id="undo">Undo</button></div>
 
 <nav aria-label="Sections">
-  <button data-tab="home" aria-current="page"><span>🏠</span>Overview</button>
-  <button data-tab="receipts"><span>📷</span>Receipts</button>
-  <button data-tab="owed"><span>💷</span>Owed</button>
-  <button data-tab="invoice"><span>🧾</span>Invoice</button>
+  <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>Overview</button>
+  <button data-tab="receipts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Receipts</button>
+  <button data-tab="owed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.5 8.5a2.5 2.5 0 0 0-5 .5c0 3-1 4.5-2 6h8M8 12.5h5"/></svg>Owed</button>
+  <button data-tab="invoice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>Invoice</button>
 </nav>
 
 <script>
