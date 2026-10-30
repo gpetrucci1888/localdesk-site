@@ -5,10 +5,13 @@
 //
 //   POST /invite                (X-Key) {name, phone, env, brand, extras} one-off connect link for a new client (14 days)
 //   GET  /connect?invite=<id>   the client clicks this, then "Allow" at Intuit
-//   GET  /connect?k=ADMIN_KEY   quick connect for Gio (sandbox, for testing)
 //   GET  /callback              Intuit sends them back here; tokens saved, client's app link shown
 //   GET  /disconnect            landing page after a client disconnects in QuickBooks
-//   POST /revoke/<realmId>      (X-Key) cut a client off: revoke at Intuit, delete tokens
+//   POST /revoke/<realmId>      (X-Key) end a client: revoke at Intuit and cut access at once (tokens, logins, notifications,
+//                               shared links, app link). Their record, mileage and change log are then held for RETENTION_DAYS (30)
+//                               and purged (see PURGE_MODE below)
+//   POST /purge/<realmId>?confirm=<realmId>  (X-Key) delete everything Books holds for an ended client now (refused on legal hold)
+//   GET  /export/<realmId>      (X-Key) everything Books holds about that client, as JSON (handover and data requests)
 //   GET  /app/<appKey>          (X-Key) which company an app link belongs to
 //   GET  /companies             (X-Key header) which QuickBooks companies are connected
 //   ANY  /qb/<realmId>/<path>   (X-Key header) passed through to the QuickBooks API,
@@ -85,6 +88,10 @@
 // Settings: QB_CLIENT_ID, QB_CLIENT_SECRET (Intuit development keys, used for sandbox companies),
 // QB_PROD_CLIENT_ID, QB_PROD_CLIENT_SECRET (production keys, for real clients), ADMIN_KEY,
 // APP_URL (where the phone app lives). Each saved connection remembers which keys it used.
+// PURGE_MODE (plain text, optional): "live" lets the daily job delete ended clients' held data after RETENTION_DAYS.
+// Anything else (including unset) is a dry run that only texts what is due. Never set it without the owner's go-ahead.
+// Demo: a client record with demo:true is only honoured on a sandbox (practice) company. It never emails or texts,
+// needs no login, and is rate-limited (DEMO_LIMITS). The app worker forwards the visitor's address as X-Client-IP.
 // Tokens, invites and clients live in the Store Durable Object.
 
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
@@ -101,8 +108,84 @@ function creds(env, which) {
 }
 const randomKey = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(12)))).replace(/[+/=]/g, c => ({ '+': '-', '/': '_', '=': '' }[c]));
 
+// Admin key check that doesn't leak anything through timing: both sides are hashed first.
+async function sameKey(given, wanted) {
+  if (!given || !wanted) return false;
+  const [a, b] = await Promise.all([sha256(given), sha256(wanted)]);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// Security headers on every response. CSP and frame protection only go on HTML (a CSP on a PDF can break the viewer).
+// A page that needs one inline script passes its nonce in X-CSP-Nonce, which is used here and then removed.
+function secure(res) {
+  const h = new Headers(res.headers);
+  const nonce = h.get('X-CSP-Nonce');
+  h.delete('X-CSP-Nonce');
+  h.set('X-Content-Type-Options', 'nosniff');
+  h.set('Referrer-Policy', 'no-referrer');
+  h.set('Strict-Transport-Security', 'max-age=31536000');
+  const type = h.get('Content-Type') || '';
+  if (/text\/html/.test(type)) {
+    h.set('Content-Security-Policy', `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src ${nonce ? `'nonce-${nonce}'` : "'none'"}; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`);
+    h.set('X-Frame-Options', 'DENY');
+    h.set('Cache-Control', 'no-store');
+  } else if (!h.has('Cache-Control') && /json|text\/plain|csv/.test(type)) {
+    h.set('Cache-Control', 'private, no-store');
+  }
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
+// Usage limits, counted in the Store. true = go ahead. Demo limits are per visitor plus a global ceiling.
+async function throttle(store, name, limit, windowSec) {
+  const res = await store.fetch('https://store/limit', { method: 'POST', body: JSON.stringify({ name, limit, windowSec }) });
+  return res.ok;
+}
+async function visitor(request) {
+  // CF-Connecting-IP is set by Cloudflare itself. X-Client-IP is only believed on calls that came from our own app worker (they carry no CF-Connecting-IP).
+  const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Client-IP') || 'unknown';
+  return (await sha256(`${ip}|${new Date().toISOString().slice(0, 10)}`)).slice(0, 16);
+}
+const TOO_MANY = () => Response.json({ error: 'That is a lot at once. Give it a few minutes and try again.' }, { status: 429, headers: { 'Retry-After': '300' } });
+const AI_WHATS = ['parse', 'untidy', 'allow'];
+// What one demo visitor, and the demo overall, can do per hour. Real clients only get a runaway-loop ceiling on the AI.
+const DEMO_LIMITS = { aiPerVisitor: 15, lightPerVisitor: 60, writesPerVisitor: 60, aiPerHour: 60, aiPerDay: 300, writesPerDay: 1500 };
+const CLIENT_AI_PER_HOUR = 200;
+const PROBLEM_WHATS = ['read', 'file', 'other'];
+const PROBLEMS_PER_HOUR = 3;
+
+// Emails an invoice or quote through QuickBooks. false = not sent (demo companies never email anyone).
+async function sendDoc(env, store, realmId, kind, id, email) {
+  if (isDemoClient(await getClient(store, realmId))) return false;
+  await qb(env, store, realmId, 'POST', `${kind}/${id}/send?sendTo=${encodeURIComponent(email)}`);
+  return true;
+}
+
+const isDemoClient = (client) => Boolean(client && client.demo === true);
+// A demo record is only honoured on a sandbox (practice) company, so it can never open a real customer's books.
+async function isSandboxRealm(store, realmId) {
+  const res = await store.fetch(`https://store/tokens/${realmId}`);
+  if (!res.ok) return false;
+  return (await res.json()).env === 'sandbox';
+}
+
 export default {
   async fetch(request, env) {
+    return secure(await route(request, env));
+  },
+
+  // 1st of the month: monthly text. 8th after a quarter: accountant packs. Every morning: daily check.
+  async scheduled(event, env, ctx) {
+    const run = event.cron === QUARTER_CRON ? quarterRun : event.cron === DAILY_CRON ? dailyRun : event.cron === HOURLY_CRON ? hourlyRun : monthlyRun;
+    ctx.waitUntil(run(env).catch(async err => {
+      console.error('scheduled run failed', err && err.stack || err);
+      if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books: the ${event.cron} run failed: ${String(err && err.message || err).slice(0, 200)}`).catch(() => {});
+    }));
+  },
+};
+
+async function route(request, env) {
     const url = new URL(request.url);
     const store = env.STORE.get(env.STORE.idFromName('main'));
     const redirectUri = `${url.origin}/callback`;
@@ -110,17 +193,14 @@ export default {
     const origin = url.hostname === 'books' ? (env.BOOKS_URL || 'https://books.gpetrucci93.workers.dev') : url.origin;
     try {
       if (url.pathname === '/connect') {
-        let invite = null;
-        if (url.searchParams.get('invite')) {
-          const res = await store.fetch(`https://store/invites/${encodeURIComponent(url.searchParams.get('invite'))}`);
-          if (!res.ok) return page('This link has expired or already been used. Ask Gio for a fresh one.');
-          invite = await res.json();
-        } else if (url.searchParams.get('k') !== env.ADMIN_KEY) {
-          return text('Not allowed', 403);
-        }
-        const which = invite ? invite.env : 'sandbox';
+        // Only invite links start a connection. (A sandbox connection is a sandbox invite: POST /invite {env: 'sandbox'}.)
+        if (!url.searchParams.get('invite')) return page('This link is missing its invite. Ask Gio for a fresh one.', 400);
+        const res = await store.fetch(`https://store/invites/${encodeURIComponent(url.searchParams.get('invite'))}`);
+        if (!res.ok) return page('This link has expired or already been used. Ask Gio for a fresh one.', 410);
+        const invite = await res.json();
+        const which = invite.env;
         const state = crypto.randomUUID();
-        await store.fetch('https://store/state', { method: 'PUT', body: JSON.stringify({ value: state, invite: invite && invite.id, env: which }) });
+        await store.fetch('https://store/state', { method: 'PUT', body: JSON.stringify({ value: state, invite: invite.id, env: which }) });
         const go = new URL(AUTH_URL);
         go.search = new URLSearchParams({ client_id: creds(env, which).id, response_type: 'code', scope: SCOPE, redirect_uri: redirectUri, state }).toString();
         return Response.redirect(go.toString(), 302);
@@ -128,17 +208,17 @@ export default {
 
       if (url.pathname === '/callback') {
         const ok = await store.fetch('https://store/state', { method: 'POST', body: url.searchParams.get('state') || '' });
-        if (!ok.ok) return page('That link has expired. Ask Gio for a fresh one.');
+        if (!ok.ok) return page('That link has expired. Ask Gio for a fresh one.', 400);
         const st = await ok.json();
         const code = url.searchParams.get('code'), realmId = url.searchParams.get('realmId');
-        if (!code || !realmId) return page('QuickBooks didn\'t connect. Nothing was changed.');
+        if (!code || !realmId) return page('QuickBooks didn\'t connect. Nothing was changed.', 400);
         const tokens = await tokenRequest(env, st.env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
         await store.fetch(`https://store/tokens/${realmId}`, { method: 'PUT', body: JSON.stringify(tokens) });
         if (!st.invite) return page('Connected ✓ You can close this page.');
         const inv = await (await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`)).json().catch(() => ({}));
         const existing = await getClient(store, realmId);
         const keep = (f) => inv[f] || (existing && existing[f]) || '';
-        const client = { ...(existing || {}), name: inv.name || '', phone: inv.phone || '', brand: keep('brand'), extras: keep('extras'), vat: keep('vat'), chase: keep('chase') || 'off', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString() };
+        const client = { ...(existing || {}), name: inv.name || '', phone: inv.phone || '', brand: keep('brand'), extras: keep('extras'), vat: keep('vat'), chase: keep('chase') || 'off', appKey: (existing && existing.appKey) || randomKey(), env: st.env, connected_at: new Date().toISOString(), ended_at: undefined, ended_reason: undefined, disconnected_at: undefined };
         await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
         await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
         const app = `${env.APP_URL}/${client.appKey}/`;
@@ -154,18 +234,19 @@ export default {
       const pk = url.pathname.match(/^\/pack\/([\w-]{12,})(\.csv|\/r\/(\d+))?$/);
       if (pk && request.method === 'GET') {
         const res = await store.fetch(`https://store/packs/${pk[1]}`);
-        if (!res.ok) return page('This link has expired. Ask for a fresh one from the Books app.');
+        if (!res.ok) return page('This link has expired. Ask for a fresh one from the Books app.', 404);
         const link = await res.json();
-        if (pk[3]) return receiptFile(env, store, link.realmId, pk[3]);
+        if (pk[3]) return receiptFile(env, store, link, pk[3]);
         const data = await pack(env, store, link.realmId, link.from, link.to);
         if (pk[2]) return new Response(packCsv(data), { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="books-${link.from}-to-${link.to}.csv"` } });
-        return new Response(packPage(data, `${url.origin}/pack/${pk[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+        const nonce = randomKey();
+        return new Response(packPage(data, `${url.origin}/pack/${pk[1]}`, nonce), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex', 'X-CSP-Nonce': nonce } });
       }
 
       const dl = url.pathname.match(/^\/d\/([\w-]{12,})(\.pdf)?$/);
       if (dl && request.method === 'GET') {
         const res = await store.fetch(`https://store/docs/${dl[1]}`);
-        if (!res.ok) return page('This link has expired. Ask for a fresh one.');
+        if (!res.ok) return page('This link has expired. Ask for a fresh one.', 404);
         const link = await res.json();
         if (dl[2]) {
           const pdf = await qbRaw(env, store, link.realmId, `${link.type === 'quote' ? 'estimate' : 'invoice'}/${link.id}/pdf`, 'application/pdf');
@@ -178,7 +259,7 @@ export default {
       const c = url.pathname.match(/^\/c\/([a-z]+(?:\/[a-z]+)?)(?:\/(\d+))?$/);
       if (c) return await clientRoute(c[1], c[2], request, url, env, store, origin);
 
-      if (request.headers.get('X-Key') !== env.ADMIN_KEY || !env.ADMIN_KEY) return text('Not allowed', 403);
+      if (!(await sameKey(request.headers.get('X-Key'), env.ADMIN_KEY))) return text('Not allowed', 403);
 
       if (url.pathname === '/companies') return store.fetch('https://store/tokens');
 
@@ -209,9 +290,27 @@ export default {
           const c = creds(env, t.env);
           await fetch(REVOKE_URL, { method: 'POST', headers: { Authorization: 'Basic ' + btoa(`${c.id}:${c.secret}`), 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ token: t.refresh_token }) });
         }
-        await store.fetch(`https://store/tokens/${rv[1]}`, { method: 'DELETE' });
-        await store.fetch(`https://store/clients/${rv[1]}`, { method: 'DELETE' });
-        return Response.json({ ok: true });
+        // Access ends now. The client's record, mileage and change log are held for RETENTION_DAYS, then purged.
+        const cut = await (await store.fetch(`https://store/cutoff/${rv[1]}`, { method: 'POST', body: JSON.stringify({ reason: 'revoked' }) })).json();
+        return Response.json({ ok: true, ...cut, purgeAfterDays: RETENTION_DAYS });
+      }
+
+      const pg = url.pathname.match(/^\/purge\/(\d+)$/);
+      if (pg && request.method === 'POST') {
+        const cl = await getClient(store, pg[1]);
+        if (!cl) return Response.json({ error: 'No such client' }, { status: 404 });
+        if (url.searchParams.get('confirm') !== pg[1]) return Response.json({ error: 'Add ?confirm=' + pg[1] + ' to delete everything for this client' }, { status: 400 });
+        if (cl.hold) return Response.json({ error: 'This client is on legal hold. Clear the hold first' }, { status: 409 });
+        if (!cl.ended_at) return Response.json({ error: 'This client has not been ended (POST /revoke first)' }, { status: 409 });
+        return Response.json({ ok: true, deleted: await (await store.fetch(`https://store/purge/${pg[1]}`, { method: 'POST' })).json() });
+      }
+
+      const ex = url.pathname.match(/^\/export\/(\d+)$/);
+      if (ex && request.method === 'GET') {
+        const cl = await getClient(store, ex[1]);
+        if (!cl) return Response.json({ error: 'No such client' }, { status: 404 });
+        const [trips, log, pushes] = await Promise.all(['trips', 'log', 'pushsubs'].map(k => store.fetch(`https://store/${k}/${ex[1]}`).then(r => r.json())));
+        return Response.json({ exported: new Date().toISOString(), client: { ...cl, appKey: undefined }, mileage: trips, changeLog: log, notificationDevices: pushes.length });
       }
 
       const a = url.pathname.match(/^\/([a-z]+)\/(\d+)(?:\/(\d+))?$/);
@@ -246,17 +345,7 @@ export default {
       }
       return text(`Error: ${msg}`, 500);
     }
-  },
-
-  // 1st of the month: monthly text. 8th after a quarter: accountant packs. Every morning: daily check.
-  async scheduled(event, env, ctx) {
-    const run = event.cron === QUARTER_CRON ? quarterRun : event.cron === DAILY_CRON ? dailyRun : event.cron === HOURLY_CRON ? hourlyRun : monthlyRun;
-    ctx.waitUntil(run(env).catch(async err => {
-      console.error('scheduled run failed', err && err.stack || err);
-      if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books: the ${event.cron} run failed: ${String(err && err.message || err).slice(0, 200)}`).catch(() => {});
-    }));
-  },
-};
+}
 
 // Errors that mean something is broken, rather than a missing amount or a typo.
 const SYSTEM_ERROR = /^(QuickBooks \d|QuickBooks company|Text failed|Texts are not set up|Could not understand)/;
@@ -285,6 +374,9 @@ const CLIENT_WHATS = ['file', 'summary', 'owed', 'recent', 'invoice', 'remind', 
 // Extras a client pays for on top of the starter. "quotes" = quotes and jobs.
 const EXTRA_ONLY = { quote: 'quotes', quotes: 'quotes', won: 'quotes', chase: 'quotes', invoiceit: 'quotes', jobs: 'quotes', job: 'quotes' };
 const SESSION_DAYS = 365, CODE_MINUTES = 10, CODES_PER_HOUR = 5, CODE_TRIES = 5;
+// After a client is ended we hold their record, mileage and change log this long (so they can be handed over), then purge.
+// Nothing is deleted automatically until PURGE_MODE is set to "live"; until then the weekly text only says what is due.
+const RETENTION_DAYS = 30;
 
 async function clientRoute(what, id, request, url, env, store, origin) {
   const appKey = request.headers.get('X-App') || '';
@@ -294,14 +386,16 @@ async function clientRoute(what, id, request, url, env, store, origin) {
   const realmId = (await res.json()).realmId;
   const client = (await getClient(store, realmId)) || {};
   // demo: the practice company's main link needs no login; any extra (test) link for it still does.
-  const loggedIn = (client.demo && appKey === client.appKey) || await validSession(store, appKey, request.headers.get('X-Session'));
+  const isDemo = isDemoClient(client) && appKey === client.appKey && await isSandboxRealm(store, realmId);
+  const loggedIn = isDemo || await validSession(store, appKey, request.headers.get('X-Session'));
 
   if (what === 'app') {
     if (loggedIn) await store.fetch(`https://store/seen/${realmId}`, { method: 'POST' });
     return Response.json({ realmId, name: client.name || '', brand: client.brand || '', extras: client.extras || '', loggedIn: Boolean(loggedIn),
-      phoneEnd: (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: Boolean(client.phone),
+      phoneEnd: isDemo ? '' : (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: !isDemo && Boolean(client.phone),
       vat: await vatRegistered(env, store, realmId, client).catch(() => true), chase: client.chase === 'on' });
   }
+  if (isDemo && what.startsWith('login/')) return Response.json({ error: 'This is the demo, so there is nothing to log in to.' }, { status: 400 });
   if (what === 'login/send' && request.method === 'POST') {
     if (!client.phone) throw new Error('No phone number saved. Ask Gio to add it');
     const old = await (await store.fetch(`https://store/codes/${appKey}`)).json().catch(() => null);
@@ -329,9 +423,11 @@ async function clientRoute(what, id, request, url, env, store, origin) {
   }
 
   if (!loggedIn) return Response.json({ error: 'Please log in again', login: true }, { status: 401 });
+  { const limited = await limitFor(what, request, store, isDemo, realmId); if (limited) return limited; }
+  if (what === 'allow' && request.method === 'POST') return Response.json({ ok: true }); // the check above is the point: the app asks before using the AI
   // Their own settings, for the Settings screen (only once logged in).
   if (what === 'me') return Response.json({ name: client.name || '', accountant: client.accountant || '', chase: client.chase === 'on',
-    vat: await vatRegistered(env, store, realmId, client).catch(() => true), phoneEnd: (client.phone || '').replace(/\D/g, '').slice(-3), extras: client.extras || '' });
+    vat: await vatRegistered(env, store, realmId, client).catch(() => true), phoneEnd: isDemo ? '' : (client.phone || '').replace(/\D/g, '').slice(-3), extras: client.extras || '' });
   // Log out this phone only (the admin /logout logs out every phone).
   if (what === 'bye' && request.method === 'POST') {
     const sess = request.headers.get('X-Session');
@@ -343,6 +439,7 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     return Response.json({ error: 'Not part of your plan. Ask Gio to switch it on.' }, { status: 403 });
   }
   if (what === 'accountant' && request.method === 'PUT') {
+    if (isDemo) return Response.json({ ok: true }); // the demo is shared, so nothing typed into it is kept
     const em = String((await request.json()).accountant || '').trim().slice(0, 200);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) throw new Error('That email doesn\'t look right');
     await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify({ ...client, accountant: em }) });
@@ -350,6 +447,7 @@ async function clientRoute(what, id, request, url, env, store, origin) {
   }
   // The only setting a client changes themselves: whether Books chases for them.
   if (what === 'settings' && request.method === 'PUT') {
+    if (isDemo) return Response.json({ ok: true, chase: false }); // the demo never emails anyone
     const v = await request.json();
     if (typeof v.chase === 'boolean') client.chase = v.chase ? 'on' : 'off';
     await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
@@ -357,11 +455,29 @@ async function clientRoute(what, id, request, url, env, store, origin) {
   }
   // The app couldn't do something on its own side (reading a receipt): tell Gio.
   if (what === 'problem' && request.method === 'POST') {
+    if (isDemo) return Response.json({ ok: true });
     const v = await request.json().catch(() => ({}));
-    await alertOwner(env, store, `app:${realmId}:${String(v.what || '').slice(0, 20)}`, `Books app problem for ${client.name || realmId}: ${String(v.message || '').slice(0, 200)}`).catch(() => {});
+    if (!(await throttle(store, `problem:${realmId}`, PROBLEMS_PER_HOUR, 3600))) return Response.json({ ok: true });
+    await alertOwner(env, store, `app:${realmId}:${PROBLEM_WHATS.includes(v.what) ? v.what : 'other'}`, `Books app problem for ${client.name || realmId}: ${String(v.message || '').slice(0, 200)}`).catch(() => {});
     return Response.json({ ok: true });
   }
   return (await handle(what, realmId, id, request, url, env, store, origin)) || text('Not found', 404);
+}
+
+// Usage limits for the app's calls. AI calls cost money, so they are limited for everyone; the demo is limited much harder.
+async function limitFor(what, request, store, isDemo, realmId) {
+  const ai = what === 'parse' || what === 'allow';   // each one is a model call
+  const light = what === 'untidy';                    // a model call only when something needs sorting
+  const write = request.method !== 'GET' && !ai;
+  if (isDemo) {
+    const v = await visitor(request);
+    if (ai && !(await throttle(store, `demo:ai:${v}`, DEMO_LIMITS.aiPerVisitor, 3600) && await throttle(store, 'demo:ai:all', DEMO_LIMITS.aiPerHour, 3600) && await throttle(store, 'demo:ai:day', DEMO_LIMITS.aiPerDay, 86400))) return TOO_MANY();
+    if (light && !(await throttle(store, `demo:light:${v}`, DEMO_LIMITS.lightPerVisitor, 3600))) return TOO_MANY();
+    if (write && !(await throttle(store, `demo:w:${v}`, DEMO_LIMITS.writesPerVisitor, 3600) && await throttle(store, 'demo:w:day', DEMO_LIMITS.writesPerDay, 86400))) return TOO_MANY();
+    return null;
+  }
+  if ((ai || light) && !(await throttle(store, `ai:${realmId}`, CLIENT_AI_PER_HOUR, 3600))) return TOO_MANY();
+  return null;
 }
 
 async function validSession(store, appKey, session) {
@@ -433,7 +549,11 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
     const v = await body(), old = (await getClient(store, realmId)) || {};
     for (const f of ['name', 'phone', 'brand', 'accountant', 'extras', 'appKey', 'vat', 'chase']) if (typeof v[f] === 'string') old[f] = v[f];
     if (old.vat && !['yes', 'no'].includes(old.vat)) throw new Error('vat is "yes", "no" or ""');
-    if (typeof v.demo === 'boolean') old.demo = v.demo;
+    if (typeof v.demo === 'boolean') {
+      if (v.demo && !(await isSandboxRealm(store, realmId))) throw new Error('Demo mode is only allowed on a sandbox (practice) company');
+      old.demo = v.demo;
+    }
+    if (typeof v.hold === 'boolean') old.hold = v.hold;
     if (old.appKey && !/^[\w-]{8,}$/.test(old.appKey)) throw new Error('Bad app key');
     await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(old) });
     return Response.json(old);
@@ -595,7 +715,7 @@ async function remind(env, store, realmId, id, quiet) {
   const inv = (await qb(env, store, realmId, 'GET', `invoice/${id}`)).Invoice;
   const email = inv.BillEmail && inv.BillEmail.Address;
   if (!email) throw new Error('No email address for this customer. Add one in QuickBooks first');
-  await qb(env, store, realmId, 'POST', `invoice/${id}/send?sendTo=${encodeURIComponent(email)}`);
+  if (!(await sendDoc(env, store, realmId, 'invoice', id, email))) throw new Error('Emails are switched off in the demo');
   if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed invoice${num(inv.DocNumber)} to ${email} again` });
   return { ok: true, sentTo: email };
 }
@@ -706,7 +826,7 @@ async function newInvoice(env, store, realmId, r) {
   const { doc, email, cisDeduction } = await saleParts(env, store, realmId, r);
   const created = (await qb(env, store, realmId, 'POST', 'invoice', doc)).Invoice;
   let sentTo = '';
-  if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  if (email && await sendDoc(env, store, realmId, 'invoice', created.Id, email)) sentTo = email;
   await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice${num(created.DocNumber)} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo, cisDeduction, toReceive: round(Number(created.TotalAmt) - cisDeduction) };
 }
@@ -717,7 +837,7 @@ async function newQuote(env, store, realmId, r) {
   const { doc, email } = await saleParts(env, store, realmId, r);
   const created = (await qb(env, store, realmId, 'POST', 'estimate', { ...doc, TxnStatus: 'Pending' })).Estimate;
   let sentTo = '';
-  if (email) { await qb(env, store, realmId, 'POST', `estimate/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  if (email && await sendDoc(env, store, realmId, 'estimate', created.Id, email)) sentTo = email;
   await logChange(store, realmId, { kind: 'quote', ref: created.Id, text: `Quote${num(created.DocNumber)} for ${r.customer} ${money(created.TotalAmt)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
 }
@@ -751,7 +871,7 @@ async function quoteChase(env, store, realmId, id, quiet) {
   const e = (await qb(env, store, realmId, 'GET', `estimate/${id}`)).Estimate;
   const email = e.BillEmail && e.BillEmail.Address;
   if (!email) throw new Error('No email on this quote, so give them a ring');
-  await qb(env, store, realmId, 'POST', `estimate/${id}/send?sendTo=${encodeURIComponent(email)}`);
+  if (!(await sendDoc(env, store, realmId, 'estimate', id, email))) throw new Error('Emails are switched off in the demo');
   if (!quiet) await logChange(store, realmId, { kind: 'remind', text: `Emailed quote${num(e.DocNumber)} to ${email} again` });
   return { ok: true, sentTo: email };
 }
@@ -778,7 +898,7 @@ async function quoteInvoice(env, store, realmId, id, amount) {
   if (fresh.TxnStatus !== 'Closed') await qb(env, store, realmId, 'POST', 'estimate', { Id: fresh.Id, SyncToken: fresh.SyncToken, sparse: true, TxnStatus: 'Closed' }).catch(() => {});
   let sentTo = '';
   const email = e.BillEmail && e.BillEmail.Address;
-  if (email) { await qb(env, store, realmId, 'POST', `invoice/${created.Id}/send?sendTo=${encodeURIComponent(email)}`); sentTo = email; }
+  if (email && await sendDoc(env, store, realmId, 'invoice', created.Id, email)) sentTo = email;
   await logChange(store, realmId, { kind: 'invoice', ref: created.Id, text: `Invoice${num(created.DocNumber)} for ${(e.CustomerRef && e.CustomerRef.name) || 'customer'} ${money(created.TotalAmt)} from quote${num(e.DocNumber)}${sentTo ? `, emailed to ${sentTo}` : ''}` });
   return { ok: true, id: created.Id, number: created.DocNumber, total: Number(created.TotalAmt), sentTo };
 }
@@ -1050,9 +1170,16 @@ async function pack(env, store, realmId, from, to) {
 }
 
 // A receipt photo, fetched fresh from QuickBooks (its own download links only last 15 minutes).
-async function receiptFile(env, store, realmId, id) {
-  const a = (await qb(env, store, realmId, 'GET', `attachable/${id}`)).Attachable;
-  if (!a || !a.TempDownloadUri) return text('Not found', 404);
+// Only a receipt on an expense dated inside the pack's own period can be fetched through a pack link.
+async function receiptFile(env, store, link, id) {
+  const realmId = link.realmId;
+  let a, p;
+  try {
+    a = (await qb(env, store, realmId, 'GET', `attachable/${id}`)).Attachable;
+    const ref = ((a && a.AttachableRef) || []).map(r => r.EntityRef).find(e => e && e.type === 'Purchase');
+    if (a && a.TempDownloadUri && ref) p = (await qb(env, store, realmId, 'GET', `purchase/${ref.value}`)).Purchase;
+  } catch (err) { return text('Not found', 404); }
+  if (!p || !(p.TxnDate >= link.from && p.TxnDate <= link.to)) return text('Not found', 404);
   const res = await fetch(a.TempDownloadUri);
   return new Response(res.body, { headers: { 'Content-Type': a.ContentType || res.headers.get('Content-Type') || 'application/octet-stream', 'Cache-Control': 'private, max-age=600' } });
 }
@@ -1076,7 +1203,7 @@ function packCsv(d) {
   return rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
 }
 
-function packPage(d, self) {
+function packPage(d, self, nonce) {
   const e = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const m = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const dt = s => new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -1099,7 +1226,7 @@ a{color:#1f5fbf}.note{font-size:13px;color:var(--muted);margin:8px 0 0}
 @media (max-width:560px){.tiles{grid-template-columns:1fr}}
 </style></head><body><main>
 <div><h1>${e(d.business)}</h1><p class="sub">Books pack · ${dt(d.from)} to ${dt(d.to)}${d.due ? ` · Making Tax Digital update due ${dt(d.due)}` : ''}</p></div>
-<div class="btns"><a class="btn" href="${self}.csv">Download spreadsheet (CSV)</a><a class="btn alt" href="javascript:print()">Print or save as PDF</a></div>
+<div class="btns"><a class="btn" href="${self}.csv">Download spreadsheet (CSV)</a><a class="btn alt" href="#" id="prt">Print or save as PDF</a></div>
 <div class="card"><h2>Summary</h2><div class="tiles"><div><span>Income</span><b>${m(d.income)}</b></div><div><span>Expenses</span><b>${m(d.expenses)}</b></div><div><span>Profit</span><b>${m(d.profit)}</b></div></div>
 <p class="note">From QuickBooks, before any adjustments. ${d.spent.length} expenses, ${d.spent.length - missing} with a receipt attached.</p></div>
 <div class="card"><h2>By category</h2><table>${Object.keys(sections).map(k => `<tr><th colspan="2">${e(label[k] || k)}</th></tr>` + sections[k].map(l => `<tr><td>${e(l.name)}</td><td class="n">${m(l.amount)}</td></tr>`).join('')).join('') || '<tr><td>Nothing in this period.</td></tr>'}</table></div>
@@ -1115,7 +1242,7 @@ ${d.trips.length ? `<div class="card"><h2>Mileage log</h2><table><tr><th>Date</t
 ${d.trips.map(t => `<tr><td>${dt(t.date)}</td><td class="n">${t.miles}</td><td>${e(t.why)}</td><td class="n">${m(t.worth)}</td></tr>`).join('')}<tr><th>Total</th><th class="n">${d.miles}</th><th></th><th class="n">${m(d.mileWorth)}</th></tr></table>
 <p class="note">Logged in the Books app, not in QuickBooks. 45p a mile for the first 10,000 business miles in the tax year, 25p after. Only claimable instead of actual vehicle costs for that vehicle.</p></div>` : ''}
 <p class="note">Made by Books (Localdesk). Everything here comes straight from QuickBooks, apart from the mileage log.</p>
-</main></body></html>`;
+</main><script nonce="${nonce}">document.getElementById('prt').addEventListener('click',function(e){e.preventDefault();print()})</script></body></html>`;
 }
 
 // 8th of Jan, Apr, Jul, Oct: each client gets their pack link for the quarter that just ended.
@@ -1126,6 +1253,7 @@ async function quarterRun(env) {
   const p = packPeriod('lastquarter'), report = [];
   for (const c of companies) {
     const client = await getClient(store, c.realmId);
+    if (isDemoClient(client)) continue;
     try {
       const link = await packLink(store, origin, c.realmId, p);
       if (client && client.phone) await sendSms(env, client.phone, `Your books for the quarter to ${new Date(p.to).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })} are ready for your accountant: ${link} (open Books and tap "Send to accountant", or forward this link).`);
@@ -1248,12 +1376,32 @@ const CHASES_PER_DAY = 10;
 async function dailyRun(env) {
   const store = env.STORE.get(env.STORE.idFromName('main'));
   const report = await health(env, store, { refresh: true, chase: true });
+  await store.fetch('https://store/housekeeping', { method: 'POST' }).catch(() => {});
+  const retention = await purgeDue(env, store);
+  if (new Date().getUTCDay() === 1 && env.OWNER_PHONE && retention.due.length) {
+    await sendSms(env, env.OWNER_PHONE, `Books: ${retention.due.length} ended client${retention.due.length > 1 ? 's are' : ' is'} past the ${RETENTION_DAYS}-day holding period and still held (nothing deleted yet): ${retention.due.join(', ')}. Export first if they want a copy, then switch automatic deletion on.`).catch(() => {});
+  }
   if (new Date().getUTCDay() === 1 && env.OWNER_PHONE) {
     const lines = report.clients.map(c => c.ok
       ? `${c.name}: ${c.filed} filed, ${c.toTidy} to sort, ${c.late} late${c.chased ? `, ${c.chased} chased` : ''}, app ${c.seenDays == null ? 'never opened' : c.seenDays === 0 ? 'used today' : `last used ${c.seenDays}d ago`}.`
       : `${c.name}: NOT CONNECTED (${c.problem}).`);
     await sendSms(env, env.OWNER_PHONE, `Books weekly check: ${lines.join(' ') || 'no clients connected.'}`);
   }
+}
+
+// Ended clients past RETENTION_DAYS (and not on legal hold). Only deletes when PURGE_MODE is "live"; otherwise it just reports.
+async function purgeDue(env, store) {
+  const clients = await (await store.fetch('https://store/clients')).json();
+  const due = clients.filter(c => c.ended_at && !c.hold && !isDemoClient(c) && Date.now() - Date.parse(c.ended_at) > RETENTION_DAYS * 86400000);
+  if (!due.length) return { due: [], purged: [] };
+  if (env.PURGE_MODE !== 'live') return { due: due.map(c => c.name || c.realmId), purged: [] };
+  const purged = [];
+  for (const c of due) {
+    await store.fetch(`https://store/purge/${c.realmId}`, { method: 'POST' });
+    purged.push(c.name || c.realmId);
+  }
+  if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books: deleted what was held for ended clients after ${RETENTION_DAYS} days: ${purged.join(', ')}.`).catch(() => {});
+  return { due: [], purged };
 }
 
 // Each client's connection, kept fresh, plus what needs doing. With chase, also chases for clients who switched it on.
@@ -1276,9 +1424,9 @@ async function health(env, store, opts = {}) {
       row.toTidy = messy.length; row.late = late.length;
       row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length;
       row.seenDays = seen && seen.at ? Math.floor((Date.now() - seen.at) / 86400000) : null;
-      if (opts.chase && client.chase === 'on') row.chasedToday = await chaseAll(env, store, c.realmId, client, late);
+      if (opts.chase && client.chase === 'on' && !isDemoClient(client)) row.chasedToday = await chaseAll(env, store, c.realmId, client, late);
       row.chased = log.filter(e => e.kind === 'chase' && e.at > week).length + (row.chasedToday || 0);
-      if (opts.chase) {
+      if (opts.chase && !isDemoClient(client)) {
         const bits = [];
         if (late.length) bits.push(`${late.length} invoice${late.length > 1 ? 's' : ''} late (${money(late.reduce((t, i) => t + i.balance, 0))})`);
         if (messy.length) bits.push(`${messy.length} expense${messy.length > 1 ? 's' : ''} to sort`);
@@ -1290,6 +1438,10 @@ async function health(env, store, opts = {}) {
       await alertOwner(env, store, `conn:${c.realmId}`, `Books: ${row.name}'s QuickBooks isn't working (${row.problem}). They may need a fresh connect link.`).catch(() => {});
     }
     clients.push(row);
+  }
+  const have = new Set(companies.map(c => c.realmId));
+  for (const c of await (await store.fetch('https://store/clients')).json()) {
+    if (c.disconnected_at && !c.ended_at && !have.has(c.realmId)) clients.push({ realmId: c.realmId, name: c.name || c.realmId, ok: false, problem: `disconnected in QuickBooks on ${String(c.disconnected_at).slice(0, 10)}` });
   }
   return { checked: new Date().toISOString(), clients };
 }
@@ -1655,6 +1807,7 @@ async function hourlyRun(env) {
   const store = env.STORE.get(env.STORE.idFromName('main'));
   const companies = await (await store.fetch('https://store/tokens')).json();
   for (const c of companies) {
+    if (isDemoClient(await getClient(store, c.realmId))) continue;
     const subs = await (await store.fetch(`https://store/pushsubs/${c.realmId}`)).json();
     if (!subs.length) continue;
     const since = await store.fetch(`https://store/paycheck/${c.realmId}`).then(r => (r.ok ? r.text() : ''));
@@ -1704,6 +1857,7 @@ async function monthlyRun(env) {
   const report = [];
   for (const c of companies) {
     const client = await getClient(store, c.realmId);
+    if (isDemoClient(client)) continue;
     try {
       const msg = await monthlyText(env, store, c.realmId);
       if (client && client.phone) await sendSms(env, client.phone, msg);
@@ -1760,7 +1914,7 @@ async function qb(env, store, realmId, method, path, body) {
 
 // Fresh tokens for this company (with .env), refreshing and saving the new refresh token when needed.
 // Connections saved before env was recorded are sandbox ones.
-async function accessToken(env, store, realmId, force) {
+async function accessToken(env, store, realmId, force, retried) {
   const res = await store.fetch(`https://store/tokens/${realmId}`);
   if (!res.ok) throw new Error(`QuickBooks company ${realmId} isn't connected`);
   const t = await res.json();
@@ -1770,6 +1924,17 @@ async function accessToken(env, store, realmId, force) {
   try {
     fresh = await tokenRequest(env, t.env, { grant_type: 'refresh_token', refresh_token: t.refresh_token });
   } catch (err) {
+    if (/invalid_grant/i.test(String(err.message)) && !retried) {
+      // Intuit rotates the refresh token, so another request may have just refreshed it: use theirs.
+      const now = await store.fetch(`https://store/tokens/${realmId}`).then(r => (r.ok ? r.json() : null));
+      if (now && now.refresh_token !== t.refresh_token) return accessToken(env, store, realmId, false, true);
+      if (now) {
+        // Same token and Intuit says it's finished: Books was disconnected in QuickBooks (or it expired). It's no use, so don't keep it.
+        await store.fetch(`https://store/tokens/${realmId}`, { method: 'DELETE' });
+        const cl = await getClient(store, realmId);
+        if (cl) await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify({ ...cl, disconnected_at: new Date().toISOString() }) });
+      }
+    }
     await alertOwner(env, store, `conn:${realmId}`, `Books: ${await clientName(store, realmId)}'s QuickBooks connection has dropped (${String(err.message).slice(0, 120)}). Send them a fresh connect link.`).catch(() => {});
     throw err;
   }
@@ -1923,6 +2088,53 @@ export class Store {
       const client = await this.storage.get(`client:${realmId}`);
       return Response.json({ realmId, name: (client && client.name) || '', brand: (client && client.brand) || '', extras: (client && client.extras) || '' });
     }
+    if (url.pathname === '/clients') {
+      const all = await this.storage.list({ prefix: 'client:' });
+      return Response.json([...all].map(([k, v]) => ({ realmId: k.slice(7), ...v })));
+    }
+    if (url.pathname === '/limit' && request.method === 'POST') {
+      const { name, limit, windowSec } = JSON.parse(await request.text());
+      const key = `rl:${windowSec}:${Math.floor(Date.now() / (windowSec * 1000))}:${name}`;
+      const n = ((await this.storage.get(key)) || 0) + 1;
+      await this.storage.put(key, n);
+      if (Math.random() < 0.05) { // now and then, tidy counters from past windows
+        const all = await this.storage.list({ prefix: 'rl:', limit: 500 });
+        const stale = [...all.keys()].filter(k => { const [, w, b] = k.split(':'); return (Number(b) + 2) * Number(w) * 1000 < Date.now(); });
+        if (stale.length) await dropKeys(this.storage, stale);
+      }
+      return n > limit ? text('limited', 429) : text('ok');
+    }
+    const co = url.pathname.match(/^\/(cutoff|purge)\/(\d+)$/);
+    if (co && request.method === 'POST') {
+      const realm = co[2], key = `client:${realm}`;
+      const cl = await this.storage.get(key);
+      const out = await cutAccess(this.storage, realm, cl);
+      if (co[1] === 'cutoff') {
+        const { reason } = JSON.parse((await request.text()) || '{}');
+        if (cl) await this.storage.put(key, { ...cl, ended_at: new Date().toISOString(), ended_reason: reason || 'revoked' });
+        return Response.json(out);
+      }
+      out.mileage = await dropWhere(this.storage, `trips:${realm}:`, () => true);
+      out.changeLog = await dropWhere(this.storage, `log:${realm}:`, () => true);
+      out.chaseNotes = await dropWhere(this.storage, `chased:${realm}:`, () => true);
+      const seg = new RegExp(`:${realm}(:|$)`);
+      const alerts = [...(await this.storage.list({ prefix: 'alert:' })).keys()].filter(k => seg.test(k));
+      await dropKeys(this.storage, alerts);
+      await this.storage.delete(key);
+      out.client = cl ? 1 : 0;
+      return Response.json(out);
+    }
+    if (url.pathname === '/housekeeping' && request.method === 'POST') {
+      // Old invites (they hold a name and phone), login codes, sessions and counters that nobody needs any more.
+      const now = Date.now();
+      return Response.json({
+        invites: await dropWhere(this.storage, 'invite:', v => now - v.created > INVITE_DAYS * 86400000),
+        states: await dropWhere(this.storage, 'state:', v => now - v.at > 15 * 60_000),
+        codes: await dropWhere(this.storage, 'code:', v => (!v.expires || now > v.expires) && !(v.sent || []).some(t => now - t < 3600000)),
+        sessions: await dropWhere(this.storage, 'session:', v => now - v.created > SESSION_DAYS * 86400000),
+        alerts: await dropWhere(this.storage, 'alert:', v => now - v > 7 * 86400000),
+      });
+    }
     const c = url.pathname.match(/^\/clients\/(\d+)$/);
     if (c) {
       const key = `client:${c[1]}`;
@@ -1957,7 +2169,29 @@ export class Store {
   }
 }
 
+// A Durable Object takes at most 128 keys per delete.
+async function dropKeys(storage, keys) {
+  for (let i = 0; i < keys.length; i += 128) await storage.delete(keys.slice(i, i + 128));
+  return keys.length;
+}
+async function dropWhere(storage, prefix, test) {
+  const all = await storage.list({ prefix });
+  return dropKeys(storage, [...all].filter(([, v]) => test(v)).map(([k]) => k));
+}
+// Ends everything that gives access: QuickBooks tokens, logins, login codes, app link, notifications and shared links.
+async function cutAccess(storage, realm, cl) {
+  const out = { tokens: (await storage.delete(`tokens:${realm}`)) ? 1 : 0, sessions: 0, notifications: 0, links: 0 };
+  if (cl && cl.appKey) {
+    await storage.delete([`code:${cl.appKey}`, `appkey:${cl.appKey}`]);
+    out.sessions = await dropWhere(storage, 'session:', v => v.appKey === cl.appKey);
+  }
+  out.notifications = await dropWhere(storage, `push:${realm}:`, () => true);
+  out.links = await dropWhere(storage, 'doc:', v => v.realmId === realm) + await dropWhere(storage, 'pack:', v => v.realmId === realm);
+  await storage.delete([`seen:${realm}`, `paycheck:${realm}`]);
+  return out;
+}
+
 function text(body, status = 200) { return new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
-function page(msg) {
-  return new Response(`<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuickBooks</title><body style="font:18px system-ui;display:grid;place-items:center;min-height:90vh;margin:0;padding:16px;text-align:center"><p>${msg}</p></body>`, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+function page(msg, status = 200) {
+  return new Response(`<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuickBooks</title><body style="font:18px system-ui;display:grid;place-items:center;min-height:90vh;margin:0;padding:16px;text-align:center"><p>${msg}</p></body>`, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
 }

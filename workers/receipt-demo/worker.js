@@ -32,8 +32,35 @@ const PROMPT = `You read UK receipts for a plumber's bookkeeping. Look at the re
 - items: a few words on what was bought.
 - readable: false if this isn't a receipt or you can't read it.`;
 
+// Security headers on everything. The app is one page with inline script and style, so CSP allows those,
+// but only from itself plus the PDF reader on cdnjs; nothing else can load, and nothing can frame the app.
+const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdnjs.cloudflare.com; worker-src 'self' blob: https://cdnjs.cloudflare.com; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'";
+function secure(res) {
+  const h = new Headers(res.headers);
+  h.set('X-Content-Type-Options', 'nosniff');
+  h.set('Referrer-Policy', 'no-referrer'); // the app's address contains the client's app key
+  h.set('Strict-Transport-Security', 'max-age=31536000');
+  const type = h.get('Content-Type') || '';
+  if (/text\/html/.test(type)) {
+    h.set('Content-Security-Policy', CSP);
+    h.set('X-Frame-Options', 'DENY');
+    h.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(), payment=()');
+  } else if (!h.has('Cache-Control') && /json/.test(type)) {
+    h.set('Cache-Control', 'private, no-store');
+  }
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
+// A receipt photo (as a data: URL) bigger than this is refused before it reaches the AI.
+const MAX_IMAGE = 6_000_000;
+
 export default {
   async fetch(request, env) {
+    return secure(await serve(request, env));
+  },
+};
+
+async function serve(request, env) {
     const url = new URL(request.url);
     const seg = url.pathname.match(/^\/([\w-]{8,})(\/.*)?$/);
     if (!seg) return new Response('Not found', { status: 404 });
@@ -41,8 +68,9 @@ export default {
     const app = `/${KEY}/`;
     const session = cookie(request, 'bk');
     // Everything goes to the connector as this client only: their app key, plus their login.
+    const ip = request.headers.get('CF-Connecting-IP');
     const books = (path, init = {}) => env.BOOKS.fetch(`https://books/c/${path}`, {
-      ...init, headers: { 'X-App': KEY, 'X-Session': session, 'Content-Type': 'application/json' },
+      ...init, headers: { 'X-App': KEY, 'X-Session': session, 'Content-Type': 'application/json', ...(ip ? { 'X-Client-IP': ip } : {}) },
     });
     const info = await books('app');
     if (!info.ok) return new Response('Not found', { status: 404 });
@@ -93,9 +121,15 @@ export default {
     }
 
     if (rest === 'read' && request.method === 'POST') {
+      if (Number(request.headers.get('Content-Length') || 0) > MAX_IMAGE * 1.4) return json({ error: 'That photo is too big. Try a smaller one.' }, 413);
+      // The connector counts every read, for the client (or, on the demo, the visitor and the demo overall) and says no when it's too many.
+      const ok = await books('allow', { method: 'POST' });
+      if (ok.status === 429) return json({ error: 'That is a lot of receipts at once. Give it a few minutes and try again.' }, 429);
+      if (!ok.ok) return json({ error: 'Try again in a moment.' }, 503);
       try {
         const { image } = await request.json();
         if (!/^data:image\/(jpeg|png|webp);base64,/.test(image || '')) return json({ error: 'No photo received' }, 400);
+        if (image.length > MAX_IMAGE) return json({ error: 'That photo is too big. Try a smaller one.' }, 413);
         return json(await readReceipt(env, image));
       } catch (err) {
         // Every reading model failed: that's on us, so Gio hears about it.
@@ -107,8 +141,7 @@ export default {
     const api = rest.match(/^api\/([a-z]+(?:\/\d+)?)$/);
     if (api) return pass(await books(api[1] + url.search, { method: request.method, body: ['GET', 'HEAD'].includes(request.method) ? undefined : request.body }));
     return new Response('Not found', { status: 404 });
-  },
-};
+}
 
 // The connector's answer, always as JSON.
 async function pass(res) {

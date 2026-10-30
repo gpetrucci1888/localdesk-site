@@ -1046,9 +1046,13 @@ $('stAcctGo').addEventListener('click',async function(){
   try{await api('accountant',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({accountant:em})});toast('Accountant saved',null)}catch(err){say(err.message,true)}
 });
 $('logout').addEventListener('click',async function(){
-  if(!(await ask('Log out of this phone?','You\'ll need a texted code to log back in.','Log out',true)))return;
+  // Receipts saved for later (no signal) are on this phone only; logging out removes them, so say so first.
+  var left=(await waiting()).length;
+  if(!(await ask('Log out of this phone?',(left?left+' receipt'+(left>1?'s are':' is')+' still waiting to send and will be deleted. ':'')+'You\'ll need a texted code to log back in.','Log out',true)))return;
   try{await pushOff(true)}catch(e){}
   try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('bk:'+BASE)===0)localStorage.removeItem(k)})}catch(e){}
+  try{await idb('readwrite',function(s){return s.clear()})}catch(e){}
+  try{if(window.caches)await caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))})}catch(e){}
   await fetch(BASE+'/logout',{method:'POST'}).catch(function(){});location.reload();
 });
 
