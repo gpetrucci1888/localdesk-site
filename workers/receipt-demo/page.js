@@ -235,7 +235,7 @@ html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
 <section id="tab-home">
   <div class="card wait" id="waitCard" hidden><h2>Waiting for signal</h2><p style="margin:0" id="waitText"></p><button class="link" id="waitGo">Send them now →</button></div>
   <div class="card" id="startCard" hidden><h2>Getting started</h2><ol class="steps">
-    <li>Add Books to your home screen (Share, then "Add to Home Screen").</li>
+    <li id="startStep1">Add Books to your home screen (Share, then "Add to Home Screen").</li>
     <li>Snap your next receipt. Books reads it and files it in QuickBooks.</li>
     <li>Add your accountant's email in Settings (the cog, top right).</li></ol>
     <button class="link" id="startDone">Got it, hide this</button></div>
@@ -401,6 +401,7 @@ var TITLES={home:'This month',receipts:'Receipts',jobs:'Quotes',owed:'Who owes y
 var PARENT={tidy:'home',changes:'settings',expenses:'receipts',settings:'home'};
 var current='home';
 var VAT='{{VAT}}'==='1';
+var AGREED='{{AGREED}}'==='1';
 var EXTRAS='{{EXTRAS}}'.split(',').map(function(x){return x.trim()});
 var QUOTES=EXTRAS.indexOf('quotes')>=0;
 if(QUOTES){document.querySelector('nav').classList.add('five');document.querySelector('nav [data-tab=jobs]').hidden=false}
@@ -1107,8 +1108,18 @@ document.addEventListener('touchend',function(){if(!sw)return;var s=sw;sw=null;s
 // ---- VAT: not registered means no VAT on receipts or invoices ----
 if(!VAT)$('vat').closest('label').hidden=true;
 
+// ---- first login: accept the terms ----
+if(!AGREED){(function(){
+  var sh=sheet('<h3>Before you start</h3><p class="sub">Books files receipts and invoices into your QuickBooks for you. Please read how it works and how we look after your information.</p><p class="sub"><a href="https://www.localdeskai.co.uk/books/terms.html" target="_blank" rel="noopener">Terms</a> &middot; <a href="https://www.localdeskai.co.uk/books/privacy.html" target="_blank" rel="noopener">Privacy policy</a></p><label class="sub" style="display:flex;gap:10px;align-items:flex-start;margin:12px 0"><input type="checkbox" id="agreeBox" style="width:22px;height:22px;flex:none;margin-top:2px"><span>I have read and agree to the terms and privacy policy.</span></label><button class="go" id="agreeGo" style="width:100%" disabled>Continue</button>');
+  sh.el.parentNode.addEventListener('click',function(e){if(e.target===this)e.stopImmediatePropagation()},true);
+  var box=sh.el.querySelector('#agreeBox'),go=sh.el.querySelector('#agreeGo');
+  box.addEventListener('change',function(){go.disabled=!box.checked});
+  go.addEventListener('click',function(){go.disabled=true;api('agree',{method:'POST'}).then(function(){sh.close()}).catch(function(){go.disabled=false;toast("Couldn't save that. Check your signal and try again.")})});
+})()}
+
 // ---- getting started ----
 try{$('startCard').hidden=Boolean(localStorage.getItem('books-started'))}catch(e){}
+if(!/iPhone|iPad|Android/i.test(navigator.userAgent))$('startStep1').textContent='Bookmark this page so you can find Books again.';
 $('startDone').addEventListener('click',function(){$('startCard').hidden=true;try{localStorage.setItem('books-started','1')}catch(e){}});
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register(BASE+'/sw.js',{scope:BASE+'/'}).catch(function(){});

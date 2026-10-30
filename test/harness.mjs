@@ -121,7 +121,7 @@ export function world(extra = {}) {
   };
   const appEnv = {
     AI: ai,
-    BOOKS: { fetch: (u, init) => books.fetch(new Request(u, init), booksEnv) },
+    BOOKS: { fetch: (u, init) => books.fetch(new Request(u, init && init.body && typeof init.body !== "string" ? { ...init, duplex: "half" } : init), booksEnv) },
   };
   return { storage, store: stub, booksEnv, appEnv, ai };
 }

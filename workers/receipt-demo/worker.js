@@ -97,7 +97,7 @@ async function serve(request, env) {
       .replaceAll('{{SUPPORT_ASK}}', sup ? `Ring Gio on <a href="tel:${sup}">${supShow}</a> and he'll sort it.` : "Ask Localdesk and they'll sort it.")
       .replaceAll('{{NAME}}', esc(client.name || 'Your business'))
       .replaceAll('{{EXTRAS}}', esc(client.extras || '')).replaceAll('{{PHONE_END}}', esc(client.phoneEnd || ''))
-      .replaceAll('{{VAT}}', client.vat === false ? '0' : '1').replaceAll('{{CHASE}}', client.chase ? '1' : '0')
+      .replaceAll('{{AGREED}}', client.agreed === false ? '0' : '1').replaceAll('{{VAT}}', client.vat === false ? '0' : '1').replaceAll('{{CHASE}}', client.chase ? '1' : '0')
       .replaceAll('{{HD}}', brand.hd).replaceAll('{{ACC}}', brand.acc).replaceAll('{{ACCINK}}', brand.accInk)
       .replace('{{LOGO}}', brand.logo ? `<img class="logo" src="data:image/png;base64,${brand.logo}" alt="">` : '');
     const html = (body) => new Response(body, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });

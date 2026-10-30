@@ -347,6 +347,8 @@ async function route(request, env) {
     }
 }
 
+const AGREEMENT_VERSION = '2026-10'; // change when the terms or privacy policy change materially
+
 // What a customer sees. QuickBooks' own wording ("Object Not Found", "Stale object", a code number) means nothing to a plumber,
 // so it is replaced by a sentence that says what happened and whether anything was saved. The full text still goes to Gio.
 function friendly(msg) {
@@ -379,7 +381,7 @@ async function clientName(store, realmId) {
 
 // ---------- the app: one client, logged in by text code ----------
 
-const CLIENT_WHATS = ['file', 'summary', 'owed', 'recent', 'invoice', 'remind', 'paid', 'undo', 'parse', 'untidy', 'tidy', 'quarter',
+const CLIENT_WHATS = ['file', 'agree', 'summary', 'owed', 'recent', 'invoice', 'remind', 'paid', 'undo', 'parse', 'untidy', 'tidy', 'quarter',
   'quote', 'quotes', 'won', 'chase', 'invoiceit', 'customers', 'jobs', 'job', 'pack', 'accountant',
   'changes', 'revert', 'miles', 'mileoff', 'cis', 'settings', 'problem',
   'expenses', 'expense', 'fix', 'receipt', 'invoices', 'invoicedoc', 'share', 'customerlist', 'customer', 'trend', 'status',
@@ -416,6 +418,7 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     return Response.json({ realmId, name: client.name || '', brand: client.brand || '', extras: client.extras || '', loggedIn: Boolean(loggedIn),
       phoneEnd: isDemo ? '' : (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: !isDemo && Boolean(client.phone),
       support: isDemo ? '' : supportNumber(env),
+      agreed: isDemo || Boolean(client.agreed),
       vat: await vatRegistered(env, store, realmId, client).catch(() => true), chase: client.chase === 'on' });
   }
   if (isDemo && what.startsWith('login/')) return Response.json({ error: 'This is the demo, so there is nothing to log in to.' }, { status: 400 });
@@ -469,6 +472,15 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     return Response.json({ ok: true });
   }
   // The only setting a client changes themselves: whether Books chases for them.
+  // First login: the client ticks that they accept the terms and privacy policy. Kept with the date so there is a record.
+  if (what === 'agree' && request.method === 'POST') {
+    if (isDemo) return Response.json({ ok: true });
+    if (!client.agreed) {
+      client.agreed = { at: new Date().toISOString(), version: AGREEMENT_VERSION };
+      await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
+    }
+    return Response.json({ ok: true });
+  }
   if (what === 'settings' && request.method === 'PUT') {
     if (isDemo) return Response.json({ ok: true, chase: false }); // the demo never emails anyone
     const v = await request.json();
