@@ -23,5 +23,5 @@ test('two 429s in a row are waited out and the request succeeds', async (t) => {
 test('if QuickBooks keeps saying 429 it ends as a clear, plain message after a few tries', async (t) => {
   const { call, tick } = await setup(t, 99);
   const p = call(); const timer = setInterval(() => tick(), 5); const r = await p; clearInterval(timer);
-  assert.equal(r.status, 500); assert.match(await r.text(), /QuickBooks is busy\. Wait a minute and try again\. Nothing was saved/);
+  assert.equal(r.status, 500); assert.match(await r.text(), /is busy\. Wait a minute and try again\. Nothing was saved/);
 });

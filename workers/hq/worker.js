@@ -327,12 +327,13 @@ function newClientForm(msg = '', v = {}) {
 <label for="p">Owner's mobile number<small>Login codes and texts go here. Any normal UK format works.</small></label><input id="p" name="phone" inputmode="tel" value="${esc(v.phone || '')}" placeholder="07700 900123" required>
 <label for="v">Are they VAT registered?</label><select id="v" name="vat"><option value="">Not sure, let QuickBooks tell us</option><option value="yes">Yes</option><option value="no">No</option></select>
 <label for="q">Include quotes?<small>The quotes add-on.</small></label><select id="q" name="extras"><option value="">No</option><option value="quotes">Yes</option></select>
-<label for="e">Which QuickBooks?</label><select id="e" name="env"><option value="production">A real customer's QuickBooks</option><option value="sandbox">A practice company (testing only)</option></select>
+<label for="s">Which accounting software do they use?</label><select id="s" name="platform"><option value="quickbooks">QuickBooks Online</option><option value="freeagent">FreeAgent</option></select>
+<label for="e">Real or practice company?</label><select id="e" name="env"><option value="production">A real customer's QuickBooks</option><option value="sandbox">A practice company (testing only)</option></select>
 <div class="sp"></div><button class="btn block" style="margin-top:16px">Make the connect link</button></form></div>`, '/books');
 }
 async function createClient(request, env) {
   const f = await request.formData(), v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)]));
-  const res = await books(env, '/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: v.name, phone: v.phone, vat: v.vat, extras: v.extras, env: v.env === 'sandbox' ? 'sandbox' : 'production' }) });
+  const res = await books(env, '/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: v.name, phone: v.phone, vat: v.vat, extras: v.extras, platform: v.platform === 'freeagent' ? 'freeagent' : 'quickbooks', env: v.env === 'sandbox' ? 'sandbox' : 'production' }) });
   const out = await res.json().catch(() => ({}));
   if (!res.ok || !out.link) return html(newClientForm(String(out.error || await res.text().catch(() => '') || 'That didn\'t work.').replace(/^Error: /, ''), v), 400);
   const msg = `Hi, here is the link to connect your QuickBooks to Books: ${out.link} (it works once, for 14 days). Log in to QuickBooks and tap Allow. Your app link comes straight after.`;

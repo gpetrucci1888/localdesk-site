@@ -87,15 +87,59 @@ export class FakeQB {
   }
 }
 
+
+// A stand-in for FreeAgent's API (https://dev.freeagent.com/docs), shaped like the real responses. Nothing real is ever contacted.
+export class FakeFA {
+  constructor() {
+    this.n = 500; this.calls = []; this.mails = []; this.refreshes = 0; this.fail429 = 0;
+    this.company = { name: 'Test Plumbing Ltd', sales_tax_registration_status: 'Registered' };
+    this.categories = { admin_expenses_categories: [{ url: 'https://api.freeagent.com/v2/categories/285', description: 'Motor Expenses' }, { url: 'https://api.freeagent.com/v2/categories/363', description: 'General Admin Expenses' }], cost_of_sales_categories: [{ url: 'https://api.freeagent.com/v2/categories/310', description: 'Materials Purchased' }] };
+    this.expenses = []; this.contacts = []; this.invoices = []; this.pl = { income: 4200, expenses: 1300, operating_profit: 2900 };
+  }
+  handle(url, init = {}) {
+    const u = new URL(url), method = (init.method || 'GET').toUpperCase(), path = u.pathname.replace(/^\/v2/, '');
+    const body = init.body && typeof init.body === 'string' && init.body.startsWith('{') ? JSON.parse(init.body) : null;
+    this.calls.push({ method, path, query: u.search, host: u.host, auth: (init.headers || {}).Authorization, ua: (init.headers || {})['User-Agent'], body });
+    const ok = (o, status = 200) => Response.json(o, { status });
+    if (path === '/token_endpoint') {
+      const p = new URLSearchParams(String(init.body));
+      if (p.get('grant_type') === 'refresh_token') { this.refreshes++; return ok({ access_token: 'fa-access-' + this.refreshes, token_type: 'bearer', expires_in: 604800 }); }
+      if (p.get('code') === 'bad') return ok({ error: 'invalid_grant', error_description: 'code expired' }, 400);
+      return ok({ access_token: 'fa-access-0', refresh_token: 'fa-refresh-0', token_type: 'bearer', expires_in: 604800 });
+    }
+    if (this.fail429 > 0) { this.fail429--; return ok({ errors: [{ message: 'Too many requests' }] }, 429); }
+    if (path === '/users/me') return ok({ user: { url: 'https://api.freeagent.com/v2/users/4242', first_name: 'Test' } });
+    if (path === '/company') return ok({ company: this.company });
+    if (path === '/categories') return ok(this.categories);
+    if (path === '/expenses' && method === 'GET') { const from = u.searchParams.get('from_date'), to = u.searchParams.get('to_date'); return ok({ expenses: this.expenses.filter(e => (!from || e.dated_on >= from) && (!to || e.dated_on <= to)) }); }
+    if (path === '/expenses' && method === 'POST') { const e = { ...body.expense, url: `https://api.freeagent.com/v2/expenses/${++this.n}` }; delete e.attachment; e.hasAttachment = Boolean(body.expense.attachment); this.expenses.push(e); return ok({ expense: e }, 201); }
+    let m = path.match(/^\/expenses\/(\d+)$/);
+    if (m && method === 'DELETE') { this.expenses = this.expenses.filter(e => !e.url.endsWith('/' + m[1])); return new Response(null, { status: 200 }); }
+    if (path === '/contacts' && method === 'GET') return ok({ contacts: this.contacts });
+    if (path === '/contacts' && method === 'POST') { const c = { ...body.contact, url: `https://api.freeagent.com/v2/contacts/${++this.n}` }; this.contacts.push(c); return ok({ contact: c }, 201); }
+    if (path === '/invoices' && method === 'GET') return ok({ invoices: this.invoices.filter(i => Number(i.due_value) > 0) });
+    if (path === '/invoices' && method === 'POST') {
+      const items = body.invoice.invoice_items, net = items.reduce((t, i) => t + Number(i.price) * Number(i.quantity), 0), rate = Number((items[0] || {}).sales_tax_rate || 0);
+      const inv = { ...body.invoice, url: `https://api.freeagent.com/v2/invoices/${++this.n}`, reference: `INV-${100 + this.invoices.length}`, total_value: String((net * (1 + rate / 100)).toFixed(2)), due_value: String((net * (1 + rate / 100)).toFixed(2)), due_on: body.invoice.dated_on };
+      this.invoices.push(inv); return ok({ invoice: inv }, 201);
+    }
+    m = path.match(/^\/invoices\/(\d+)\/send_email$/);
+    if (m && method === 'POST') { this.mails.push({ id: m[1], to: body.invoice.email.to }); return ok({}); }
+    if (path === '/accounting/profit_and_loss/summary') return ok({ profit_and_loss_summary: this.pl });
+    return ok({ errors: [{ message: 'Unmocked FreeAgent route: ' + method + ' ' + path }] }, 404);
+  }
+}
+
 // Replaces global fetch for one test. Returns what was called, plus the fake QuickBooks and SMS log.
 export function network(t, { token } = {}) {
   const original = globalThis.fetch;
-  const qb = new FakeQB();
+  const qb = new FakeQB(), fa = new FakeFA();
   const log = { sms: [], revokes: 0, tokenCalls: 0, other: [], downloads: [] };
   const state = { token: token || (() => Response.json({ access_token: 'access-2', refresh_token: 'refresh-2', expires_in: 3600, x_refresh_token_expires_in: 8640000 })) };
   globalThis.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url;
     if (/quickbooks\.api\.intuit\.com/.test(url)) return qb.handle(url, init);
+    if (/api\.(sandbox\.)?freeagent\.com/.test(url)) return fa.handle(url, init);
     if (/oauth\.platform\.intuit\.com/.test(url)) { log.tokenCalls++; return state.token(init); }
     if (/developer\.api\.intuit\.com/.test(url)) { log.revokes++; return new Response('{}'); }
     if (/api\.twilio\.com/.test(url)) { log.sms.push(Object.fromEntries(new URLSearchParams(String(init.body)))); return Response.json({}, { status: 201 }); }
@@ -104,7 +148,7 @@ export function network(t, { token } = {}) {
     return new Response('unmocked ' + url, { status: 599 });
   };
   t.after(() => { globalThis.fetch = original; });
-  return { qb, log, state };
+  return { qb, fa, log, state };
 }
 
 // One fresh world: storage, Store stub, env for the books worker, env for the app worker.
@@ -117,7 +161,7 @@ export function world(extra = {}) {
     STORE: { idFromName: () => 'main', get: () => stub },
     ADMIN_KEY: ADMIN, QB_CLIENT_ID: 'sandbox-id', QB_CLIENT_SECRET: 'sandbox-secret', QB_PROD_CLIENT_ID: 'prod-id', QB_PROD_CLIENT_SECRET: 'prod-secret',
     TWILIO_ACCOUNT_SID: 'ACtest', TWILIO_AUTH_TOKEN: 'twilio-test-token', SMS_FROM: 'Books', OWNER_PHONE: '+447700900001',
-    APP_URL: 'https://app.test', BOOKS_URL: 'https://books.test', AI: ai, ...extra,
+    APP_URL: 'https://app.test', BOOKS_URL: 'https://books.test', AI: ai, FA_SANDBOX_CLIENT_ID: 'fa-sandbox-id', FA_SANDBOX_CLIENT_SECRET: 'fa-sandbox-secret', FA_CLIENT_ID: 'fa-prod-id', FA_CLIENT_SECRET: 'fa-prod-secret', ...extra,
   };
   const appEnv = {
     AI: ai,

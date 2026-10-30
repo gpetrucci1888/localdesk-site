@@ -102,6 +102,7 @@
 // Tokens, invites and clients live in the Store Durable Object.
 
 import { ADMIN_PAGE } from './admin.js';
+import { createFreeAgent, faAuthorizeUrl, faExchange, faCreds } from './freeagent.js';
 
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -167,6 +168,16 @@ const PROBLEM_WHATS = ['read', 'file', 'other'];
 const PROBLEMS_PER_HOUR = 3;
 
 // Emails an invoice or quote through QuickBooks. false = not sent (demo companies never email anyone).
+// FreeAgent clients are served by freeagent.js. QuickBooks clients never touch it.
+let faInstance;
+const FA = () => (faInstance = faInstance || createFreeAgent({ ACCOUNT_NAMES, getClient, logChange, markUndone, alertOwner, clientName, ukToday, money }));
+async function onFA(store, realmId) {
+  const r = await store.fetch(`https://store/tokens/${realmId}`);
+  return r.ok && (await r.json()).platform === 'freeagent';
+}
+async function emailAllowed(env, store, realmId) { return !isDemoClient(await getClient(store, realmId)); }
+const FA_LATER = 'That feature is not available for FreeAgent yet. Receipts, invoices, who owes you and your monthly summary all work.';
+
 async function sendDoc(env, store, realmId, kind, id, email) {
   if (isDemoClient(await getClient(store, realmId))) return false;
   await qb(env, store, realmId, 'POST', `${kind}/${id}/send?sendTo=${encodeURIComponent(email)}`);
@@ -211,7 +222,8 @@ async function route(request, env) {
         const invite = await res.json();
         const which = invite.env;
         const state = crypto.randomUUID();
-        await store.fetch('https://store/state', { method: 'PUT', body: JSON.stringify({ value: state, invite: invite.id, env: which }) });
+        await store.fetch('https://store/state', { method: 'PUT', body: JSON.stringify({ value: state, invite: invite.id, env: which, platform: invite.platform || 'quickbooks' }) });
+        if (invite.platform === 'freeagent') return Response.redirect(faAuthorizeUrl(env, which, redirectUri, state), 302);
         const go = new URL(AUTH_URL);
         go.search = new URLSearchParams({ client_id: creds(env, which).id, response_type: 'code', scope: SCOPE, redirect_uri: redirectUri, state }).toString();
         return Response.redirect(go.toString(), 302);
@@ -221,9 +233,15 @@ async function route(request, env) {
         const ok = await store.fetch('https://store/state', { method: 'POST', body: url.searchParams.get('state') || '' });
         if (!ok.ok) return page('That link has expired. Ask Gio for a fresh one.', 400);
         const st = await ok.json();
-        const code = url.searchParams.get('code'), realmId = url.searchParams.get('realmId');
-        if (!code || !realmId) return page('QuickBooks didn\'t connect. Nothing was changed.', 400);
-        const tokens = await tokenRequest(env, st.env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
+        const code = url.searchParams.get('code');
+        const software = st.platform === 'freeagent' ? 'FreeAgent' : 'QuickBooks';
+        let realmId = url.searchParams.get('realmId');
+        if (!code || (st.platform !== 'freeagent' && !realmId)) return page(`${software} didn't connect. Nothing was changed.`, 400);
+        let tokens;
+        if (st.platform === 'freeagent') {
+          const fa = await faExchange(env, st.env, redirectUri, code);
+          realmId = fa.realmId; tokens = fa.tokens;
+        } else tokens = await tokenRequest(env, st.env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
         await store.fetch(`https://store/tokens/${realmId}`, { method: 'PUT', body: JSON.stringify(tokens) });
         if (!st.invite) return page('Connected ✓ You can close this page.');
         const inv = await (await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`)).json().catch(() => ({}));
@@ -233,7 +251,7 @@ async function route(request, env) {
         await store.fetch(`https://store/clients/${realmId}`, { method: 'PUT', body: JSON.stringify(client) });
         await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
         const app = `${env.APP_URL}/${client.appKey}/`;
-        if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `Books: ${client.name || realmId} just connected their QuickBooks. Their app: ${app}`).catch(() => {});
+        if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `Books: ${client.name || realmId} just connected their ${software}. Their app: ${app}`).catch(() => {});
         if (client.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, client.phone, `Welcome to Books. Your app: ${app} Open it on your phone and tap "Add to Home Screen". ${supportLine(env)}`).catch(() => {});
         return page(`Connected ✓<br><br>Your Books app:<br><a href="${app}" style="font-weight:800;word-break:break-all">${app}</a><br><br><small>On your phone, open it and tap "Add to Home Screen" so it sits with your other apps. On a computer, just bookmark it.</small>`);
       }
@@ -285,9 +303,10 @@ async function route(request, env) {
       if (url.pathname === '/invite' && request.method === 'POST') {
         const r = await request.json();
         const which = r.env === 'sandbox' ? 'sandbox' : 'production';
-        if (!creds(env, which).id) throw new Error(`No ${which} keys set up yet`);
+        const platform = r.platform === 'freeagent' ? 'freeagent' : 'quickbooks';
+        if (!(platform === 'freeagent' ? faCreds(env, which) : creds(env, which)).id) throw new Error(`No ${which} ${platform === 'freeagent' ? 'FreeAgent' : 'QuickBooks'} keys set up yet`);
         const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: ukMobile(r.phone), brand: String(r.brand || ''), extras: String(r.extras || ''),
-          vat: ['yes', 'no'].includes(r.vat) ? r.vat : '', chase: r.chase === 'on' ? 'on' : '', env: which, created: Date.now() };
+          vat: ['yes', 'no'].includes(r.vat) ? r.vat : '', chase: r.chase === 'on' ? 'on' : '', env: which, platform, created: Date.now() };
         await store.fetch(`https://store/invites/${inv.id}`, { method: 'PUT', body: JSON.stringify(inv) });
         return Response.json({ ok: true, link: `${url.origin}/connect?invite=${inv.id}`, expires: new Date(inv.created + INVITE_DAYS * 86400000).toISOString() });
       }
@@ -381,18 +400,18 @@ const AGREEMENT_VERSION = '2026-10'; // change when the terms or privacy policy 
 // What a customer sees. QuickBooks' own wording ("Object Not Found", "Stale object", a code number) means nothing to a plumber,
 // so it is replaced by a sentence that says what happened and whether anything was saved. The full text still goes to Gio.
 function friendly(msg) {
-  const m = /^QuickBooks (\d{3})/.exec(msg);
+  const m = /^(?:QuickBooks|FreeAgent) (\d{3})/.exec(msg);
   if (!m) return msg;
   const code = Number(m[1]);
-  if (code === 401 || code === 403) return "Books can't reach your QuickBooks right now. Gio has been told. Nothing was saved";
-  if (code === 429) return 'QuickBooks is busy. Wait a minute and try again. Nothing was saved';
+  if (code === 401 || code === 403) return "Books can't reach your accounts software right now. Gio has been told. Nothing was saved";
+  if (code === 429) return 'Your accounts software is busy. Wait a minute and try again. Nothing was saved';
   if (code >= 500) return "QuickBooks isn't answering at the moment. Try again in a few minutes. Nothing was saved";
   if (/inactive|not found|no longer|deleted|stale/i.test(msg)) return 'That has changed in QuickBooks since you opened it. Pull down to refresh and try again. Nothing was saved';
   return "QuickBooks wouldn't accept that. Nothing was saved. Gio has been told";
 }
 
 // Errors that mean something is broken, rather than a missing amount or a typo.
-const SYSTEM_ERROR = /^(QuickBooks \d|QuickBooks company|Text failed|Texts are not set up|Could not understand)/;
+const SYSTEM_ERROR = /^(QuickBooks \d|FreeAgent \d|QuickBooks company|FreeAgent company|Text failed|Texts are not set up|Could not understand)/;
 const ALERT_HOURS = 12;
 
 // Texts Gio about a problem, at most once per key every ALERT_HOURS.
@@ -684,6 +703,7 @@ const ACCOUNT_NAMES = {
 };
 
 async function fileReceipt(env, store, realmId, r) {
+  if (await onFA(store, realmId)) return FA().fileReceipt(env, store, realmId, r);
   const q = (sql) => qb(env, store, realmId, 'GET', 'query?query=' + encodeURIComponent(sql)).then(d => d.QueryResponse || {});
   const total = round(r.total), vat = round(r.vat);
   if (!(total > 0)) throw new Error('No total on the receipt');
@@ -788,6 +808,7 @@ async function query(env, store, realmId, sql) {
 const TAX_POT = 0.25;
 
 async function summary(env, store, realmId, month) {
+  if (await onFA(store, realmId)) return FA().summary(env, store, realmId, month, TAX_POT);
   const m = /^\d{4}-\d{2}$/.test(month || '') ? month : ukToday().slice(0, 7);
   const [y, mo] = m.split('-').map(Number);
   const end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
@@ -805,6 +826,7 @@ async function summary(env, store, realmId, month) {
 }
 
 async function owed(env, store, realmId) {
+  if (await onFA(store, realmId)) return FA().owed(env, store, realmId);
   const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail, PrivateNote from Invoice where Balance > '0' maxresults 1000")).Invoice || [];
   const today = Date.now();
   const cisOf = (i) => Number((String(i.PrivateNote || '').match(/CIS job\. Expected deduction £(\d+(?:\.\d+)?)/) || [])[1]) || 0;
@@ -880,6 +902,7 @@ async function cisSuffered(env, store, realmId) {
 
 // Only expenses this app filed can be undone (they carry our note).
 async function undoPurchase(env, store, realmId, id) {
+  if (await onFA(store, realmId)) return FA().undo(env, store, realmId, id);
   const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
   if (!/added from a receipt photo|added in Books/.test(p.PrivateNote || '')) throw new Error('Only expenses added from the app can be undone here');
   await qb(env, store, realmId, 'POST', 'purchase?operation=delete', { Id: p.Id, SyncToken: p.SyncToken });
@@ -928,6 +951,7 @@ async function saleParts(env, store, realmId, r) {
 }
 
 async function newInvoice(env, store, realmId, r) {
+  if (await onFA(store, realmId)) return FA().newInvoice(env, store, realmId, r, await emailAllowed(env, store, realmId));
   const { doc, email, cisDeduction } = await saleParts(env, store, realmId, r);
   const created = (await qb(env, store, realmId, 'POST', 'invoice', doc)).Invoice;
   let sentTo = '';
@@ -1066,6 +1090,7 @@ async function setJob(env, store, realmId, id, customerId, quiet) {
 }
 
 async function recent(env, store, realmId) {
+  if (await onFA(store, realmId)) return FA().recent(env, store, realmId);
   const list = (await query(env, store, realmId, 'select * from Purchase orderby MetaData.CreateTime desc maxresults 10')).Purchase || [];
   return list.map(p => {
     const job = (p.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.CustomerRef).find(Boolean);
@@ -1112,6 +1137,7 @@ Today is ${today}. Reply with ONLY a JSON object:
 // ---------- tidy up: expenses left in Uncategorised ----------
 
 async function untidy(env, store, realmId, countOnly) {
+  if (await onFA(store, realmId)) return [];
   const list = (await query(env, store, realmId, 'select * from Purchase orderby TxnDate desc maxresults 300')).Purchase || [];
   const items = [];
   for (const p of list) {
@@ -1359,6 +1385,7 @@ async function quarterRun(env) {
   for (const c of companies) {
     const client = await getClient(store, c.realmId);
     if (isDemoClient(client)) continue;
+    if (c.platform === 'freeagent') { report.push(`${(client && client.name) || c.realmId}: no accountant pack for FreeAgent yet.`); continue; }
     try {
       const link = await packLink(store, origin, c.realmId, p);
       if (client && client.phone) await sendSms(env, client.phone, `Your books for the quarter to ${new Date(p.to).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })} are ready for your accountant: ${link} (open Books and tap "Send to accountant", or forward this link).`);
@@ -1530,6 +1557,23 @@ async function health(env, store, opts = {}) {
   for (const c of companies) {
     const client = (await getClient(store, c.realmId)) || {};
     const row = { realmId: c.realmId, name: client.name || c.realmId, ok: true };
+    if (c.platform === 'freeagent') { // FreeAgent: no refresh dance (its tokens don't rotate); same figures as a QuickBooks row
+      try {
+        await FA().token(env, store, c.realmId);
+        const [late, log, seen] = await Promise.all([
+          FA().owed(env, store, c.realmId).then(l => l.filter(i => i.daysOverdue > 0)),
+          store.fetch(`https://store/log/${c.realmId}`).then(r => r.json()),
+          store.fetch(`https://store/seen/${c.realmId}`).then(r => r.json()).catch(() => null),
+        ]);
+        const week = Date.now() - 7 * 86400000;
+        row.toTidy = 0; row.late = late.length; row.platform = 'freeagent';
+        row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length;
+        row.seenDays = seen && seen.at ? Math.floor((Date.now() - seen.at) / 86400000) : null;
+        row.chased = log.filter(e => e.kind === 'chase' && e.at > week).length;
+      } catch (err) { row.ok = false; row.problem = String(err && err.message || err).slice(0, 120); }
+      clients.push(row);
+      continue;
+    }
     try {
       // Intuit drops a connection that isn't used for 100 days; refreshing well before keeps it alive.
       await accessToken(env, store, c.realmId, opts.refresh && Date.parse(c.refresh_expires_at) - Date.now() < 30 * 86400000);
@@ -1632,6 +1676,7 @@ async function uploadReceipt(env, store, realmId, purchaseId, image) {
 // and HMRC can ask for these, so the app asks for a photo.
 const NO_RECEIPT_DAYS = 90;
 async function noReceipt(env, store, realmId) {
+  if (await onFA(store, realmId)) return [];
   const from = isoDay(new Date(Date.now() - NO_RECEIPT_DAYS * 86400000));
   const d = await expenses(env, store, realmId, new URLSearchParams({ from }));
   return d.items.filter(i => !i.hasReceipt && i.total > 0).map(i => ({ id: i.id, date: i.date, supplier: i.supplier, total: i.total, account: i.account }));
@@ -1846,6 +1891,7 @@ async function trend(env, store, realmId) {
 }
 
 async function status(env, store, realmId) {
+  if (await onFA(store, realmId)) return FA().status(env, store, realmId);
   const t = await (await store.fetch(`https://store/tokens/${realmId}`)).json().catch(() => null);
   try {
     const info = (await qb(env, store, realmId, 'GET', `companyinfo/${realmId}`)).CompanyInfo;
@@ -1928,7 +1974,7 @@ async function hourlyRun(env) {
   const store = env.STORE.get(env.STORE.idFromName('main'));
   const companies = await (await store.fetch('https://store/tokens')).json();
   for (const c of companies) {
-    if (isDemoClient(await getClient(store, c.realmId))) continue;
+    if (isDemoClient(await getClient(store, c.realmId)) || c.platform === 'freeagent') continue; // payment alerts for FreeAgent come later
     const subs = await (await store.fetch(`https://store/pushsubs/${c.realmId}`)).json();
     if (!subs.length) continue;
     const since = await store.fetch(`https://store/paycheck/${c.realmId}`).then(r => (r.ok ? r.text() : ''));
@@ -2106,6 +2152,7 @@ async function accessToken(env, store, realmId, force, retried) {
   const res = await store.fetch(`https://store/tokens/${realmId}`);
   if (!res.ok) throw new Error(`QuickBooks company ${realmId} isn't connected`);
   const t = await res.json();
+  if (t.platform === 'freeagent') throw new Error(FA_LATER);
   t.env = t.env || 'sandbox';
   if (!force && t.expires_at - Date.now() > 60_000) return t;
   let fresh;
@@ -2370,7 +2417,7 @@ export class Store {
     if (!m) return text('Not found', 404);
     if (!m[1]) {
       const all = await this.storage.list({ prefix: 'tokens:' });
-      return Response.json([...all].map(([k, t]) => ({ realmId: k.slice(7), connected_at: t.saved_at, refresh_expires_at: new Date(t.refresh_expires_at).toISOString() })));
+      return Response.json([...all].map(([k, t]) => ({ realmId: k.slice(7), connected_at: t.saved_at, platform: t.platform || 'quickbooks', refresh_expires_at: new Date(t.refresh_expires_at).toISOString() })));
     }
     const key = `tokens:${m[1]}`;
     if (request.method === 'PUT') { await this.storage.put(key, JSON.parse(await request.text())); return text('ok'); }

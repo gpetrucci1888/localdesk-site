@@ -1045,7 +1045,7 @@ function drawExpense(sh,x){
 function loadSettings(){
   live('me',function(m){$('stVat').textContent=m.vat?'Yes':'No';if(document.activeElement!==$('stAcct'))$('stAcct').value=m.accountant||'';$('chase').checked=$('chase2').checked=m.chase});
   $('stConn').textContent='Checking QuickBooks…';
-  api('status').then(function(s){$('stConn').innerHTML=s.connected?'<span class="pill ok">Connected to QuickBooks ✓</span>'+(s.sandbox?' <span class="pill">Practice company</span>':''):'<span class="pill bad">Not connected</span> Ring Gio'}).catch(function(){$('stConn').textContent="Couldn't check QuickBooks"});
+  api('status').then(function(s){$('stConn').innerHTML=s.connected?'<span class="pill ok">Connected to '+(s.software||'QuickBooks')+' ✓</span>'+(s.sandbox?' <span class="pill">Practice company</span>':''):'<span class="pill bad">Not connected</span> Ring Gio'}).catch(function(){$('stConn').textContent="Couldn't check QuickBooks"});
   pushState();
 }
 $('stAcctGo').addEventListener('click',async function(){
