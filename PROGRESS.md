@@ -162,3 +162,6 @@
 - 30 Oct: Phase 1 work is on the LOCAL branch `phase1-security-privacy` (not pushed on purpose: public repo, merge before ANY Books worker deploy). Tests: `node --test test/*.test.mjs`, plus the browser check in `test/browser/`. Outstanding live steps and decisions are in the private notes.
 - 30 Oct (Books launch branch `books-launch`, local): history rewrite DONE and verified clean on the remote (17 branches, 0 sensitive matches; record in the private notes). Admin page and install card merged and DEPLOYED to the demo workers (books + receipt-demo) after the security work; one support-number mechanism (SUPPORT_PHONE, else OWNER_PHONE). Built, tested, NOT deployed: backup/restore (+ BACKUPS bucket), precheck of VAT codes/accounts, owner HQ (workers/hq), billing and domain scripts in ops/ (dry run by default). Decisions needed from Gio are in the private notes (Books launch - compliance, billing, domains, tests).
 
+
+## 30 Oct 2026 (end of session): FreeAgent, Xero, website redesign
+- FreeAgent and Xero added as platforms behind one table in `workers/books/worker.js`; website redesigned (home, Receptionist, Books, shared `public/ui.css`) and published at commit 4c2f85b. Full state, undeployed work, open items and what a new session loses: see `docs/HANDOFF.md` (branch `handoff-and-parity` until merged).
