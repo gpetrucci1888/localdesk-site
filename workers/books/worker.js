@@ -11,6 +11,7 @@
 //                               shared links, app link). Their record, mileage and change log are then held for RETENTION_DAYS (30)
 //                               and purged (see PURGE_MODE below)
 //   POST /purge/<realmId>?confirm=<realmId>  (X-Key) delete everything Books holds for an ended client now (refused on legal hold)
+//   GET  /precheck/<realmId>    (X-Key) read-only: do VAT codes, bank and expense accounts line up in this QuickBooks company?
 //   GET  /backup                (X-Key) everything that can't be recreated (not connection tokens), as one JSON file
 //   POST /restore[?overwrite=1] (X-Key) put a backup file back; existing records are kept unless overwrite=1
 //   (Daily 07:00 cron also writes the backup to the BACKUPS bucket if one is bound, keeping 30 days)
@@ -608,6 +609,24 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
     const c = (await getClient(store, realmId)) || {};
     return Response.json({ ...c, appUrl: c.appKey ? `${env.APP_URL}/${c.appKey}/` : '' });
   }
+  // Run once right after a client connects (read-only): will VAT codes and accounts line up in THIS QuickBooks company?
+  if (what === 'precheck' && request.method === 'GET') {
+    const accounts = (await query(env, store, realmId, 'select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
+    const registered = await vatRegistered(env, store, realmId);
+    const codes = (await query(env, store, realmId, 'select Id, Name, Active from TaxCode')).TaxCode || [];
+    const vat = {};
+    for (const k of VAT_KINDS) { try { vat[k] = pickTaxCode(codes, k).Name; } catch { vat[k] = null; } }
+    const expense = accounts.filter(a => a.AccountType === 'Expense' || a.AccountType === 'Cost of Goods Sold');
+    const categories = Object.fromEntries(CATEGORIES.map(c => { const a = matchAccount(expense, c); return [c, a ? a.Name : null]; }));
+    const banks = accounts.filter(a => a.AccountType === 'Bank' && a.Active !== false).map(a => a.Name);
+    const problems = [];
+    if (registered) for (const k of VAT_KINDS) if (!vat[k]) problems.push(`No VAT code found for ${VAT_LABEL[k]}: filing or invoicing with it will stop with an error`);
+    if (!banks.length) problems.push('No bank account: payments cannot be recorded');
+    if (banks.length > 1) problems.push(`${banks.length} bank accounts: card and bank payments go to "${banks[0]}". Check that is the right one`);
+    const unmatched = Object.entries(categories).filter(([, v]) => !v).map(([k]) => k);
+    if (unmatched.length) problems.push(`No matching expense account for: ${unmatched.join(', ')}. Those land in Uncategorised`);
+    return Response.json({ vatRegistered: registered, vat, banks, categories, problems, ok: problems.length === 0 });
+  }
   if (what === 'client' && request.method === 'PUT') {
     const v = await body(), old = (await getClient(store, realmId)) || {};
     for (const f of ['name', 'phone', 'brand', 'accountant', 'extras', 'appKey', 'vat', 'chase', 'basis']) if (typeof v[f] === 'string') old[f] = f === 'phone' ? ukMobile(v[f]) : v[f];
@@ -730,12 +749,14 @@ async function findOrCreateVendor(env, store, realmId, q, name) {
   return (await qb(env, store, realmId, 'POST', 'vendor', { DisplayName: name })).Vendor.Id;
 }
 
+const namedAccount = (accounts, n) => accounts.filter(a => a.Active !== false && a.Name.toLowerCase() === n)[0]
+  || accounts.filter(a => a.Active !== false && a.Name.toLowerCase().includes(n))[0];
+// The account a category is meant to go in, or undefined if this company has nothing that looks right.
+function matchAccount(accounts, category) {
+  for (const n of ACCOUNT_NAMES[category] || []) { const a = namedAccount(accounts, n); if (a) return a; }
+}
 function pickAccount(accounts, category) {
-  const want = ACCOUNT_NAMES[category] || [];
-  const named = (n) => accounts.filter(a => a.Active !== false && a.Name.toLowerCase() === n)[0]
-    || accounts.filter(a => a.Active !== false && a.Name.toLowerCase().includes(n))[0];
-  for (const n of want) { const a = named(n); if (a) return a; }
-  return named('uncategorised') || named('uncategorized') || accounts[0];
+  return matchAccount(accounts, category) || namedAccount(accounts, 'uncategorised') || namedAccount(accounts, 'uncategorized') || accounts[0];
 }
 
 // ---------- money in, money out, who owes ----------
