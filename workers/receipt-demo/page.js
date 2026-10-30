@@ -549,7 +549,7 @@ var quarterData=null;
 function loadQuarter(){
   return live('quarter',function(q){quarterData=q;
     $('qDates').textContent=ukDate(q.from)+' to '+ukDate(q.to);$('qIn').textContent=money(q.income);$('qOut').textContent=money(q.expenses);
-    $('qDue').textContent='Making Tax Digital update due '+ukDate(q.due)+'. Your accountant sends it from QuickBooks.';
+    $('qDue').textContent='If you\'re in Making Tax Digital for Income Tax, this quarter\'s update is due '+ukDate(q.due)+'. Your accountant sends it from QuickBooks.';
     var bits=[];if(q.toTidy)bits.push(q.toTidy+' to sort');if(q.noReceipt)bits.push(q.noReceipt+' expense'+(q.noReceipt>1?'s':'')+' with no receipt');
     $('qReady').hidden=false;$('qReady').className='ready '+(q.ready?'ok':'no');
     $('qReady').textContent=q.ready?'✓ Ready: everything sorted, every receipt attached.':'Before it goes: '+bits.join(', ')+'.';
