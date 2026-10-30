@@ -322,9 +322,11 @@ async function route(request, env) {
       const rv = url.pathname.match(/^\/revoke\/(\d+)$/);
       if (rv && request.method === 'POST') {
         const leaving = await getClient(store, rv[1]);
-        if (leaving && leaving.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, leaving.phone, 'Books is now disconnected from your QuickBooks. Everything already filed stays in your QuickBooks, and nothing else will be changed. Thanks for using Books.').catch(() => {});
+        const leaveTokens = await store.fetch(`https://store/tokens/${rv[1]}`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+        const software = leaveTokens && leaveTokens.platform === 'freeagent' ? 'FreeAgent' : 'QuickBooks';
+        if (leaving && leaving.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, leaving.phone, `Books is now disconnected from your ${software}. Everything already filed stays in your ${software}, and nothing else will be changed. Thanks for using Books.`).catch(() => {});
         const t = await (await store.fetch(`https://store/tokens/${rv[1]}`)).json().catch(() => null);
-        if (t) {
+        if (t && t.platform !== 'freeagent') { // FreeAgent has no revoke call: our access ends when the saved tokens are deleted below
           const c = creds(env, t.env);
           await fetch(REVOKE_URL, { method: 'POST', headers: { Authorization: 'Basic ' + btoa(`${c.id}:${c.secret}`), 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ token: t.refresh_token }) });
         }
@@ -633,6 +635,11 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
     return Response.json({ ...c, appUrl: c.appKey ? `${env.APP_URL}/${c.appKey}/` : '' });
   }
   // Run once right after a client connects (read-only): will VAT codes and accounts line up in THIS QuickBooks company?
+  // Admin only, FreeAgent clients: a connection test that cleans up after itself (entries named TEST are created and deleted).
+  if (what === 'selftest' && post) {
+    if (!(await onFA(store, realmId))) return Response.json({ error: 'That client is not on FreeAgent' }, { status: 400 });
+    return Response.json(await FA().selftest(env, store, realmId));
+  }
   if (what === 'precheck' && request.method === 'GET') {
     const accounts = (await query(env, store, realmId, 'select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
     const registered = await vatRegistered(env, store, realmId);

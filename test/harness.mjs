@@ -123,6 +123,12 @@ export class FakeFA {
       const inv = { ...body.invoice, url: `https://api.freeagent.com/v2/invoices/${++this.n}`, reference: `INV-${100 + this.invoices.length}`, total_value: String((net * (1 + rate / 100)).toFixed(2)), due_value: String((net * (1 + rate / 100)).toFixed(2)), due_on: body.invoice.dated_on };
       this.invoices.push(inv); return ok({ invoice: inv }, 201);
     }
+    m = path.match(/^\/invoices\/(\d+)\/transitions\/(mark_as_sent|mark_as_draft)$/);
+    if (m && method === 'PUT') { const i = this.invoices.find(x => x.url.endsWith('/' + m[1])); if (i) i.status = m[2] === 'mark_as_sent' ? 'Sent' : 'Draft'; return ok({}); }
+    m = path.match(/^\/invoices\/(\d+)$/);
+    if (m && method === 'DELETE') { const i = this.invoices.find(x => x.url.endsWith('/' + m[1])); if (i && i.status !== 'Draft') return ok({ errors: [{ message: 'Only draft invoices can be deleted' }] }, 422); this.invoices = this.invoices.filter(x => x !== i); return new Response(null, { status: 200 }); }
+    m = path.match(/^\/contacts\/(\d+)$/);
+    if (m && method === 'DELETE') { this.contacts = this.contacts.filter(c => !c.url.endsWith('/' + m[1])); return new Response(null, { status: 200 }); }
     m = path.match(/^\/invoices\/(\d+)\/send_email$/);
     if (m && method === 'POST') { this.mails.push({ id: m[1], to: body.invoice.email.to }); return ok({}); }
     if (path === '/accounting/profit_and_loss/summary') return ok({ profit_and_loss_summary: this.pl });

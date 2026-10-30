@@ -23,7 +23,7 @@ test('an invite for FreeAgent sends the customer to FreeAgent to approve, using 
   assert.equal(to.searchParams.get('client_id'), 'fa-sandbox-id'); assert.equal(to.searchParams.get('response_type'), 'code'); assert.equal(to.searchParams.get('redirect_uri'), 'https://books.test/callback');
   const live = await (await asAdmin(w, 'POST', '/invite', { name: 'Live One', env: 'production', platform: 'freeagent' })).json();
   assert.equal(new URL((await callBooks(w, 'GET', new URL(live.link).pathname + new URL(live.link).search)).headers.get('location')).host, 'api.freeagent.com');
-  const bare = world({ FA_SANDBOX_CLIENT_ID: undefined }); network(t);
+  const bare = world({ FA_SANDBOX_CLIENT_ID: undefined, FA_CLIENT_ID: undefined }); network(t);
   const refused = await asAdmin(bare, 'POST', '/invite', { name: 'No Keys', env: 'sandbox', platform: 'freeagent' });
   assert.notEqual(refused.status, 200); assert.match(await refused.text(), /FreeAgent keys set up/);
 });
@@ -156,4 +156,29 @@ test('QuickBooks still works exactly as before alongside FreeAgent', async (t) =
   await faClient(w);
   const r = await (await callBooks(w, 'POST', '/c/file', { headers: { 'X-App': c.appKey, 'X-Session': session }, body: { supplier: 'Shell', date: '2026-10-28', total: 60, vat: 10, category: 'Fuel' } })).json();
   assert.equal(r.ok, true); assert.equal(qb.t.Purchase.length, 1); assert.equal(fa.expenses.length, 0, 'nothing leaked across');
+});
+
+test('ending a FreeAgent client cuts access without calling Intuit, and the goodbye text names FreeAgent', async (t) => {
+  const w = world(); const { log } = network(t); await faClient(w);
+  const r = await asAdmin(w, 'POST', `/revoke/${FA_REALM}`);
+  assert.equal(r.status, 200); assert.equal(log.revokes, 0, 'Intuit was never contacted');
+  assert.equal(await w.storage.get(`tokens:${FA_REALM}`), undefined, 'our access is gone');
+  assert.ok(log.sms.some(m => /disconnected from your FreeAgent/.test(m.Body)));
+});
+
+test('the admin connection test files and removes its own test entries, and reports each step', async (t) => {
+  const w = world(); const { fa } = network(t); await faClient(w);
+  const r = await (await asAdmin(w, 'POST', `/selftest/${FA_REALM}`)).json();
+  assert.equal(r.ok, true, JSON.stringify(r.steps.filter(s => !s.ok)));
+  assert.ok(r.steps.length >= 8 && r.steps.every(s => s.ok));
+  assert.equal(fa.expenses.length, 0, 'the test receipt is gone'); assert.equal(fa.invoices.length, 0, 'the test invoice is gone'); assert.equal(fa.contacts.length, 0, 'the test customer is gone');
+  const qbOnly = await seedClient(w, { env: 'production' }); assert.ok(qbOnly);
+  assert.equal((await asAdmin(w, 'POST', `/selftest/${REALM}`)).status, 400, 'only for FreeAgent clients');
+});
+
+test('the invoice that is not emailed is still marked as sent so it shows under who owes you', async (t) => {
+  const w = world(); const { fa } = network(t); const { call } = await faClient(w);
+  await call('POST', '/c/invoice', { customer: 'Mr Jago', description: 'Tap', amount: 40 });
+  assert.equal(fa.invoices[0].status, 'Sent');
+  assert.equal((await (await call('GET', '/c/owed')).json())[0].customer, 'Mr Jago');
 });

@@ -10,9 +10,10 @@ const UA = 'Localdesk Books (hello@localdeskai.co.uk)';
 const SOFTWARE = 'FreeAgent';
 
 export const faBase = (which) => (which === 'production' ? FA_PROD : FA_SANDBOX);
+// One FreeAgent developer app works for both the sandbox and live accounts, so the live address falls back to the same keys.
 export const faCreds = (env, which) => (which === 'production'
-  ? { id: env.FA_CLIENT_ID, secret: env.FA_CLIENT_SECRET }
-  : { id: env.FA_SANDBOX_CLIENT_ID, secret: env.FA_SANDBOX_CLIENT_SECRET });
+  ? { id: env.FA_CLIENT_ID || env.FA_SANDBOX_CLIENT_ID, secret: env.FA_CLIENT_SECRET || env.FA_SANDBOX_CLIENT_SECRET }
+  : { id: env.FA_SANDBOX_CLIENT_ID || env.FA_CLIENT_ID, secret: env.FA_SANDBOX_CLIENT_SECRET || env.FA_CLIENT_SECRET });
 export const faAuthorizeUrl = (env, which, redirectUri, state) =>
   `${faBase(which)}/approve_app?${new URLSearchParams({ client_id: faCreds(env, which).id || '', response_type: 'code', redirect_uri: redirectUri, state })}`;
 
@@ -204,6 +205,7 @@ export function createFreeAgent(D) { // D: { ACCOUNT_NAMES, getClient, logChange
     const invoice = (await call(env, store, realmId, 'POST', '/invoices', { invoice: { contact, dated_on: D.ukToday(), payment_terms_in_days: 14, invoice_items: items, ...(r.cis ? { comments: `CIS job. Expected deduction £${cisDeduction.toFixed(2)}` } : {}) } })).invoice;
     const id = idOf(invoice.url);
     let sentTo = '';
+    if (!(email && sendAllowed)) await call(env, store, realmId, 'PUT', `/invoices/${id}/transitions/mark_as_sent`);
     if (email && sendAllowed) {
       await call(env, store, realmId, 'POST', `/invoices/${id}/send_email`, { invoice: { email: { to: email, subject: `Invoice ${invoice.reference || ''}`.trim(), body: `Hi, please find your invoice${invoice.reference ? ' ' + invoice.reference : ''} attached. Thank you.` } } });
       sentTo = email;
@@ -221,5 +223,34 @@ export function createFreeAgent(D) { // D: { ACCOUNT_NAMES, getClient, logChange
     } catch (err) { return { connected: false, problem: String(err.message).slice(0, 120), software: SOFTWARE }; }
   }
 
-  return { call, token, fileReceipt, undo, owed, summary, recent, newInvoice, status, categories, registered, untidy: async () => [], noReceipt: async () => [] };
+  // Read-write check of a new connection that cleans up after itself: every entry is named TEST and deleted at the end.
+  async function selftest(env, store, realmId) {
+    const steps = [], step = async (name, fn) => { try { const note = await fn(); steps.push({ name, ok: true, note: note || '' }); return true; } catch (e) { steps.push({ name, ok: false, note: String(e.message).slice(0, 160) }); return false; } };
+    const made = { expense: null, invoice: null, contact: null };
+    try {
+      await step('Connected to FreeAgent', async () => { const s = await status(env, store, realmId); if (!s.connected) throw new Error(s.problem); return s.sandbox ? 'sandbox' : 'live'; });
+      await step('Reads expense categories', async () => { const c = await categories(env, store, realmId); if (!c.length) throw new Error('none found'); return `${c.length} found`; });
+      await step('Reads figures and who owes you', async () => { await summary(env, store, realmId, null, 0.25); await recent(env, store, realmId); return 'ok'; });
+      await step('Files a test receipt', async () => {
+        const r = await fileReceipt(env, store, realmId, { supplier: 'TEST Books connection (delete me)', total: 1.2, vat: 0.2, category: 'Fuel', items: 'connection test' });
+        if (!r.ok || r.duplicate) throw new Error('not created'); made.expense = r.id; return `${r.account}, VAT ${r.vatCode}`;
+      });
+      await step('Test receipt can be found', async () => { const today = D.ukToday(); const l = (await call(env, store, realmId, 'GET', `/expenses?from_date=${today}&to_date=${today}`)).expenses || []; if (!l.some(e => idOf(e.url) === String(made.expense))) throw new Error('not found'); });
+      await step('Undo removes the test receipt', async () => { await undo(env, store, realmId, made.expense); made.expense = null; });
+      await step('Creates a test invoice that counts as owed', async () => {
+        const r = await newInvoice(env, store, realmId, { customer: 'TEST Books connection (delete me)', description: 'connection test', amount: 1 }, false);
+        made.invoice = r.id;
+        const o = await owed(env, store, realmId); if (!o.some(i => i.id === String(r.id))) throw new Error('not in who-owes-you');
+        return `total ${r.total}`;
+      });
+    } finally {
+      // Clean up whatever was made, whatever happened.
+      await step('Cleans up the test invoice', async () => { if (!made.invoice) return 'none made'; await call(env, store, realmId, 'PUT', `/invoices/${made.invoice}/transitions/mark_as_draft`).catch(() => {}); await call(env, store, realmId, 'DELETE', `/invoices/${made.invoice}`); });
+      await step('Cleans up the test customer', async () => { const names = await contactNames(env, store, realmId); const u = Object.keys(names).find(k => names[k].startsWith('TEST Books connection')); if (u) await call(env, store, realmId, 'DELETE', `/contacts/${idOf(u)}`); return u ? 'removed' : 'none'; });
+      await step('Cleans up any leftover test receipt', async () => { if (made.expense) await call(env, store, realmId, 'DELETE', `/expenses/${made.expense}`); });
+    }
+    return { ok: steps.every(s => s.ok), steps };
+  }
+
+  return { call, token, selftest, fileReceipt, undo, owed, summary, recent, newInvoice, status, categories, registered, untidy: async () => [], noReceipt: async () => [] };
 }
