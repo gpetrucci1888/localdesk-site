@@ -733,7 +733,7 @@ async function next(){
     var r=await (await fetch(BASE+'/read',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:data})})).json();
     if(f.waitId){await unpark(f.waitId);showWaiting()}
     if(r.error)throw new Error(r.error);
-    if(!r.readable){say("Couldn't read that one. Try again in better light, with the whole receipt in shot.",true);setTimeout(next,2500);return}
+    if(!r.readable){say(r.reason||"Couldn't read that one. Try again in better light, with the whole receipt in shot.",true);setTimeout(next,2500);return}
     r.image=data;if(f.waitId)r.jobId=f.jobId||'';var problem=unsure(r);
     if(problem){showCheck(r,data,problem)}else{say('');await autoFile(r);setTimeout(next,600)}
   }catch(err){

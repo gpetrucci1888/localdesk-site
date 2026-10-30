@@ -23,9 +23,14 @@ const MODELS = [
   '@cf/mistralai/mistral-small-3.1-24b-instruct',
 ];
 const CATEGORIES = ['Materials', 'Tools and equipment', 'Fuel', 'Vehicle', 'Subcontractors', 'Phone and internet', 'Office', 'Food and drink', 'Other'];
+// Anything that is clearly not pounds. A missing currency means pounds.
+const foreign = (c) => /^[A-Za-z]{3}$/.test(String(c || '').trim()) && !/^GBP$/i.test(String(c).trim());
+
 const PROMPT = `You read UK receipts for a plumber's bookkeeping. Look at the receipt photo and reply with ONLY a JSON object, no other text:
-{"supplier": "", "date": "YYYY-MM-DD", "total": 0.00, "vat": 0.00, "category": "", "items": "", "readable": true}
+{"supplier": "", "date": "YYYY-MM-DD", "total": 0.00, "vat": 0.00, "category": "", "items": "", "currency": "GBP", "readable": true}
 - supplier: the shop or company name.
+- date: UK receipts write the day first (03/04/2026 is 3 April 2026). Reply as YYYY-MM-DD.
+- currency: the three-letter code of the currency printed on the receipt (GBP for £, EUR for €, USD for $). If no symbol is shown, GBP.
 - total: the amount paid, including VAT, as a number.
 - vat: the VAT amount if shown, else 0.
 - category: one of ${CATEGORIES.join(', ')}.
@@ -184,7 +189,8 @@ async function readReceipt(env, image) {
         vat: Number(r.vat) || 0,
         category: CATEGORIES.includes(r.category) ? r.category : 'Other',
         items: String(r.items || ''),
-        readable: r.readable !== false,
+        readable: r.readable !== false && !foreign(r.currency),
+        reason: r.readable !== false && foreign(r.currency) ? `That receipt is in ${String(r.currency).toUpperCase()}, and Books only files pounds. Enter it by hand with the pound amount from your card statement.` : '',
         model,
       };
     } catch (err) {

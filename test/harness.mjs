@@ -112,7 +112,7 @@ export function world(extra = {}) {
   const storage = new MemStorage();
   const store = new Store({ storage });
   const stub = { fetch: (u, init) => store.fetch(u instanceof Request ? u : new Request(u, init)) };
-  const ai = { calls: 0, run: async () => { ai.calls++; return { response: JSON.stringify({ supplier: 'Shell', date: '2026-10-30', total: 40, vat: 6.67, category: 'Fuel', items: 'diesel', readable: true }) }; } };
+  const ai = { calls: 0, reply: null, run: async () => { ai.calls++; if (ai.reply) return { response: JSON.stringify(ai.reply) }; return { response: JSON.stringify({ supplier: 'Shell', date: '2026-10-30', total: 40, vat: 6.67, category: 'Fuel', items: 'diesel', readable: true }) }; } };
   const booksEnv = {
     STORE: { idFromName: () => 'main', get: () => stub },
     ADMIN_KEY: ADMIN, QB_CLIENT_ID: 'sandbox-id', QB_CLIENT_SECRET: 'sandbox-secret', QB_PROD_CLIENT_ID: 'prod-id', QB_PROD_CLIENT_SECRET: 'prod-secret',

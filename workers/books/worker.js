@@ -624,7 +624,7 @@ async function fileReceipt(env, store, realmId, r) {
   const q = (sql) => qb(env, store, realmId, 'GET', 'query?query=' + encodeURIComponent(sql)).then(d => d.QueryResponse || {});
   const total = round(r.total), vat = round(r.vat);
   if (!(total > 0)) throw new Error('No total on the receipt');
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : new Date().toISOString().slice(0, 10);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : ukToday();
 
   const vendorId = await findOrCreateVendor(env, store, realmId, q, (r.supplier || 'Unknown supplier').trim().slice(0, 100));
 
@@ -723,7 +723,7 @@ async function query(env, store, realmId, sql) {
 const TAX_POT = 0.25;
 
 async function summary(env, store, realmId, month) {
-  const m = /^\d{4}-\d{2}$/.test(month || '') ? month : new Date().toISOString().slice(0, 7);
+  const m = /^\d{4}-\d{2}$/.test(month || '') ? month : ukToday().slice(0, 7);
   const [y, mo] = m.split('-').map(Number);
   const end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
   const report = await qb(env, store, realmId, 'GET', await pnl(store, realmId, `reports/ProfitAndLoss?start_date=${m}-01&end_date=${end}`));
@@ -780,7 +780,7 @@ async function markPaid(env, store, realmId, id, method, cis) {
     const banks = (await query(env, store, realmId, "select Id from Account where AccountType = 'Bank' and Active = true")).Account || [];
     if (banks.length) deposit = { value: banks[0].Id };
   }
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   const pay = (amount, note, to) => qb(env, store, realmId, 'POST', 'payment', {
     CustomerRef: inv.CustomerRef, TotalAmt: amount, TxnDate: today, PrivateNote: note,
     ...(to ? { DepositToAccountRef: to } : {}),
@@ -1029,7 +1029,7 @@ async function askJson(env, prompt) {
 
 async function parseSpoken(env, text) {
   if (!(text || '').trim()) throw new Error('Say or type what you spent');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   const r = await askJson(env, `A UK tradesman said this about something he paid for: "${String(text).slice(0, 500)}"
 Today is ${today}. Reply with ONLY a JSON object:
 {"supplier": "", "date": "YYYY-MM-DD", "total": 0.00, "vat": 0.00, "category": "", "items": ""}
@@ -1372,7 +1372,7 @@ const MILE_RATE = 0.45, MILE_RATE_AFTER = 0.25, MILE_BAND = 10000;
 async function addTrip(store, realmId, r) {
   const n = round(r.miles);
   if (!(n > 0) || n > 2000) throw new Error('Put in the miles for the trip');
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : new Date().toISOString().slice(0, 10);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '') ? r.date : ukToday();
   if (Date.parse(date) > Date.now() + 86400000) throw new Error('That date is in the future');
   const trip = { id: logId(), date, miles: n, why: String(r.why || '').trim().slice(0, 120) };
   await store.fetch(`https://store/trips/${realmId}/${trip.id}`, { method: 'PUT', body: JSON.stringify(trip) });
@@ -1514,11 +1514,13 @@ async function chaseAll(env, store, realmId, client, late) {
 
 // ---------- everything, not just the latest: expenses, invoices, customers ----------
 
+// Today's date in the UK (not UTC): a receipt filed at 12:30am on a summer morning belongs to that day, not the one before.
+const ukToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
 const isoDay = (d) => d.toISOString().slice(0, 10);
 
 // Expenses in a period (default: last 12 months), newest first. q searches supplier, note and category.
 async function expenses(env, store, realmId, params) {
-  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.get('to') || '') ? params.get('to') : isoDay(new Date());
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.get('to') || '') ? params.get('to') : ukToday();
   const from = /^\d{4}-\d{2}-\d{2}$/.test(params.get('from') || '') ? params.get('from') : isoDay(new Date(Date.now() - 365 * 86400000));
   const [buys, files] = await Promise.all([
     query(env, store, realmId, `select * from Purchase where TxnDate >= '${from}' and TxnDate <= '${to}' orderby TxnDate desc maxresults 1000`).then(d => d.Purchase || []),

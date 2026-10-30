@@ -126,3 +126,19 @@ test('the support number comes from the connector\'s settings: shown to real cli
   const { readFileSync } = await import('node:fs');
   for (const f of ['workers/receipt-demo/page.js', 'workers/receipt-demo/worker.js', 'workers/books/worker.js']) assert.doesNotMatch(readFileSync(new URL('../' + f, import.meta.url), 'utf8'), /\b0?7467\b|447467/, `${f} has no hard-coded number`);
 });
+
+test('a receipt in another currency is not filed as pounds; a pound or unmarked one is read as normal', async (t) => {
+  const w = world(); network(t);
+  await demo(w);
+  const base = { supplier: 'Ferme Marché', date: '2026-10-20', total: 40, vat: 6.67, category: 'Materials', items: 'x', readable: true };
+  w.ai.reply = { ...base, currency: 'EUR' };
+  const euro = await (await read(w, '203.0.113.5')).json();
+  assert.equal(euro.readable, false);
+  assert.match(euro.reason, /in EUR, and Books only files pounds/);
+  for (const currency of ['GBP', 'gbp', '', undefined]) {
+    w.ai.reply = { ...base, currency };
+    const ok = await (await read(w, '198.51.100.9')).json();
+    assert.equal(ok.readable, true, `currency ${JSON.stringify(currency)}`);
+    assert.equal(ok.reason, '');
+  }
+});
