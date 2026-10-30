@@ -360,6 +360,28 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
 .ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:auto}.ctas .btn.line{background:transparent;border:2px solid var(--charcoal);color:var(--charcoal)}
 .pricing.two .wrap{grid-template-columns:1fr}.panels{display:grid;gap:clamp(24px,4vw,48px);margin-top:clamp(28px,4vw,48px)}@media(min-width:860px){.panels{grid-template-columns:1fr 1fr}}.panels .price-panel{display:flex;flex-direction:column}.panels .price-panel h3{margin:0 0 6px;font-weight:900;font-stretch:76%;font-size:2rem}.panels .price-panel .btn{margin-top:auto}
 @media(max-width:859px){.hero.joined .wrap{grid-template-columns:1fr}}
+
+.ecosystem .display{margin-bottom:16px}.eco-lede{max-width:40em;margin:0;color:#3B434B;font-size:1.12rem}
+.prod{position:relative;gap:14px;transition:transform .25s var(--ease),box-shadow .25s var(--ease)}.prod:hover{transform:translate(-3px,-3px);box-shadow:13px 13px 0 var(--charcoal)}
+.badge{align-self:flex-start;background:var(--charcoal);color:#fff;font-weight:800;font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;padding:6px 10px}
+.prod .tag{font-weight:700;color:var(--charcoal)}
+.peek{background:var(--charcoal);color:#fff;border-radius:14px;padding:14px;display:grid;gap:8px;font-size:.92rem;border:1px solid var(--charcoal-3);box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.peek-bar{display:flex;align-items:center;gap:6px;font-size:.78rem;color:#B9C0C6;font-weight:600}.peek-bar i{width:9px;height:9px;border-radius:50%;background:var(--charcoal-3)}.peek-bar i:first-child{background:var(--yellow)}.peek-bar span{margin-left:8px;letter-spacing:.04em}
+.bub{max-width:86%;padding:8px 12px;border-radius:14px;line-height:1.35}.bub.them{background:var(--charcoal-3);justify-self:start;border-bottom-left-radius:4px}.bub.mia{background:var(--yellow);color:var(--charcoal);justify-self:end;border-bottom-right-radius:4px;font-weight:600}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap}.chip-row span{background:rgba(245,184,0,.16);color:var(--yellow);font-weight:700;font-size:.74rem;padding:4px 9px;border-radius:99px}
+.peek-sms{background:rgba(255,255,255,.07);border-radius:10px;padding:8px 12px;font-size:.84rem;color:#E4E7EA}.peek-sms b{color:var(--yellow)}
+.filed{background:var(--charcoal-2);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 10px}.filed b{color:var(--yellow)}.filed span{grid-column:1;font-size:.84rem;color:#C9CED3}.filed em{grid-column:2;grid-row:1/3;align-self:center;font-style:normal;font-weight:700;font-size:.8rem;border:1px solid var(--charcoal-3);padding:4px 10px;border-radius:99px}
+.figs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.figs div{background:var(--charcoal-2);border-radius:10px;padding:8px 10px}.figs small{display:block;color:#B9C0C6;font-size:.7rem;font-weight:600}.figs b{font-size:1.05rem}
+.integ{margin-top:clamp(28px,4vw,48px);background:#fff;border:2px solid var(--charcoal);padding:clamp(20px,3.5vw,36px);display:grid;gap:20px}
+.integ-head h3{margin:0 0 6px;font-weight:900;font-stretch:76%;font-size:clamp(1.4rem,3vw,1.9rem);line-height:1.1}.integ-head p{margin:0;color:#3B434B;font-size:1rem}
+.integ-grid{list-style:none;margin:0;padding:0;display:grid;gap:14px}@media(min-width:760px){.integ-grid{grid-template-columns:repeat(3,1fr)}}
+.integ-grid li{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--line);padding:16px;display:grid;gap:8px;align-content:start}
+.integ-grid li:nth-child(-n+2){border-top-color:var(--yellow)}
+.wm{font-weight:900;font-stretch:80%;font-size:1.5rem;letter-spacing:.01em}
+.st{justify-self:start;font-weight:800;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:4px 9px}.st.ok{background:var(--charcoal);color:#fff}.st.soon{background:transparent;color:var(--charcoal);border:1.5px dashed var(--steel)}
+.integ-grid small{color:var(--steel);font-size:.9rem;line-height:1.4}
+.more{margin-top:clamp(20px,3vw,32px);border:2px dashed var(--line);padding:clamp(18px,3vw,28px);display:flex;gap:16px 28px;align-items:center;justify-content:space-between;flex-wrap:wrap}.more b{font-weight:900;font-stretch:76%;font-size:1.4rem}.more p{margin:4px 0 0;color:var(--steel);font-size:1rem;max-width:34em}.more .btn{min-height:46px;background:transparent;border:2px solid var(--charcoal);color:var(--charcoal)}
+@media(prefers-reduced-motion:reduce){.prod{transition:none}.prod:hover{transform:none}}
 </style>
 </head>
 <body>
@@ -370,6 +392,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <span><span class="brand-name">LOCALDESK</span><span class="brand-sub">FOR TRADES</span></span>
     </a>
     <nav class="nav" aria-label="Main">
+      <a href="#products">Products</a>
       <a href="receptionist/">Receptionist</a>
       <a href="books/">Books</a>
       <a href="#pricing">Pricing</a>
@@ -393,7 +416,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
     </div>
     <div class="mini">
       <article class="duo-card"><h3>Mia</h3><p>Answers every call 24/7, takes the details and texts you a summary.</p><p class="duo-price"><b>£397</b> a month <small>7-day free trial</small></p><a class="btn btn-yellow" href="receptionist/">See Mia</a></article>
-      <article class="duo-card"><h3>Books</h3><p>Snap a receipt and it's filed in your QuickBooks. Invoices, chasing and accountant packs.</p><p class="duo-price"><b>£150</b> a month <small>plus £395 setup</small></p><a class="btn btn-yellow" href="books/">See Books</a></article>
+      <article class="duo-card"><h3>Books</h3><p>Snap a receipt and it's filed in your accounting software. Invoices, chasing and monthly books-checks.</p><p class="duo-price"><b>£150</b> a month <small>plus £395 setup</small></p><a class="btn btn-yellow" href="books/">See Books</a></article>
     </div>
   </div>
 </section>
@@ -405,24 +428,53 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
   </div>
 </section>
 
-<section class="duo" id="products" aria-labelledby="duo-title">
+<section class="duo ecosystem" id="products" aria-labelledby="duo-title">
   <div class="wrap">
-    <p class="kicker">Two products, one Localdesk</p>
-    <h2 class="display" id="duo-title">Never miss a call. Never fall behind on the books.</h2>
+    <p class="kicker">Products &amp; services</p>
+    <h2 class="display" id="duo-title">One Localdesk. Less admin for your trade.</h2>
+    <p class="eco-lede">Two tools built for tradespeople, looked after by one person in Saltash. Use one, or run both together.</p>
     <div class="duo-grid">
-      <article class="duo-card">
-        <h3>Mia, the AI receptionist</h3>
-        <ul class="feat"><li>Answers every call, day and night</li><li>Takes name, number and what the job is</li><li>Texts you a summary after every call</li><li>Missed-call text-back and call-back requests</li></ul>
+      <article class="duo-card prod reveal">
+        <span class="badge">Available now</span>
+        <div class="peek" role="img" aria-label="Preview: a missed call answered by Mia, with the caller's name, number and job texted to the tradesperson.">
+          <div class="peek-bar"><i></i><i></i><i></i><span>Mia · incoming call</span></div>
+          <div class="bub them">Hi, my boiler's stopped working.</div>
+          <div class="bub mia">Sorry to hear that. Can I take your name and number?</div>
+          <div class="chip-row"><span>Name taken</span><span>Number taken</span><span>Job noted</span></div>
+          <div class="peek-sms">Text sent to you: <b>Boiler fault, ring back today</b></div>
+        </div>
+        <h3>Localdesk Receptionist</h3>
+        <p class="tag">An AI receptionist for tradespeople.</p>
+        <ul class="feat"><li>Answers calls 24/7, day and night</li><li>Captures customer details and what the job is</li><li>Handles booking and call-back requests</li><li>Helps you stop missing enquiries</li></ul>
         <p class="duo-price"><b>£397</b> a month <small>7-day free trial, setup waived for founding clients</small></p>
         <div class="ctas"><a class="btn btn-yellow js-book" href="#contact">Book a 15-minute demo</a><a class="btn line" href="receptionist/">Find out more</a></div>
       </article>
-      <article class="duo-card">
-        <h3>Books, bookkeeping from your phone</h3>
-        <ul class="feat"><li>Photograph a receipt and it's filed in your QuickBooks</li><li>Send invoices and quotes, and chase late payers</li><li>Mileage, profit per job and a tax-pot guide</li><li>Flags what's missing, plus a pack for your accountant</li></ul>
+      <article class="duo-card prod reveal">
+        <span class="badge">Available now</span>
+        <div class="peek" role="img" aria-label="Preview: a receipt filed into the accounting software, with this month's money in, money out and what is owed.">
+          <div class="peek-bar"><i></i><i></i><i></i><span>Books · this month</span></div>
+          <div class="filed"><b>Receipt filed</b><span>Screwfix · £84.00 · Materials</span><em>Undo</em></div>
+          <div class="figs"><div><small>Money in</small><b>£4,200</b></div><div><small>Money out</small><b>£1,300</b></div><div><small>Owed to you</small><b>£650</b></div></div>
+          <div class="peek-sms">Monthly summary texted to you on the 1st</div>
+        </div>
+        <h3>Books by Localdesk</h3>
+        <p class="tag">Bookkeeping built around tradespeople.</p>
+        <ul class="feat"><li>Photograph a receipt and it's filed for you</li><li>Expenses, invoices and income tracking</li><li>A monthly books-check that flags what's missing</li><li>Works with your own accounting software</li></ul>
         <p class="duo-price"><b>£150</b> a month <small>plus £395 setup</small></p>
         <div class="ctas"><a class="btn btn-yellow" href="#contact">Get started</a><a class="btn line" href="books/">Find out more</a></div>
       </article>
     </div>
+
+    <div class="integ reveal" id="integrations" aria-labelledby="integ-title">
+      <div class="integ-head"><h3 id="integ-title">Books connects with the accounting software you already use</h3><p>These are the platforms Books works with. They aren't Localdesk products, and you keep your own subscription with them.</p></div>
+      <ul class="integ-grid">
+        <li><b class="wm">QuickBooks</b><span class="st ok">Available</span><small>QuickBooks Online</small></li>
+        <li><b class="wm">FreeAgent</b><span class="st ok">Available</span><small>Tested on FreeAgent's sandbox. Live company connections are being confirmed.</small></li>
+        <li><b class="wm">Xero</b><span class="st soon">Being verified</span><small>Built and tested. The real-service connection is still being verified.</small></li>
+      </ul>
+    </div>
+
+    <div class="more reveal"><div><b>More tools coming</b><p>Localdesk is growing into a wider toolkit for tradespeople. Tell us what would save you the most time.</p></div><a class="btn line" href="#contact">Tell us what you need</a></div>
   </div>
 </section>
 
