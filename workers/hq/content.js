@@ -41,6 +41,13 @@ export const REGISTER = [
 ];
 
 export const DOCS = [
+  { id: 'launch-checklist', title: 'Before your first paying Books client', about: 'The short list, in order', body: `# Before your first paying client
+
+1. **Register with HMRC for money laundering supervision.** Bookkeeping for other businesses needs it. Don't take a payment until it's done.
+2. **Get the agreement and data addendum checked** by a professional, and add your name, address, ICO number and insurance details.
+3. **Say "go"** and the Stripe payment link (£395 setup, £150 a month) is switched on.
+4. **Add the new Books address** (books.localdeskai.co.uk/callback) as a redirect address in your Intuit developer account, then the permanent addresses are switched on.
+5. **Test with a real UK QuickBooks trial** once Intuit has approved the live keys: connect it and run the setup check on the client's page.` },
   { id: 'owner', title: 'Owner guide: running Localdesk without Claude', about: 'Where everything is, how to log in, what to do if Claude stops', body: `# Owner guide
 
 ## Your control room

@@ -11,7 +11,7 @@
 // admin key, so the owner never handles it), optional STRIPE_KEY (RESTRICTED read-only). Plain: optional RESET_TOTP.
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
-import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, ICON } from './ui.js';
+import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
 
 const enc = new TextEncoder();
 const SESSION_SECONDS = 12 * 3600;            // this visit only
@@ -249,28 +249,34 @@ const dueGreeting = () => { const h = Number(new Date().toLocaleString('en-GB', 
 // ---------- pages ----------
 async function pageHome(env) {
   const d = await load(env);
-  const todo = [];
-  for (const c of d.booksProblems) todo.push(banner('bad', `${esc(c.name)}: ${plainProblem(c.problem)}`, esc(FIX), btn('/books', 'Open Books', 'dark')));
-  for (const s of d.failed) todo.push(banner('bad', `${esc(s.who)}'s payment failed`, 'Their card was declined. Stripe tries again automatically and emails them. If it is still unpaid after 14 days, get in touch.', btn('/payments', 'See payments', 'dark')));
-  if (d.stale) todo.push(banner('warn', 'No recent backup of your Books data', 'A backup is made every morning. If this still shows tomorrow, open Backups to see what to do.', btn('/backups', 'Open Backups', 'dark')));
-  const status = todo.length ? `<h2>${todo.length === 1 ? '1 thing needs' : `${todo.length} things need`} you</h2>${todo.join('')}` : banner('ok', 'All good', 'Nothing needs you right now.');
-  return shell('Home', `<div><h1>${dueGreeting()}, Gio</h1><p class="lead">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London' })}</p></div>
-${status}
-${d.subs.off ? stripeSetup() : d.subs.error ? stripeError() : ''}
+  const todos = [];
+  for (const c of d.booksProblems) todos.push(banner('bad', `${esc(c.name)}: ${plainProblem(c.problem)}`, esc(FIX), btn(`/books/client/${esc(c.realmId)}`, 'Open their page', 'dark')));
+  for (const s of d.failed) todos.push(banner('bad', `${esc(s.who)}'s payment failed`, 'Their card was declined. Stripe tries again automatically and emails them. If it is still unpaid after 14 days, get in touch.', btn('/payments', 'See payments', 'dark')));
+  if (d.stale) todos.push(banner('warn', 'No recent backup of your Books data', 'A backup is made every morning. Take one now, and if this still shows tomorrow, open Help.', `<form method="post" action="/backups/download" style="margin-top:12px"><button class="btn dark">Download a backup now</button></form>`));
+  const noStripe = d.subs.off || d.subs.error;
+  const setup = [
+    todo(!d.subs.off, 'Connect Stripe', 'See your customers and money here. Takes 3 minutes.', btn('/docs/stripe', 'Do it now', 'dark')),
+    todo(!d.stale, 'Daily backup', d.stale ? 'No backup stored yet. One is made every morning.' : 'Running. A copy is made every morning.', `<form method="post" action="/backups/download"><button class="btn line">Make one now</button></form>`),
+    todo(false, 'Before your first paying client', 'Register with HMRC and get your agreement checked.', btn('/docs/launch-checklist', 'See the list', 'dark')),
+  ].filter(x => !x.includes('class="dot"') || true);
+  const doneAll = !d.subs.off && !d.stale;
+  return shell('Home', `<div class="ph"><div><h1>${dueGreeting()}, Gio</h1><p class="lead">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/London' })}</p></div></div>
+<section class="section">${todos.length ? `<h2>${todos.length === 1 ? '1 thing needs' : `${todos.length} things need`} you</h2>${todos.join('')}` : banner('ok', 'All good', 'Nothing needs you right now.')}</section>
 ${d.health.error ? booksError() : ''}
-<div class="tiles">${tile(d.subs.off || d.subs.error ? '–' : money(d.income), 'coming in each month')}${tile(d.subs.off || d.subs.error ? '–' : d.live.length, 'paying customers')}${tile(d.health.error ? '–' : d.clients.length, 'Books clients', true)}</div>
-<h2>Where to?</h2>
-<div class="big">${bigLink('/books', 'books', 'Books', 'Your bookkeeping clients')}${bigLink('/receptionist', 'receptionist', 'Receptionist', 'Mia, calls and texts')}${bigLink('/customers', 'customers', 'Customers', 'Everyone you look after')}${bigLink('/payments', 'payments', 'Payments', 'Money in, failed payments')}${bigLink('/backups', 'backups', 'Backups', 'Your data, kept safe')}${bigLink('/settings', 'settings', 'Settings', 'Accounts and security')}</div>`, '/');
+<div class="tiles">${tile(noStripe ? '–' : money(d.income), noStripe ? 'monthly income (connect Stripe)' : 'coming in each month', false, true)}${tile(noStripe ? '–' : d.live.length, 'paying customers')}${tile(d.health.error ? '–' : d.clients.length, 'Books clients', true)}</div>
+<section class="section"><h2>Quick actions</h2><div class="qa">${btn('/books/new', 'Add a Books client')}${btn('/books', 'See my Books clients', 'dark')}</div></section>
+<section class="section"><h2>Everything</h2><div class="big">${bigLink('/books', 'books', 'Books', 'Your bookkeeping clients')}${bigLink('/receptionist', 'receptionist', 'Receptionist', 'Mia, calls and texts')}${bigLink('/customers', 'customers', 'Customers', 'Everyone you look after')}${bigLink('/payments', 'payments', 'Payments', 'Money in, failed payments')}${bigLink('/backups', 'backups', 'Backups', 'Your data, kept safe')}${bigLink('/settings', 'settings', 'Settings', 'Accounts and security')}</div></section>
+<div class="card"><h2>${doneAll ? 'Set-up' : 'Getting set up'}</h2>${setup.join('')}</div>`, '/');
 }
 async function pageCustomers(env) {
   const d = await load(env);
   const booksRows = d.clients.map(c => item(`/books/client/${esc(c.realmId)}`, c.name, c.ok ? 'Connected to QuickBooks' : esc(plainProblem(c.problem)), c.ok ? pill('ok', 'Connected') : pill('bad', 'Needs you'))).join('');
   const mia = d.subList.filter(s => !s.isBooks);
-  const miaRows = mia.map(s => item('/payments', s.who, `${esc(s.plan)} · ${money(s.per)} a month`, statusPill(s))).join('');
+  const miaRows = mia.map(s => item('', s.who, `${esc(s.plan)} · ${money(s.per)} a month`, statusPill(s))).join('');
   return shell('Customers', `<h1>Customers</h1>
 ${d.health.error ? booksError() : ''}
-<div class="card"><h2>Books clients</h2>${booksRows ? `<div class="list">${booksRows}</div>` : '<p class="mute">No Books clients yet.</p>'}<div class="sp"></div>${btn('/books/new', 'Add a new Books client')}</div>
-<div class="card"><h2>Receptionist customers</h2>${d.subs.off ? stripeSetup() : d.subs.error ? stripeError() : miaRows ? `<div class="list">${miaRows}</div>` : '<p class="mute">No receptionist customers yet. They show here once they subscribe.</p>'}</div>`, '/customers');
+<div class="cols"><div class="card"><h2>Books clients</h2>${booksRows ? `<div class="list">${booksRows}</div>` : '<p class="mute">No Books clients yet. Add your first one.</p>'}<div class="sp"></div>${btn('/books/new', 'Add a new Books client')}</div>
+<div class="card"><h2>Receptionist customers</h2>${d.subs.off ? stripeSetup() : d.subs.error ? stripeError() : miaRows ? `<div class="list">${miaRows}</div>` : '<p class="mute">No receptionist customers yet. They show here once they subscribe.</p>'}</div></div>`, '/customers');
 }
 async function pagePayments(env) {
   const d = await load(env);
@@ -407,7 +413,7 @@ ${status}
 }
 const pageSettings = () => shell('Settings', `<h1>Settings</h1>
 <div class="card"><h2>Your accounts</h2><div class="list">${LINKS.accounts.map(l => item(l.url, l.name, esc(l.note), '', true)).join('')}</div></div>
-<div class="card"><h2>Where your passwords and keys are kept</h2><p class="mute">You never need to type these here. This only tells you where each one lives.</p><div class="list">${REGISTER.map(r => `<div class="item" style="align-items:flex-start"><span class="body"><b>${esc(r.name)}</b><small>Kept in: ${esc(r.where)}</small><small>What it does: ${esc(r.use)}</small><small>If you lose it: ${esc(r.recover)}</small></span></div>`).join('')}</div></div>
+<div class="card"><details><summary style="font-size:1.15rem;font-weight:800">Where your passwords and keys are kept</summary><p class="mute">You never need to type these here. This only tells you where each one lives.</p><div class="list">${REGISTER.map(r => `<div class="item" style="align-items:flex-start"><span class="body"><b>${esc(r.name)}</b><small>Kept in: ${esc(r.where)}</small><small>What it does: ${esc(r.use)}</small><small>If you lose it: ${esc(r.recover)}</small></span></div>`).join('')}</div></details></div>
 <div class="card"><h2>Your HQ login</h2><details><summary>I've lost my phone</summary><p>In Cloudflare, open <b>Workers &amp; Pages</b>, then <b>hq</b>, then <b>Settings</b>, then <b>Variables and Secrets</b>. Change the variable <code>RESET_TOTP</code> to any new word. Then log in again and set up the app on your new phone.</p></details><details><summary>I want a new passphrase</summary><p>In the same place in Cloudflare, edit <code>OWNER_PASSWORD</code> and save. Every phone and computer is logged out and you log in with the new one.</p></details></div>
 <div class="card"><h2>Lost or lent a device?</h2><p class="mute">HQ remembers your phone and computer for 3 months so you don't log in every time. If a device is lost, log every device out at once. You then log back in with your passphrase and code.</p><form method="post" action="/logout-all"><button class="btn block danger">Log out every device</button></form></div>
 <form method="post" action="/logout"><button class="btn block line">Log out of this device</button></form>`, '/settings');
