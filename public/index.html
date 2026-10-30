@@ -3,524 +3,514 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Localdesk | Call Answering and Bookkeeping for Trades in Cornwall &amp; Plymouth</title>
-<meta name="description" content="Localdesk helps trades stay on top of the admin: Mia, the AI receptionist, answers every call, and Books keeps your bookkeeping sorted from your phone. Start with either and add the other later.">
+<title>Localdesk | AI Receptionist and Bookkeeping Software for Trades in Cornwall &amp; Plymouth</title>
+<meta name="description" content="Localdesk builds practical software for tradespeople. Our AI receptionist answers every call, and Books keeps your bookkeeping sorted from your phone. Less admin, more time for the work.">
 <link rel="canonical" href="https://www.localdeskai.co.uk/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.localdeskai.co.uk/">
-<meta property="og:title" content="Localdesk: the phone answered, the books done.">
-<meta property="og:description" content="Mia answers your calls. Books sorts your bookkeeping from your phone. For trades in Cornwall and Plymouth.">
+<meta property="og:title" content="Localdesk: less admin, more time for the work.">
+<meta property="og:description" content="Practical software for UK tradespeople: an AI receptionist and bookkeeping that work together. Built in Saltash, Cornwall.">
 <meta property="og:locale" content="en_GB">
 <meta property="og:image" content="https://www.localdeskai.co.uk/og-image.png">
-<meta name="theme-color" content="#1F2328">
+<meta name="theme-color" content="#15181C">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F2328'/%3E%3Ccircle cx='32' cy='19' r='13' fill='%23F5B800'/%3E%3Ccircle cx='19' cy='42' r='13' fill='%23F5B800' stroke='%231F2328' stroke-width='2'/%3E%3Ccircle cx='45' cy='42' r='13' fill='%23F5B800' stroke='%231F2328' stroke-width='2'/%3E%3C/svg%3E">
 <link rel="preload" href="fonts/Archivo-VF.woff" as="font" type="font/woff" crossorigin>
 <script>document.documentElement.classList.add('js')</script>
 <style>
 @font-face{font-family:'Archivo';src:url('fonts/Archivo-VF.woff') format('woff');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
 :root{
-  --charcoal:#1F2328;
-  --charcoal-2:#2A3038;
-  --charcoal-3:#3A424A;
-  --yellow:#F5B800;
-  --concrete:#E9EBED;
-  --paper:#F7F8F8;
-  --steel:#566069;
-  --line:#C9CED3;
-  --white:#fff;
-  --pad:clamp(20px,5vw,56px);
-  --max:1180px;
-  --ease:cubic-bezier(.2,.7,.2,1);
+  --ink:#15181C;--charcoal:#1F2328;--charcoal-2:#2A3038;--charcoal-3:#3A424A;
+  --yellow:#F5B800;--yellow-2:#FFD23F;--teal:#1F8A7A;--teal-2:#2BB39F;
+  --paper:#F7F8F8;--concrete:#E9EBED;--line:#DDE1E5;--steel:#566069;--mute:#8A939B;--white:#fff;
+  --pad:clamp(20px,5vw,56px);--max:1200px;--ease:cubic-bezier(.2,.7,.2,1);--r:12px;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--charcoal);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:18px;line-height:1.55;font-stretch:100%}
-a{color:inherit}
-a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.wrap{max-width:var(--max);margin:0 auto;padding-left:var(--pad);padding-right:var(--pad)}
-.display{font-family:'Archivo',Impact,'Arial Narrow',sans-serif;font-weight:900;font-stretch:68%;letter-spacing:-.005em;word-spacing:.1em;line-height:.94;margin:0}
-h1.display{font-size:clamp(3.4rem,9.2vw,7.6rem)}
-h2.display{font-size:clamp(2.6rem,6vw,4.6rem)}
-.kicker{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;color:var(--steel);margin:0 0 18px}
-.kicker::before{content:"";width:22px;height:4px;background:var(--yellow)}
-.lede{font-size:clamp(1.1rem,1.6vw,1.3rem);line-height:1.5;max-width:34em;margin:0}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 28px;font:inherit;font-weight:700;font-size:1.05rem;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:transform .12s ease,background .12s ease,border-color .12s ease}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:84px}
+body{margin:0;background:var(--paper);color:var(--charcoal);font-family:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:17px;line-height:1.6;font-stretch:100%;-webkit-font-smoothing:antialiased}
+a{color:inherit}img,svg{max-width:100%}
+a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 var(--pad)}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.03em;line-height:1.04;font-stretch:96%;text-wrap:balance}
+p{margin:0}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--steel);margin-bottom:18px}
+.eyebrow::before{content:"";width:22px;height:3px;background:var(--yellow);border-radius:2px}
+.dark .eyebrow{color:#9AA3AB}
+h2{font-size:clamp(2rem,4.6vw,3.3rem)}
+.lede{font-size:clamp(1.05rem,1.6vw,1.22rem);color:var(--steel);max-width:36em;margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 24px;font:inherit;font-weight:700;font-size:1rem;text-decoration:none;border:1.5px solid transparent;border-radius:10px;cursor:pointer;transition:transform .15s var(--ease),background .15s,box-shadow .2s,border-color .15s;white-space:nowrap}
 .btn:active{transform:translateY(1px)}
-.btn-yellow{background:var(--yellow);color:var(--charcoal)}
-.btn-yellow:hover{background:#FFC619}
-.btn-ghost{border-color:#6C757F;color:var(--white);background:transparent}
-.btn-ghost:hover{border-color:var(--white)}
-.btn-white{border-color:var(--white);background:var(--white);color:var(--charcoal)}
-.btn-white:hover{background:#E6E9EC;border-color:#E6E9EC}
-.btn-white .btn-ico{width:20px;height:20px;margin-right:10px;vertical-align:-4px}
-section{scroll-margin-top:12px}
+.btn-y{background:var(--yellow);color:var(--ink);box-shadow:0 1px 0 rgba(255,255,255,.4) inset,0 8px 24px -8px rgba(245,184,0,.55)}.btn-y:hover{background:var(--yellow-2);transform:translateY(-1px)}
+.btn-g{background:rgba(255,255,255,.06);color:#fff;border-color:rgba(255,255,255,.22)}.btn-g:hover{background:rgba(255,255,255,.12)}
+.btn-o{background:#fff;color:var(--ink);border-color:var(--line)}.btn-o:hover{border-color:var(--charcoal);transform:translateY(-1px)}
+.btn-d{background:var(--ink);color:#fff}.btn-d:hover{background:var(--charcoal-2);transform:translateY(-1px)}
+.btn-t{background:var(--teal);color:#fff}.btn-t:hover{background:var(--teal-2);transform:translateY(-1px)}
+.arrow::after{content:"→";transition:transform .2s var(--ease)}.arrow:hover::after{transform:translateX(3px)}
 
-/* reveal on scroll (only when JS is running) */
-.js .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
-.js .reveal.in{opacity:1;transform:none}
-
-/* nav */
-.top{background:var(--charcoal);color:var(--white)}
-.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-top:18px;padding-bottom:18px}
-.brand{display:flex;align-items:center;gap:14px;text-decoration:none}
-.brand-name{display:block;font-weight:900;font-stretch:80%;font-size:1.55rem;letter-spacing:.06em;line-height:1}
-.brand-sub{display:block;font-weight:600;font-size:.72rem;letter-spacing:.2em;color:var(--yellow);margin-top:5px}
-.nav{display:flex;align-items:center;gap:28px;font-weight:600;font-size:.98rem}
-.nav a{text-decoration:none;color:#D5D9DD}
-.nav a:hover{color:var(--white)}
-.nav .btn{min-height:44px;padding:0 20px;color:var(--charcoal);font-size:.98rem;white-space:nowrap}
-@media(max-width:760px){.nav a:not(.btn){display:none}.nav .btn{padding:0 14px}.brand-name{font-size:1.35rem}.brand-sub{letter-spacing:.14em}}
-@media(max-width:400px){.top .wrap{gap:10px}.brand{gap:10px}.logo-mark{width:38px;height:36px}.brand-name{font-size:1.1rem}.brand-sub{font-size:.6rem;letter-spacing:.1em}.nav .btn{padding:0 12px;font-size:.9rem}}
-
-/* hero */
-.hero{background:var(--charcoal);color:var(--white);position:relative;overflow:hidden}
-.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 400px at 85% 40%,rgba(245,184,0,.13),transparent 70%);pointer-events:none}
-.hero .wrap{position:relative;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:clamp(24px,5vw,72px);align-items:center;padding-top:clamp(36px,6vw,80px);padding-bottom:clamp(64px,9vw,120px)}
-.hero h1 span{display:block}
-.hero .lede{color:#D5D9DD;margin-top:28px}
-.hero .actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
-.hero .fine{margin:22px 0 0;color:#9AA3AB;font-size:.95rem}
-.picker{width:100%;max-width:560px;text-align:center}
-.picker p{margin:0 0 12px;font-size:.9rem;font-weight:700;color:#C9CED3}
-.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
-.chip{font:inherit;font-size:.88rem;font-weight:700;color:#D5D9DD;background:var(--charcoal-2);border:2px solid var(--charcoal-3);padding:6px 12px;min-height:40px;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
-.chip:hover{border-color:#6C757F;color:var(--white)}
-.chip[aria-pressed="true"]{background:var(--yellow);border-color:var(--yellow);color:var(--charcoal)}
-@media(min-width:901px){.hero .wrap{padding-top:clamp(24px,4.5vh,72px)}.phone-stage{gap:14px}}
-@media(max-width:900px){.hero .wrap{grid-template-columns:1fr}.screen{height:600px}}
-
-/* phone */
-.phone-stage{display:flex;flex-direction:column;align-items:center;gap:18px}
-.phone{zoom:.74;width:min(320px,100%);background:#0F1215;border-radius:46px;padding:11px;box-shadow:0 0 0 2px var(--charcoal-3),0 40px 80px -30px rgba(0,0,0,.7);transform:rotate(3deg);transition:transform .5s var(--ease)}
-.phone.buzz{animation:buzz .5s linear}
-.screen{position:relative;background:#EEF0F2;border-radius:36px;color:var(--charcoal);height:clamp(520px,72vh,620px);overflow:hidden}
-.screen.dark .status{color:var(--white)}
-.status{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;padding:14px 24px 0}
-.scr{position:absolute;inset:0;padding:44px 14px 18px;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s linear .4s}
-.scr.on{opacity:1;visibility:visible;transition:opacity .4s ease}
-/* screen 1: incoming */
-.scr-ring{background:linear-gradient(180deg,#2A3038,#1F2328);color:var(--white);align-items:center;text-align:center;padding-top:70px}
-.scr-ring .from{font-size:.85rem;color:#9AA3AB;margin:0}
-.scr-ring .biz{font-weight:900;font-stretch:76%;font-size:1.7rem;line-height:1.1;margin:6px 0 4px}
-.scr-ring .num{font-size:.95rem;color:#D5D9DD;margin:0}
-.ring{position:relative;width:96px;height:96px;margin:40px auto 0;display:grid;place-items:center}
-.ring b{position:relative;z-index:1;width:72px;height:72px;border-radius:50%;background:var(--yellow);display:grid;place-items:center}
-.ring::before,.ring::after{content:"";position:absolute;inset:12px;border-radius:50%;border:3px solid var(--yellow);animation:pulse 1.6s ease-out infinite}
-.ring::after{animation-delay:.8s}
-.scr-ring .answered{margin-top:auto;font-size:.82rem;color:#9AA3AB}
-/* screen 2: on the call */
-.scr-call{background:var(--charcoal);color:var(--white)}
-.call-head{display:flex;align-items:center;gap:10px;padding:6px 6px 12px;border-bottom:1px solid var(--charcoal-3)}
-.call-head .dot{width:10px;height:10px;border-radius:50%;background:#3DDC84;box-shadow:0 0 0 4px rgba(61,220,132,.2)}
-.call-head b{display:block;font-size:.92rem;line-height:1.2}
-.call-head small{color:#9AA3AB;font-size:.75rem}
-.call-head time{margin-left:auto;font-variant-numeric:tabular-nums;font-size:.85rem;color:#C9CED3}
-.wave{display:flex;align-items:center;justify-content:center;gap:4px;height:46px;margin:12px 0 8px}
-.wave i{width:4px;height:8px;border-radius:2px;background:var(--yellow);transition:height .12s ease}
-.captions{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent,#000 22%);mask-image:linear-gradient(180deg,transparent,#000 22%)}
-.cap{max-width:88%;padding:9px 12px;font-size:.84rem;line-height:1.35;animation:pop .35s var(--ease) both}
-.cap small{display:block;font-size:.68rem;font-weight:700;margin-bottom:2px;opacity:.75}
-.cap.rec{background:var(--yellow);color:var(--charcoal);align-self:flex-start}
-.cap.cal{background:var(--charcoal-2);align-self:flex-end}
-/* screen 3: the text */
-.thread-head{display:flex;align-items:center;gap:10px;padding:8px 6px 10px;border-bottom:1px solid #D2D6DA}
-.avatar{width:36px;height:36px;border-radius:50%;background:var(--yellow);display:grid;place-items:center;font-weight:900;font-stretch:80%;font-size:1.1rem;flex:none}
-.thread-head b{display:block;font-size:.95rem;line-height:1.2}
-.thread-head small{color:var(--steel);font-size:.75rem}
-.scr-sms{gap:12px}
-.msg{background:var(--white);border-radius:18px 18px 18px 6px;padding:13px 14px;font-size:.88rem;line-height:1.4;box-shadow:0 1px 0 rgba(0,0,0,.06)}
-.msg dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px}
-.msg dt{color:var(--steel);font-weight:600}
-.msg dd{margin:0;font-weight:700}
-.msg .urgent{display:inline-block;background:var(--yellow);padding:0 7px;font-weight:800}
-.msg-reply{border-radius:18px 18px 6px 18px;background:var(--charcoal);color:var(--white);align-self:flex-end;max-width:84%}
-.scr-sms.on .msg{animation:pop .45s var(--ease) both}
-.scr-sms.on .msg-reply{animation-delay:.9s}
-.stage-foot{display:flex;align-items:center;gap:14px;font-size:.85rem;color:#9AA3AB}
-.replay{font:inherit;font-size:.85rem;font-weight:700;color:var(--white);background:none;border:0;padding:6px 0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
-@keyframes pulse{from{transform:scale(1);opacity:.9}to{transform:scale(1.9);opacity:0}}
-@keyframes buzz{0%,100%{transform:rotate(3deg)}20%{transform:rotate(1.5deg) translateX(-3px)}40%{transform:rotate(4.5deg) translateX(3px)}60%{transform:rotate(2deg) translateX(-2px)}80%{transform:rotate(4deg) translateX(2px)}}
-@media(max-width:360px){.phone{zoom:1}}
-@media(max-width:900px){.phone{transform:none}.phone.buzz{animation:none}}
-
-/* live demo: talk to Mia */
-.ring-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-top:22px;padding:14px 16px;background:var(--charcoal);color:var(--white);text-decoration:none;border-left:6px solid var(--yellow)}
-.ring-line span{font-size:.95rem;color:#C9CED3}
-.ring-line b{font-weight:900;font-stretch:76%;font-size:1.7rem;line-height:1;color:var(--yellow);letter-spacing:.01em}
-.ring-line:hover b{text-decoration:underline}
-.hero .fine a{color:var(--white);font-weight:700;white-space:nowrap}
-.live{background:var(--concrete);padding:clamp(64px,9vw,120px) 0}
-.live .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(28px,6vw,88px);align-items:center}
-.live .lede{margin-top:22px;color:#3B434B}
-.tries{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:10px}
-.tries li{background:var(--white);border-left:4px solid var(--yellow);padding:10px 14px;font-weight:600;font-size:1rem}
-.tries li::before{content:"Try: ";color:var(--steel);font-weight:500}
-.live .note{margin:18px 0 0;font-size:.88rem;color:var(--steel);max-width:34em}
-.talk{background:var(--charcoal);color:var(--white);padding:clamp(28px,4vw,48px) clamp(20px,3vw,40px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;box-shadow:12px 12px 0 var(--yellow)}
-.talk-who{display:flex;align-items:center;gap:10px;font-weight:700;font-size:.95rem;color:#C9CED3}
-.talk-who i{width:10px;height:10px;border-radius:50%;background:#3DDC84;box-shadow:0 0 0 4px rgba(61,220,132,.2)}
-.orb{--lvl:0;position:relative;width:176px;height:176px;border-radius:50%;border:0;padding:0;background:var(--yellow);color:var(--charcoal);cursor:pointer;display:grid;place-items:center;margin:36px 0;transition:transform .15s ease,background .2s}
-.orb:hover{transform:scale(1.03)}
-.orb::before,.orb::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:3px solid rgba(245,184,0,.45);transform:scale(calc(1 + var(--lvl) * .14));transition:transform .08s linear}
-.orb::after{inset:-30px;border-color:rgba(245,184,0,.2);transform:scale(calc(1 + var(--lvl) * .2))}
-.orb svg{width:58px;height:58px}
-.orb .ico-end{display:none}
-.talk[data-state="idle"] .orb::before,.talk[data-state="ended"] .orb::before{animation:breathe 2.4s ease-in-out infinite}
-.talk[data-state="connecting"] .orb{background:#C9CED3;cursor:progress}
-.talk[data-state="connecting"] .orb::before{border-color:rgba(255,255,255,.35);border-top-color:var(--yellow);animation:spin 1s linear infinite}
-.talk[data-state="live"] .orb{background:#E5484D;color:var(--white)}
-.talk[data-state="live"] .orb .ico-mic{display:none}
-.talk[data-state="live"] .orb .ico-end{display:block}
-.talk-status{margin:0;font-weight:900;font-stretch:76%;font-size:clamp(1.5rem,2.6vw,1.9rem);line-height:1.1;min-height:2.2em;display:flex;align-items:center}
-.talk-sub{margin:-8px 0 0;color:#C9CED3;font-size:.95rem;min-height:1.5em}
-.talk-time{font-variant-numeric:tabular-nums;color:var(--yellow);font-weight:700}
-.talk .after{display:none;color:var(--yellow);font-weight:700}
-.talk[data-state="ended"] .after{display:inline}
-.talk[data-state="error"] .talk-status{color:#FF8A8D}
-@keyframes breathe{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.08);opacity:.4}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:900px){.live .wrap{grid-template-columns:1fr}.talk{box-shadow:8px 8px 0 var(--yellow)}}
-@media(prefers-reduced-motion:reduce){.orb::before,.orb::after{animation:none!important;transition:none}}
-
-/* calculator */
-.loss{padding:clamp(64px,9vw,120px) 0}
-.loss .wrap{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:clamp(28px,6vw,88px);align-items:center}
-.loss .lede{margin-top:24px;color:#3B434B}
-.calc{background:var(--white);border:3px solid var(--charcoal);box-shadow:12px 12px 0 var(--yellow);padding:clamp(22px,3.5vw,40px)}
-.calc h3{margin:0 0 6px;font-weight:900;font-stretch:76%;font-size:1.6rem;line-height:1.1}
-.calc .sub{margin:0 0 22px;color:var(--steel);font-size:.95rem}
-.field{margin-bottom:22px}
-.field label{display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:1rem;margin-bottom:10px}
-.field output{white-space:nowrap;font-weight:900;font-stretch:80%;font-size:1.25rem;font-variant-numeric:tabular-nums}
-input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;cursor:pointer}
-input[type=range]::-webkit-slider-runnable-track{height:8px;background:linear-gradient(90deg,var(--charcoal) var(--p,50%),var(--concrete) var(--p,50%))}
-input[type=range]::-moz-range-track{height:8px;background:var(--concrete)}
-input[type=range]::-moz-range-progress{height:8px;background:var(--charcoal)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-10px;background:var(--yellow);border:3px solid var(--charcoal);border-radius:50%}
-input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yellow);border:3px solid var(--charcoal);border-radius:50%}
-.result{margin-top:8px;padding-top:22px;border-top:3px solid var(--charcoal)}
-.result .big{display:block;font-weight:900;font-stretch:68%;font-size:clamp(3.6rem,8vw,5.4rem);line-height:.9;font-variant-numeric:tabular-nums}
-.result .what{display:block;font-weight:700;margin-top:6px}
-.vs{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:16px;padding:14px 16px;background:var(--charcoal);color:var(--white);font-size:.98rem}
-.vs b{color:var(--yellow)}
-.calc .note{margin:14px 0 0;font-size:.82rem;color:var(--steel)}
-@media(max-width:900px){.loss .wrap{grid-template-columns:1fr}.calc{box-shadow:8px 8px 0 var(--yellow)}}
-
-/* transcript */
-.call{background:var(--concrete);padding:clamp(64px,9vw,120px) 0}
-.call .wrap{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(28px,6vw,88px);align-items:start}
-.call .lede{margin-top:22px;color:#3B434B}
-.call .note{margin-top:18px;font-size:.95rem;color:var(--steel);max-width:30em}
-.transcript{background:var(--charcoal);color:var(--white);padding:clamp(20px,3vw,36px);display:flex;flex-direction:column;gap:14px}
-#lines{display:flex;flex-direction:column;gap:14px}
-.transcript .tag{font-size:.85rem;color:#9AA3AB;margin:0 0 4px;font-weight:600}
-.line{max-width:86%;padding:12px 16px;line-height:1.4;font-size:1rem}
-.line small{display:block;font-size:.78rem;font-weight:700;margin-bottom:3px}
-.line.rec{background:var(--yellow);color:var(--charcoal);align-self:flex-start}
-.line.rec small{color:#5C4500}
-.line.cal{background:var(--charcoal-2);align-self:flex-end}
-.line.cal small{color:#9AA3AB}
-@media(max-width:900px){.call .wrap{grid-template-columns:1fr}.line{max-width:94%}}
-
-/* what you get: bento grid */
-.get{padding:clamp(64px,9vw,120px) 0}
-.get h2{max-width:11em}
-.bento{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:clamp(32px,5vw,56px) 0 0;padding:0;list-style:none}
-.tile{background:var(--white);border:2px solid var(--charcoal);padding:clamp(20px,2.4vw,28px);display:flex;flex-direction:column;gap:8px;transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
-.tile:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--charcoal)}
-.tile b{font-weight:900;font-stretch:76%;font-size:clamp(1.4rem,2.1vw,1.75rem);line-height:1.05}
-.tile span{color:#3B434B;font-size:1rem}
-.tile .ico{width:44px;height:44px;margin-bottom:8px}
-.tile-hero{grid-column:span 2;grid-row:span 2;background:var(--charcoal);color:var(--white);justify-content:space-between}
-.tile-hero:hover{box-shadow:6px 6px 0 var(--yellow)}
-.tile-hero b{font-size:clamp(2rem,3.6vw,3rem)}
-.tile-hero span{color:#C9CED3}
-.clock{font-weight:900;font-stretch:68%;font-size:clamp(3.2rem,6vw,5rem);line-height:.9;color:var(--yellow);font-variant-numeric:tabular-nums;margin:0}
-.clock-line{margin:10px 0 0;font-size:1.1rem;font-weight:600;color:var(--white);max-width:22em}
-.tile-wide{grid-column:span 2}
-.tile-yellow{background:var(--yellow)}
-.tile-yellow span{color:var(--charcoal)}
-@media(max-width:900px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.tile-hero{grid-row:auto}}
-@media(max-width:560px){.bento{grid-template-columns:1fr}.tile-hero,.tile-wide{grid-column:auto}}
-
-/* compare */
-.compare{background:var(--charcoal);color:var(--white);padding:clamp(64px,9vw,120px) 0}
-.compare h2{max-width:12em}
-.tbl{width:100%;border-collapse:collapse;margin-top:clamp(32px,5vw,56px);font-size:1rem}
-.tbl th,.tbl td{text-align:left;padding:16px 16px 16px 0;border-bottom:1px solid var(--charcoal-3);vertical-align:top}
-.tbl thead th{font-weight:900;font-stretch:76%;font-size:1.5rem;color:#C9CED3;border-bottom:3px solid #6C757F}
-.tbl thead th.us{color:var(--yellow);border-bottom-color:var(--yellow)}
-.tbl tbody th{font-weight:600;color:#9AA3AB;width:26%}
-.tbl td.us{color:var(--white);font-weight:700;background:rgba(245,184,0,.07);padding-left:14px}
-.tbl thead th.us{padding-left:14px}
-.tbl td{color:#D5D9DD}
-@media(max-width:700px){
-  .tbl,.tbl tbody,.tbl tr,.tbl th,.tbl td{display:block}
-  .tbl thead{display:none}
-  .tbl tr{padding:14px 0;border-bottom:1px solid var(--charcoal-3)}
-  .tbl th,.tbl td{border:0;padding:3px 0;width:auto!important}
-  .tbl td.us{background:none;padding-left:0}
-  .tbl td::before{content:attr(data-h) ": ";color:#9AA3AB;font-weight:600}
-  .tbl td.us::before{color:var(--yellow)}
+/* ---------- navigation ---------- */
+.top{position:fixed;inset:0 0 auto 0;z-index:50;transition:background .25s,box-shadow .25s,border-color .25s;border-bottom:1px solid transparent}
+.top.scrolled,.top.open{background:rgba(21,24,28,.86);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-color:rgba(255,255,255,.08)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:70px;gap:20px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:#fff}
+.logo-mark{width:38px;height:36px;flex:none}
+.brand-name{display:block;font-weight:900;font-stretch:84%;font-size:1.28rem;letter-spacing:.06em;line-height:1}
+.brand-sub{display:block;font-weight:600;font-size:.62rem;letter-spacing:.3em;color:#9AA3AB;margin-top:4px}
+.nav{display:flex;align-items:center;gap:6px}
+.nav>a:not(.btn),.dd>button{color:#D8DDE1;text-decoration:none;font:inherit;font-weight:600;font-size:.96rem;padding:10px 14px;border-radius:8px;background:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:color .15s,background .15s}
+.nav>a:not(.btn):hover,.dd>button:hover,.dd.show>button{color:#fff;background:rgba(255,255,255,.08)}
+.dd{position:relative}.dd>button::after{content:"";width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);opacity:.7}
+.menu{position:absolute;top:calc(100% + 10px);left:-60px;width:min(520px,92vw);background:#fff;color:var(--ink);border-radius:14px;padding:10px;box-shadow:0 30px 60px -20px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.06);display:grid;gap:4px;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .18s,transform .18s var(--ease),visibility .18s}
+.dd.show .menu{opacity:1;visibility:visible;transform:none}
+.menu a{display:grid;grid-template-columns:44px 1fr;gap:14px;padding:14px;border-radius:10px;text-decoration:none;align-items:center}
+.menu a:hover{background:var(--paper)}
+.menu b{display:block;font-weight:800;font-size:1rem}.menu span span{display:block;color:var(--steel);font-size:.9rem;line-height:1.4;margin-top:2px}
+.ico{width:44px;height:44px;border-radius:11px;display:grid;place-items:center;flex:none}
+.ico svg{width:22px;height:22px}
+.ico.mia{background:var(--ink);color:var(--yellow)}.ico.bk{background:#E6F4F1;color:var(--teal)}
+.menu-note{padding:8px 14px 6px;font-size:.78rem;color:var(--mute)}
+.burger{display:none;background:none;border:1px solid rgba(255,255,255,.25);color:#fff;width:44px;height:44px;border-radius:10px;cursor:pointer;place-items:center}
+.burger i,.burger i::before,.burger i::after{display:block;width:18px;height:2px;background:currentColor;content:"";position:relative;transition:transform .2s,opacity .2s}
+.burger i::before{position:absolute;top:-6px}.burger i::after{position:absolute;top:6px}
+.top.open .burger i{background:transparent}.top.open .burger i::before{top:0;transform:rotate(45deg)}.top.open .burger i::after{top:0;transform:rotate(-45deg)}
+@media(max-width:940px){
+  .burger{display:grid}
+  .nav{position:absolute;top:70px;left:0;right:0;background:rgba(21,24,28,.97);flex-direction:column;align-items:stretch;padding:12px var(--pad) 24px;gap:2px;display:none;border-bottom:1px solid rgba(255,255,255,.08);max-height:calc(100vh - 70px);overflow:auto}
+  .top.open .nav{display:flex}
+  .nav>a:not(.btn),.dd>button{padding:14px 8px;font-size:1.05rem;width:100%;justify-content:space-between}
+  .dd>button::after{display:none}
+  .menu{position:static;opacity:1;visibility:visible;transform:none;box-shadow:none;background:rgba(255,255,255,.04);width:100%;color:#fff;margin-bottom:8px}
+  .menu a:hover{background:rgba(255,255,255,.06)}.menu span span{color:#AEB6BD}.menu-note{color:#8A939B}
+  .nav .btn{margin-top:10px}
 }
+
+/* ---------- hero ---------- */
+.hero{position:relative;background:var(--ink);color:#fff;overflow:hidden;padding:clamp(120px,15vw,168px) 0 clamp(56px,8vw,110px);isolation:isolate}
+.hero::before{content:"";position:absolute;inset:0;z-index:-2;background:radial-gradient(60% 55% at 78% 8%,rgba(245,184,0,.2),transparent 60%),radial-gradient(45% 45% at 8% 90%,rgba(31,138,122,.16),transparent 60%)}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:64px 64px;-webkit-mask-image:radial-gradient(70% 70% at 60% 30%,#000,transparent 75%);mask-image:radial-gradient(70% 70% at 60% 30%,#000,transparent 75%)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(32px,5vw,72px);align-items:center}
+.pill{display:inline-flex;align-items:center;gap:10px;font-size:.84rem;font-weight:600;color:#D8DDE1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);padding:7px 14px 7px 8px;border-radius:99px;margin-bottom:26px}
+.pill b{background:var(--yellow);color:var(--ink);font-size:.68rem;letter-spacing:.1em;padding:3px 8px;border-radius:99px;text-transform:uppercase}
+.hero h1{font-size:clamp(2.7rem,6.6vw,5.1rem);line-height:.98}
+.hero h1 em{font-style:normal;background:linear-gradient(100deg,var(--yellow-2),var(--yellow) 60%,#FFB000);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lede{color:#B9C0C6;margin-top:24px;max-width:31em}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+.hero .fine{margin-top:24px;font-size:.9rem;color:#8A939B}.hero .fine a{color:#D8DDE1}
+.stage{position:relative;min-height:600px}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.14);border-radius:18px;box-shadow:0 40px 80px -30px rgba(0,0,0,.7)}
+.win{position:absolute;left:0;top:0;width:min(520px,90%);background:#fff;color:var(--ink);border-radius:14px;box-shadow:0 50px 90px -30px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.1);overflow:hidden;animation:rise .9s var(--ease) both}
+.win-bar{display:flex;align-items:center;gap:6px;padding:11px 14px;background:#F1F3F4;border-bottom:1px solid var(--line);font-size:.76rem;color:var(--steel);font-weight:600}
+.win-bar i{width:9px;height:9px;border-radius:50%;background:#D0D5D9}.win-bar span{margin:0 auto;transform:translateX(-18px)}
+.win-body{padding:18px;display:grid;gap:14px}
+.k3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.k3 div{border:1px solid var(--line);border-radius:10px;padding:10px 12px}.k3 small{display:block;font-size:.68rem;color:var(--steel);font-weight:600}.k3 b{font-size:1.2rem;letter-spacing:-.02em}
+.k3 div:first-child{background:var(--ink);border-color:var(--ink);color:#fff}.k3 div:first-child small{color:#AEB6BD}
+.chk{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.chk h4{margin:0;padding:10px 12px;font-size:.78rem;background:#F7F8F8;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.chk h4 span{color:var(--teal);font-weight:700}
+.chk li{list-style:none;display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:.84rem;border-bottom:1px solid #EEF0F1}.chk li:last-child{border:0}
+.chk ul{margin:0;padding:0}.dot{width:8px;height:8px;border-radius:50%;background:var(--yellow);flex:none}.dot.r{background:#E5604D}.dot.g{background:var(--teal-2)}
+.chk em{margin-left:auto;font-style:normal;color:var(--mute);font-size:.76rem}
+.phone{position:absolute;right:-6px;top:236px;width:236px;background:#0E1014;border-radius:34px;padding:9px;box-shadow:0 50px 80px -24px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.14);animation:rise 1s .15s var(--ease) both}
+.phone .scr{background:#171A1F;border-radius:26px;padding:16px 14px 14px;color:#fff;display:grid;gap:10px;font-size:.8rem}
+.phone .st{display:flex;justify-content:space-between;font-size:.66rem;color:#8A939B;font-weight:600}
+.call{background:rgba(255,255,255,.06);border-radius:12px;padding:10px 12px;display:grid;gap:3px}
+.call b{font-size:.84rem}.call span{color:#AEB6BD;font-size:.74rem;line-height:1.35}
+.tag{justify-self:start;font-size:.62rem;font-weight:800;letter-spacing:.04em;white-space:nowrap;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:rgba(245,184,0,.16);color:var(--yellow)}
+.tag.ok{background:rgba(43,179,159,.18);color:var(--teal-2)}
+.float{position:absolute;display:flex;align-items:center;gap:10px;background:#fff;color:var(--ink);padding:10px 14px;border-radius:12px;font-size:.82rem;font-weight:700;box-shadow:0 24px 50px -18px rgba(0,0,0,.6);animation:bob 6s ease-in-out infinite}
+.float i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-style:normal;font-size:.8rem}
+.float.f1{left:6px;bottom:96px}.float.f1 i{background:#E6F4F1;color:var(--teal)}
+.float.f2{left:calc(90% - 150px);top:-20px;animation-delay:-3s}.float.f2 i{background:#FFF3CC;color:#9A7000}
+.illus{position:absolute;left:6px;bottom:20px;font-size:.7rem;color:#6B747C;letter-spacing:.04em}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@media(max-width:980px){.hero .wrap{grid-template-columns:1fr}.stage{min-height:500px;margin-top:8px}}
+@media(max-width:560px){.stage{min-height:690px}.win{width:100%}.phone{width:210px;top:322px;right:0}.float.f2,.float.f1{display:none}.illus{bottom:6px}.k3 b{font-size:1rem}}
+
+.proof{background:var(--ink);border-top:1px solid rgba(255,255,255,.08);color:#9AA3AB}
+.proof ul{list-style:none;margin:0;padding:22px 0;display:flex;flex-wrap:wrap;gap:12px 40px;justify-content:space-between;font-size:.9rem;font-weight:600}
+.proof li{display:flex;align-items:center;gap:10px}.proof li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--yellow)}
+
+/* ---------- sections ---------- */
+.sec{padding:clamp(64px,9vw,128px) 0}
+.sec.white{background:#fff}.sec.dark{background:var(--ink);color:#fff}
+.head{max-width:44em;margin-bottom:clamp(34px,5vw,64px)}.head.c{margin-inline:auto;text-align:center}.head.c .lede{margin-inline:auto}
+.dark .lede{color:#AEB6BD}
+
+/* platform */
+.plat{display:grid;grid-template-columns:1fr 1.05fr 1fr;gap:clamp(14px,2.4vw,28px);align-items:center;position:relative}
+.node{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:10px;position:relative;box-shadow:0 20px 40px -28px rgba(21,24,28,.35)}
+.node h3{font-size:1.3rem;letter-spacing:-.02em}.node p{color:var(--steel);font-size:.95rem}
+.node .ico{margin-bottom:4px}
+.core{background:var(--ink);color:#fff;border-color:var(--ink);text-align:center;justify-items:center;padding:30px 22px;box-shadow:0 40px 70px -30px rgba(21,24,28,.6)}
+.core::before{content:"";position:absolute;inset:-1px;border-radius:16px;padding:1px;background:linear-gradient(140deg,var(--yellow),transparent 40%,var(--teal-2));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.core p{color:#AEB6BD}.core .logo-mark{width:54px;height:50px}
+.plat .node:first-child::after,.plat .node:last-child::before{content:"";position:absolute;top:50%;width:clamp(14px,2.4vw,28px);height:2px;background:repeating-linear-gradient(90deg,var(--steel) 0 6px,transparent 6px 11px)}
+.plat .node:first-child::after{right:calc(-1 * clamp(14px,2.4vw,28px))}.plat .node:last-child::before{left:calc(-1 * clamp(14px,2.4vw,28px))}
+.under{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:14px}
+.under span{font-size:.78rem;font-weight:700;border:1px solid var(--line);background:var(--paper);padding:4px 10px;border-radius:99px}
+@media(max-width:900px){.plat{grid-template-columns:1fr}.plat .node::before,.plat .node::after{display:none!important}.under{justify-content:flex-start}}
+.plat-note{margin-top:26px;color:var(--steel);font-size:.95rem;text-align:center}
+
+/* product showcase */
+.prod{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:clamp(30px,5vw,80px);align-items:center}
+.prod.flip{grid-template-columns:minmax(0,1.18fr) minmax(0,.82fr)}.prod.flip .copy{order:2}
+.chipx{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px 6px 8px;border-radius:99px;margin-bottom:20px}
+.chipx i{width:22px;height:22px;border-radius:7px;display:grid;place-items:center}.chipx svg{width:13px;height:13px}
+.chipx.mia{background:var(--ink);color:var(--yellow)}.chipx.mia i{background:rgba(245,184,0,.18)}
+.chipx.bk{background:#E6F4F1;color:#126B5D}.chipx.bk i{background:#fff}
+.copy h2{font-size:clamp(1.9rem,3.8vw,2.8rem)}
+.caps{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px;margin:30px 0;padding:0;list-style:none}
+.caps li{display:grid;gap:3px;align-content:start;font-size:.93rem;color:var(--steel);border-top:2px solid var(--line);padding-top:12px}
+.caps b{color:var(--ink);font-size:.98rem}
+.mia-sec .caps li{border-color:var(--yellow)}.bk-sec .caps li{border-color:var(--teal-2)}
+.price-line{display:flex;align-items:baseline;gap:8px;margin-bottom:22px;color:var(--steel);font-size:.95rem}.price-line b{font-size:1.9rem;color:var(--ink);letter-spacing:-.03em}
+.mia-sec{background:#fff}.bk-sec{background:var(--paper)}
+@media(max-width:900px){.prod,.prod.flip{grid-template-columns:1fr}.prod.flip .copy{order:0}.caps{grid-template-columns:1fr}}
+
+.canvas{position:relative;border-radius:22px;padding:clamp(18px,3vw,36px);min-height:440px;display:grid;place-items:center;overflow:hidden}
+.canvas.mia{background:radial-gradient(70% 60% at 30% 20%,rgba(245,184,0,.28),transparent 65%),var(--ink)}
+.canvas.bk{background:radial-gradient(70% 60% at 75% 15%,rgba(43,179,159,.25),transparent 65%),linear-gradient(160deg,#E9F3F1,#DCEBE8)}
+.canvas::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:40px 40px;-webkit-mask-image:radial-gradient(60% 60% at 50% 40%,#000,transparent 80%);mask-image:radial-gradient(60% 60% at 50% 40%,#000,transparent 80%);pointer-events:none}
+.canvas.bk::after{background-image:linear-gradient(rgba(21,24,28,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(21,24,28,.05) 1px,transparent 1px)}
+.pane{position:relative;z-index:1;width:100%;max-width:480px;background:#fff;color:var(--ink);border-radius:14px;box-shadow:0 40px 70px -28px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.06);overflow:hidden}
+.pane.dk{background:#171A1F;color:#fff;box-shadow:0 40px 70px -28px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.1)}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:.92rem}
+.dk .ph{border-color:rgba(255,255,255,.1)}
+.ph small{font-weight:600;color:var(--mute);font-size:.74rem}
+.row{display:grid;grid-template-columns:36px 1fr auto;gap:12px;padding:13px 16px;align-items:center;border-bottom:1px solid var(--line)}
+.dk .row{border-color:rgba(255,255,255,.08)}
+.av{width:36px;height:36px;border-radius:10px;background:rgba(245,184,0,.16);color:var(--yellow);display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.row b{display:block;font-size:.92rem}.row span{color:#9AA3AB;font-size:.82rem;line-height:1.35}
+.time{font-size:.74rem;color:#7F8890}
+.sms{margin:14px 16px 16px;background:rgba(245,184,0,.1);border:1px solid rgba(245,184,0,.3);border-radius:12px;padding:12px 14px;font-size:.85rem;color:#F1E3B3}
+.sms small{display:block;color:#C6B27A;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+.tr{padding:14px 16px;display:grid;gap:8px}
+.bub{max-width:86%;padding:9px 12px;border-radius:14px;font-size:.84rem;line-height:1.4}
+.bub.a{background:rgba(255,255,255,.08);border-bottom-left-radius:4px;justify-self:start}.bub.b{background:var(--yellow);color:var(--ink);font-weight:600;border-bottom-right-radius:4px;justify-self:end}
+.fig{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.fig div{background:#fff;padding:14px 16px}.fig small{display:block;font-size:.72rem;color:var(--steel);font-weight:600}.fig b{font-size:1.35rem;letter-spacing:-.03em}
+.fig div:first-child b{font-size:1.7rem}
+.b-row{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);font-size:.88rem}
+.b-row:last-child{border:0}.b-row em{margin-left:auto;font-style:normal;color:var(--mute);font-size:.78rem;white-space:nowrap}
+.b-row .ok{width:26px;height:26px;border-radius:8px;background:#E6F4F1;color:var(--teal);display:grid;place-items:center;font-size:.8rem;font-weight:800;flex:none}
+.undo{margin-left:auto;font-size:.76rem;font-weight:700;border:1px solid var(--line);padding:4px 10px;border-radius:99px;color:var(--steel)}
+.chk2{padding:14px 16px;background:#FAFBFB}
+.chk2 h4{margin:0 0 10px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--steel)}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pills span{font-size:.8rem;font-weight:700;padding:6px 11px;border-radius:99px;background:#fff;border:1px solid var(--line);display:inline-flex;gap:7px;align-items:center}
+.sidephone{position:absolute;z-index:2;right:clamp(8px,2vw,22px);bottom:clamp(8px,2vw,22px);width:150px;background:#0E1014;border-radius:26px;padding:7px;box-shadow:0 30px 50px -16px rgba(0,0,0,.6);animation:bob 7s ease-in-out infinite}
+.sidephone div{background:#171A1F;border-radius:20px;padding:12px;color:#fff;font-size:.7rem;display:grid;gap:6px}
+.sidephone b{font-size:.76rem;color:var(--teal-2)}
+@media(max-width:560px){.sidephone{display:none}.canvas{min-height:0}}
+
+/* integrations */
+.integ{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.int{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;display:grid;gap:14px;align-content:start;transition:transform .25s var(--ease),box-shadow .25s}
+.int:hover{transform:translateY(-4px);box-shadow:0 26px 50px -30px rgba(21,24,28,.5)}
+.wm{display:flex;align-items:center;gap:12px;font-weight:900;font-stretch:88%;font-size:1.5rem;letter-spacing:-.02em}
+.wm i{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-style:normal;font-size:1rem;color:#fff;font-weight:800}
+.int p{color:var(--steel);font-size:.95rem}
+.badge{justify-self:start;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:99px}
+.badge.ok{background:#E6F4F1;color:#126B5D}.badge.soon{background:#FFF3CC;color:#7A5A00}
+.plat-note{margin-top:26px;color:var(--steel);font-size:.95rem;text-align:center}.int-note{margin-top:22px;color:var(--steel);font-size:.95rem}
+@media(max-width:860px){.integ{grid-template-columns:1fr}}
+
+/* benefits */
+.ben{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid rgba(255,255,255,.12);border-radius:16px;overflow:hidden}
+.ben div{padding:30px 26px;border-right:1px solid rgba(255,255,255,.1);display:grid;gap:12px;align-content:start;background:rgba(255,255,255,.02)}
+.ben div:last-child{border:0}.ben h3{font-size:1.2rem;letter-spacing:-.02em}.ben p{color:#AEB6BD;font-size:.95rem}
+.ben .n{font-weight:800;color:var(--yellow);font-size:.82rem;letter-spacing:.14em}
+@media(max-width:980px){.ben{grid-template-columns:1fr 1fr}.ben div:nth-child(2){border-right:0}.ben div:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,.1)}}
+@media(max-width:560px){.ben{grid-template-columns:1fr}.ben div{border-right:0!important;border-bottom:1px solid rgba(255,255,255,.1)}.ben div:last-child{border:0}}
 
 /* how */
-.how{padding:clamp(64px,9vw,120px) 0}
-.steps{margin:clamp(32px,5vw,56px) 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,4vw,56px);counter-reset:s}
-.steps li{counter-increment:s;border-top:3px solid var(--charcoal);padding-top:18px}
-.steps li::before{content:counter(s);display:block;font-weight:900;font-stretch:68%;font-size:5.5rem;line-height:.9;color:var(--yellow);-webkit-text-stroke:2px var(--charcoal);margin-bottom:10px}
-.steps b{display:block;font-weight:900;font-stretch:76%;font-size:1.7rem;line-height:1.1;margin-bottom:8px}
-.steps span{color:#3B434B}
-@media(max-width:800px){.steps{grid-template-columns:1fr}}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;counter-reset:s;list-style:none;margin:0;padding:0;position:relative}
+.steps li{counter-increment:s;background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;display:grid;gap:10px;align-content:start}
+.steps li::before{content:counter(s);width:38px;height:38px;border-radius:50%;background:var(--ink);color:var(--yellow);display:grid;place-items:center;font-weight:800}
+.steps b{font-size:1.15rem;letter-spacing:-.02em}.steps span{color:var(--steel);font-size:.95rem}
+@media(max-width:860px){.steps{grid-template-columns:1fr}}
 
-/* built for */
-.trades{background:var(--yellow);padding:clamp(48px,7vw,88px) 0}
-.trades p{margin:0;font-weight:900;font-stretch:68%;word-spacing:.1em;font-size:clamp(2rem,4.8vw,3.9rem);line-height:1.05;letter-spacing:-.005em}
-.trades p i{font-style:normal;color:rgba(31,35,40,.38);padding:0 .12em}
-.trades small{display:block;margin-top:18px;font-weight:600;font-size:1.05rem}
+/* trust */
+.trust{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(30px,5vw,80px);align-items:start}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tgrid div{border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:22px;background:rgba(255,255,255,.03);display:grid;gap:8px}
+.tgrid b{font-size:1.05rem;letter-spacing:-.01em}.tgrid p{color:#AEB6BD;font-size:.93rem}
+.tgrid a{color:var(--yellow)}
+@media(max-width:900px){.trust{grid-template-columns:1fr}}@media(max-width:560px){.tgrid{grid-template-columns:1fr}}
 
 /* pricing */
-.pricing{background:var(--charcoal);color:var(--white);padding:clamp(64px,9vw,120px) 0}
-.pricing .wrap{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(28px,6vw,88px);align-items:start}
-.pricing .lede{color:#D5D9DD;margin-top:22px}
-.addon{margin-top:28px;padding-left:18px;border-left:4px solid var(--yellow);color:#C9CED3;font-size:1rem;max-width:30em}
-.price-panel{background:var(--white);color:var(--charcoal);padding:clamp(26px,4vw,48px);position:relative;box-shadow:12px 12px 0 var(--yellow)}
-.price{display:flex;align-items:baseline;gap:10px;line-height:.9}
-.price b{font-weight:900;font-stretch:68%;font-size:clamp(5rem,12vw,8.5rem);letter-spacing:-.01em}
-.price span{font-weight:700;font-size:1.3rem;color:var(--steel)}
-.price-panel ul{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:10px}
-.price-panel li{padding-left:30px;position:relative;font-weight:600}
-.price-panel li::before{content:"";position:absolute;left:0;top:.42em;width:16px;height:9px;border-left:4px solid var(--charcoal);border-bottom:4px solid var(--charcoal);transform:rotate(-45deg)}
-.setup{margin-top:30px;padding-top:22px;border-top:2px solid var(--charcoal);font-size:1rem;color:#3B434B}
-.setup b{font-size:1.1rem;color:var(--charcoal)}
-.setup s{color:var(--steel)}
-.price-panel .btn{margin-top:24px;width:100%}
-.stamp{position:absolute;top:-22px;right:clamp(10px,3vw,30px);transform:rotate(7deg);border:4px solid var(--yellow);background:var(--charcoal);color:var(--yellow);padding:8px 16px;font-weight:900;font-stretch:76%;font-size:1.25rem;line-height:1.05;text-align:center}
-.stamp small{display:block;font-size:.8rem;font-weight:700;color:var(--white);margin-top:2px;font-stretch:100%}
-@media(max-width:900px){.pricing .wrap{grid-template-columns:1fr}.stamp{top:-26px}.price-panel{box-shadow:8px 8px 0 var(--yellow)}}
+.price-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.pp{background:#fff;border:1px solid var(--line);border-radius:18px;padding:clamp(24px,3vw,38px);display:grid;gap:16px;align-content:start;position:relative}
+.pp.mia{border-top:4px solid var(--yellow)}.pp.bk{border-top:4px solid var(--teal)}
+.pp h3{font-size:1.6rem}.pp .big{display:flex;align-items:baseline;gap:10px}.pp .big b{font-size:3rem;letter-spacing:-.04em;line-height:1}.pp .big span{color:var(--steel);font-size:.92rem;line-height:1.3}
+.pp ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.pp li{padding-left:26px;position:relative;font-size:.97rem}
+.pp li::before{content:"";position:absolute;left:2px;top:.45em;width:12px;height:7px;border-left:3px solid var(--teal);border-bottom:3px solid var(--teal);transform:rotate(-45deg)}
+.pp.mia li::before{border-color:#C28F00}
+.pp .setup{color:var(--steel);font-size:.9rem}
+.tagp{justify-self:start;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:var(--paper);border:1px solid var(--line);padding:5px 11px;border-radius:99px}
+@media(max-width:860px){.price-grid{grid-template-columns:1fr}}
 
-/* trust + faq */
-.faq{padding:clamp(64px,9vw,120px) 0}
-.trust{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(20px,4vw,56px);margin:0 0 clamp(48px,7vw,88px);padding:0;list-style:none}
-.trust li{border-top:3px solid var(--yellow);padding-top:16px}
-.trust b{display:block;font-weight:900;font-stretch:76%;font-size:1.55rem;line-height:1.1;margin-bottom:6px}
-.trust span{color:#3B434B;font-size:1rem}
-@media(max-width:800px){.trust{grid-template-columns:1fr}}
-.qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(24px,5vw,72px);margin-top:clamp(28px,4vw,48px);align-items:start}
-.qa details{border-top:1px solid var(--line)}
-.qa summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:20px 0;font-weight:800;font-size:1.15rem;line-height:1.25}
-.qa summary::-webkit-details-marker{display:none}
-.qa summary::after{content:"+";flex:none;width:30px;height:30px;display:grid;place-items:center;background:var(--charcoal);color:var(--yellow);font-weight:900;font-size:1.3rem;line-height:1}
-.qa details[open] summary::after{content:"\2013"}
-.qa details p{margin:-6px 46px 20px 0;color:#3B434B;font-size:1rem}
-@media(max-width:800px){.qa{grid-template-columns:1fr}}
+/* faq */
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
+details{border-top:1px solid var(--line);padding:4px 0}
+details:last-child{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;font-weight:700;padding:18px 36px 18px 0;list-style:none;position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:4px;top:12px;font-size:1.6rem;font-weight:400;color:var(--steel);transition:transform .2s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{padding:0 0 20px;color:var(--steel);max-width:36em}details a{text-decoration:underline}
+@media(max-width:860px){.qa{grid-template-columns:1fr}}
+
+/* about */
+.about{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(30px,5vw,80px);align-items:center}
+.about p+p{margin-top:14px}.about .lede{margin-top:20px}
+.facts{display:grid;gap:12px}.facts div{display:flex;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid var(--line);font-size:.97rem}.facts span{color:var(--steel)}.facts b{text-align:right}
+@media(max-width:860px){.about{grid-template-columns:1fr}}
 
 /* contact */
-.hazard{height:16px;background:repeating-linear-gradient(-45deg,var(--yellow) 0 16px,var(--charcoal) 16px 32px)}
-.contact{background:var(--yellow);padding:clamp(56px,8vw,104px) 0}
-.contact .wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(28px,6vw,88px);align-items:end}
-.contact .lede{margin-top:20px}
-.contact .me{margin:18px 0 0;font-size:1rem;max-width:30em}
-.details{background:var(--charcoal);color:var(--white);padding:clamp(22px,3vw,36px);display:grid;gap:18px;margin:0}
-.details dt{font-size:.85rem;font-weight:700;color:var(--yellow)}
-.details dd{margin:2px 0 0;font-size:1.3rem;font-weight:700;overflow-wrap:anywhere}
-.details a{text-underline-offset:4px}
-.details .btn{margin-top:6px;min-height:48px;font-size:1rem}
-@media(max-width:900px){.contact .wrap{grid-template-columns:1fr}}
-.foot{background:var(--charcoal);color:#9AA3AB;font-size:.92rem}
-.foot .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;padding-top:22px;padding-bottom:22px}
-.foot nav{display:flex;gap:20px}
+.contact{background:var(--ink);color:#fff;position:relative;overflow:hidden;isolation:isolate}
+.contact::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(50% 60% at 90% 0%,rgba(245,184,0,.18),transparent 60%)}
+.cgrid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(30px,5vw,80px);align-items:start}
+.contact .lede{color:#AEB6BD}
+.details{margin:34px 0 0;display:grid;gap:0}
+.details div{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+.details dt{color:#8A939B;font-size:.85rem;font-weight:600}.details dd{margin:0;font-weight:700;text-align:right}.details a{text-decoration:none}
+.me{margin-top:24px;color:#8A939B;font-size:.92rem}
+.enq{background:#fff;color:var(--ink);border-radius:18px;padding:clamp(22px,3vw,36px);display:grid;gap:16px;box-shadow:0 40px 70px -30px rgba(0,0,0,.6)}
+.enq h3{font-size:1.5rem}.enq .small{color:var(--steel);font-size:.93rem;margin-top:-8px}
+.enq label{display:grid;gap:6px;font-weight:700;font-size:.88rem}
+.enq input,.enq select{font:inherit;font-size:1rem;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);width:100%}
+.enq input:focus,.enq select:focus{border-color:var(--charcoal);outline:none;box-shadow:0 0 0 3px rgba(245,184,0,.45)}
+.enq .r{display:grid;gap:14px}@media(min-width:760px){.enq .r{grid-template-columns:1fr 1fr}}
+.enq button{font:inherit;font-weight:800;font-size:1.05rem;min-height:54px;padding:12px 28px;border:0;border-radius:10px;background:var(--yellow);color:var(--ink);cursor:pointer;justify-self:start;transition:background .15s,transform .15s}
+.enq button:hover:not(:disabled){background:var(--yellow-2);transform:translateY(-1px)}.enq button:disabled{opacity:.6;cursor:default}
+.hp{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
+.msg{min-height:1.4em;font-size:.93rem;font-weight:600}.msg.ok{color:#126B5D}.msg.bad{color:#B3261E}
+@media(max-width:900px){.cgrid{grid-template-columns:1fr}}
 
-/* sticky booking bar on phones */
-.mbar{display:none}
-@media(max-width:760px){
-  .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--charcoal);color:var(--white);border-top:3px solid var(--yellow);transform:translateY(110%);transition:transform .3s var(--ease)}
-  .mbar.show{transform:none}
-  .mbar span{font-size:.9rem;line-height:1.2;color:#C9CED3}
-  .mbar span b{display:block;color:var(--white);font-size:1.05rem}
-  .mbar .btn{min-height:46px;padding:0 18px;font-size:.98rem;white-space:nowrap}
-  .foot{padding-bottom:76px}
-}
+/* footer */
+.foot{background:#0F1215;color:#9AA3AB;padding:clamp(48px,7vw,80px) 0 28px;font-size:.93rem}
+.fgrid{display:grid;grid-template-columns:1.5fr repeat(4,1fr);gap:32px}
+.foot h4{margin:0 0 14px;color:#fff;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase}
+.foot ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.foot a{text-decoration:none;color:#9AA3AB;transition:color .15s}.foot a:hover{color:#fff}
+.foot .brand{margin-bottom:14px}.foot .about-line{max-width:22em;line-height:1.55}
+.legal{margin-top:44px;padding-top:22px;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;font-size:.84rem}
+@media(max-width:940px){.fgrid{grid-template-columns:1fr 1fr 1fr}.fgrid>div:first-child{grid-column:1/-1}}
+@media(max-width:560px){.fgrid{grid-template-columns:1fr 1fr}}
 
-@media(prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  .js .reveal{opacity:1;transform:none;transition:none}
-  .ring::before,.ring::after,.cap,.scr-sms.on .msg,.phone.buzz{animation:none}
-  .tile,.tile:hover{transition:none;transform:none}
-}
-.enq{grid-column:1/-1;background:#fff;color:#1F2328;border-radius:18px;padding:clamp(20px,4vw,32px);display:grid;gap:14px}.enq h3{margin:0;font-size:1.3rem;font-weight:900;font-stretch:85%}.enq p.small{margin:0;color:#566069;font-size:.95rem}
-.enq .row{display:grid;gap:14px}@media(min-width:760px){.enq .row{grid-template-columns:1fr 1fr}}.enq label{display:grid;gap:6px;font-weight:700;font-size:.95rem}.enq input,.enq select,.enq textarea{font:inherit;font-size:1.05rem;padding:13px 14px;min-height:52px;border:2px solid #C9CED3;border-radius:12px;background:#fff;color:#1F2328;width:100%}.enq textarea{min-height:96px;resize:vertical}.enq input:focus,.enq select:focus,.enq textarea:focus{outline:none;border-color:#1F2328}
-.enq button{font:inherit;font-weight:800;font-size:1.05rem;min-height:54px;padding:12px 28px;border:0;border-radius:12px;background:#F5B800;color:#1F2328;cursor:pointer;justify-self:start}.enq button:disabled{opacity:.6}.enq .hp{position:absolute;left:-9999px;height:0;overflow:hidden}.enq .msg{font-weight:700;min-height:1.4em}.enq .msg.ok{color:#16794a}.enq .msg.bad{color:#B3361F}
-.duo{background:var(--paper);padding:clamp(48px,7vw,96px) 0}.duo .display{max-width:16em}.duo-grid{display:grid;gap:clamp(16px,3vw,32px);margin-top:clamp(24px,4vw,40px)}@media(min-width:760px){.duo-grid{grid-template-columns:1fr 1fr}}
-.duo-card{background:#fff;border-top:6px solid var(--yellow);padding:clamp(22px,3.5vw,40px);box-shadow:10px 10px 0 var(--charcoal);display:flex;flex-direction:column;gap:12px}.duo-card h3{margin:0;font-weight:900;font-stretch:76%;font-size:clamp(1.9rem,4vw,2.6rem);line-height:1}.duo-card p{margin:0;color:#3B434B;font-size:1.05rem}.duo-card .duo-price{color:var(--charcoal);font-weight:700}.duo-card .duo-price b{font-size:1.9rem;font-weight:900}.duo-card .duo-price small{color:var(--steel);font-weight:600;margin-left:6px}.duo-card .btn{align-self:flex-start;margin-top:auto}
-.hero.joined .wrap{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)}.hero.joined .duo-card h3{color:var(--charcoal)}.hero.joined .duo-card p{color:#3B434B}.hero.joined .duo-card .duo-price{color:var(--charcoal)}.hero.joined .duo-card .duo-price small{color:var(--steel)}.mini{display:grid;gap:16px}.mini .duo-card{box-shadow:8px 8px 0 var(--yellow);padding:22px}.mini .duo-card h3{font-size:1.9rem}.mini .duo-card p{font-size:1rem}.mini .duo-card{border-top:0;border-left:6px solid var(--yellow)}
-.feat{display:grid;gap:12px;margin:0;padding:0;list-style:none}.feat li{padding-left:28px;position:relative;font-weight:600}.feat li::before{content:'';position:absolute;left:0;top:.45em;width:15px;height:8px;border-left:4px solid var(--charcoal);border-bottom:4px solid var(--charcoal);transform:rotate(-45deg)}
-.ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:auto}.ctas .btn.line{background:transparent;border:2px solid var(--charcoal);color:var(--charcoal)}
-.pricing.two .wrap{grid-template-columns:1fr}.panels{display:grid;gap:clamp(24px,4vw,48px);margin-top:clamp(28px,4vw,48px)}@media(min-width:860px){.panels{grid-template-columns:1fr 1fr}}.panels .price-panel{display:flex;flex-direction:column}.panels .price-panel h3{margin:0 0 6px;font-weight:900;font-stretch:76%;font-size:2rem}.panels .price-panel .btn{margin-top:auto}
-@media(max-width:859px){.hero.joined .wrap{grid-template-columns:1fr}}
-
-.ecosystem .display{margin-bottom:16px}.eco-lede{max-width:40em;margin:0;color:#3B434B;font-size:1.12rem}
-.prod{position:relative;gap:14px;transition:transform .25s var(--ease),box-shadow .25s var(--ease)}.prod:hover{transform:translate(-3px,-3px);box-shadow:13px 13px 0 var(--charcoal)}
-.badge{align-self:flex-start;background:var(--charcoal);color:#fff;font-weight:800;font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;padding:6px 10px}
-.prod .tag{font-weight:700;color:var(--charcoal)}
-.peek{background:var(--charcoal);color:#fff;border-radius:14px;padding:14px;display:grid;gap:8px;font-size:.92rem;border:1px solid var(--charcoal-3);box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
-.peek-bar{display:flex;align-items:center;gap:6px;font-size:.78rem;color:#B9C0C6;font-weight:600}.peek-bar i{width:9px;height:9px;border-radius:50%;background:var(--charcoal-3)}.peek-bar i:first-child{background:var(--yellow)}.peek-bar span{margin-left:8px;letter-spacing:.04em}
-.bub{max-width:86%;padding:8px 12px;border-radius:14px;line-height:1.35}.bub.them{background:var(--charcoal-3);justify-self:start;border-bottom-left-radius:4px}.bub.mia{background:var(--yellow);color:var(--charcoal);justify-self:end;border-bottom-right-radius:4px;font-weight:600}
-.chip-row{display:flex;gap:6px;flex-wrap:wrap}.chip-row span{background:rgba(245,184,0,.16);color:var(--yellow);font-weight:700;font-size:.74rem;padding:4px 9px;border-radius:99px}
-.peek-sms{background:rgba(255,255,255,.07);border-radius:10px;padding:8px 12px;font-size:.84rem;color:#E4E7EA}.peek-sms b{color:var(--yellow)}
-.filed{background:var(--charcoal-2);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 10px}.filed b{color:var(--yellow)}.filed span{grid-column:1;font-size:.84rem;color:#C9CED3}.filed em{grid-column:2;grid-row:1/3;align-self:center;font-style:normal;font-weight:700;font-size:.8rem;border:1px solid var(--charcoal-3);padding:4px 10px;border-radius:99px}
-.figs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.figs div{background:var(--charcoal-2);border-radius:10px;padding:8px 10px}.figs small{display:block;color:#B9C0C6;font-size:.7rem;font-weight:600}.figs b{font-size:1.05rem}
-.integ{margin-top:clamp(28px,4vw,48px);background:#fff;border:2px solid var(--charcoal);padding:clamp(20px,3.5vw,36px);display:grid;gap:20px}
-.integ-head h3{margin:0 0 6px;font-weight:900;font-stretch:76%;font-size:clamp(1.4rem,3vw,1.9rem);line-height:1.1}.integ-head p{margin:0;color:#3B434B;font-size:1rem}
-.integ-grid{list-style:none;margin:0;padding:0;display:grid;gap:14px}@media(min-width:760px){.integ-grid{grid-template-columns:repeat(3,1fr)}}
-.integ-grid li{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--line);padding:16px;display:grid;gap:8px;align-content:start}
-.integ-grid li:nth-child(-n+2){border-top-color:var(--yellow)}
-.wm{font-weight:900;font-stretch:80%;font-size:1.5rem;letter-spacing:.01em}
-.st{justify-self:start;font-weight:800;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:4px 9px}.st.ok{background:var(--charcoal);color:#fff}.st.soon{background:transparent;color:var(--charcoal);border:1.5px dashed var(--steel)}
-.integ-grid small{color:var(--steel);font-size:.9rem;line-height:1.4}
-.more{margin-top:clamp(20px,3vw,32px);border:2px dashed var(--line);padding:clamp(18px,3vw,28px);display:flex;gap:16px 28px;align-items:center;justify-content:space-between;flex-wrap:wrap}.more b{font-weight:900;font-stretch:76%;font-size:1.4rem}.more p{margin:4px 0 0;color:var(--steel);font-size:1rem;max-width:34em}.more .btn{min-height:46px;background:transparent;border:2px solid var(--charcoal);color:var(--charcoal)}
-@media(prefers-reduced-motion:reduce){.prod{transition:none}.prod:hover{transform:none}}
+.js .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.js .reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.js .reveal{opacity:1;transform:none}html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-<header class="top">
+<a class="sr" href="#main" style="position:absolute;left:-9999px">Skip to content</a>
+<header class="top" id="top">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Localdesk, home">
+    <a class="brand" href="#" aria-label="Localdesk, home">
       <svg class="logo-mark" width="52" height="49" viewBox="-4 -4 228 214" role="img" aria-label="Localdesk logo" aria-hidden="true"><defs><linearGradient id="nv0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="nv1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient></defs><circle cx="110" cy="58" r="58" fill="url(#nv0)" stroke="#1F2328" stroke-width="6"/><g transform="translate(110 55) scale(2.2)"><path d="M-9 3V-1a9 9 0 0 1 18 0V3" fill="none" stroke="#1F2328" stroke-width="2.8" stroke-linecap="round"/><rect x="-12.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><rect x="6.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><path d="M9.5 10Q9.5 13 4 13H0" fill="none" stroke="#1F2328" stroke-width="2.4" stroke-linecap="round"/><circle cx="-1" cy="13" r="2" fill="#1F2328"/></g><circle cx="60" cy="144" r="58" fill="url(#nv1)" stroke="#1F2328" stroke-width="6"/><g transform="translate(60 144) scale(2.2)"><rect x="-12" y="-9.5" width="24" height="21.5" rx="3.6" fill="#1F2328"/><rect x="-7.6" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="4.4" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="-12" y="-5" width="24" height="2.4" fill="#F5B800"/><path d="M-5.8 5.2L-1.6 9L6.2 0.8" fill="none" stroke="#F5B800" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="160" cy="144" r="58" fill="url(#nv2)" stroke="#1F2328" stroke-width="6"/><g transform="translate(160 146) scale(2.2)"><path d="M-12 -10.5h24a3.5 3.5 0 0 1 3.5 3.5v11a3.5 3.5 0 0 1-3.5 3.5H-1.5L-9 15v-6.5h-3a3.5 3.5 0 0 1-3.5-3.5V-7a3.5 3.5 0 0 1 3.5-3.5Z" fill="#1F2328" transform="scale(.82) translate(0 -1)"/><rect x="-8.5" y="-6.8" width="17" height="2.6" rx="1.3" fill="#F5B800"/><rect x="-8.5" y="-1.8" width="10.5" height="2.6" rx="1.3" fill="#F5B800"/></g></svg>
       <span><span class="brand-name">LOCALDESK</span><span class="brand-sub">FOR TRADES</span></span>
     </a>
-    <nav class="nav" aria-label="Main">
-      <a href="#products">Products</a>
-      <a href="receptionist/">Receptionist</a>
-      <a href="books/">Books</a>
+    <button class="burger" aria-label="Menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+    <nav class="nav" id="nav" aria-label="Main">
+      <div class="dd">
+        <button type="button" aria-haspopup="true" aria-expanded="false">Products</button>
+        <div class="menu" role="menu">
+          <a href="receptionist/" role="menuitem"><span class="ico mia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></span><span><b>Localdesk Receptionist</b><span>An AI receptionist that answers every call and captures the details.</span></span></a>
+          <a href="books/" role="menuitem"><span class="ico bk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></span><span><b>Books by Localdesk</b><span>Receipts, invoices and a monthly books-check, from your phone.</span></span></a>
+          <p class="menu-note">More tools coming.</p>
+        </div>
+      </div>
+      <a href="#integrations">Integrations</a>
       <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
-      <a class="btn btn-yellow" href="#contact">Get started</a>
+      <a href="#about">About</a>
+      <a href="#contact">Contact</a>
+      <a class="btn btn-y" href="#contact">Get started</a>
     </nav>
   </div>
 </header>
-<main id="top">
-<section class="hero joined">
+
+<main id="main">
+<section class="hero">
   <div class="wrap">
     <div>
-      <h1 class="display"><span>The phone</span><span>answered.</span><span>The books done.</span></h1>
-      <p class="lede">Localdesk helps trades across Cornwall and Plymouth stay on top of the admin. Mia answers your calls and texts you the details. Books files your receipts and keeps your bookkeeping sorted, from your phone.</p>
-      <div class="actions">
-        <a class="btn btn-white" href="receptionist/">Mia, the receptionist</a>
-        <a class="btn btn-yellow" href="books/">Books, the bookkeeping</a>
+      <p class="pill"><b>New</b> Software built for UK tradespeople</p>
+      <h1>Less admin. <em>More time for the work.</em></h1>
+      <p class="lede">Localdesk builds practical software for tradespeople. An AI receptionist that answers every call, and bookkeeping that files your receipts and keeps you on top of the numbers. Two products, built to work as one.</p>
+      <div class="cta-row">
+        <a class="btn btn-y arrow" href="#products">Explore our products </a>
+        <a class="btn btn-g" href="#contact">Get started</a>
       </div>
-      <p class="fine"><b style="color:#fff">Start with either. Add the other whenever you're ready.</b></p>
-      <p class="fine">Or ring our demo line and hear Mia: <a href="tel:+441752741686">01752 741686</a>.</p>
+      <p class="fine">Or ring our demo line and hear the receptionist: <a href="tel:+441752741686">01752 741686</a></p>
     </div>
-    <div class="mini">
-      <article class="duo-card"><h3>Mia</h3><p>Answers every call 24/7, takes the details and texts you a summary.</p><p class="duo-price"><b>£397</b> a month <small>7-day free trial</small></p><a class="btn btn-yellow" href="receptionist/">See Mia</a></article>
-      <article class="duo-card"><h3>Books</h3><p>Snap a receipt and it's filed in your accounting software. Invoices, chasing and monthly books-checks.</p><p class="duo-price"><b>£150</b> a month <small>plus £395 setup</small></p><a class="btn btn-yellow" href="books/">See Books</a></article>
+    <div class="stage" aria-label="Illustration of the Localdesk products">
+      <div class="win">
+        <div class="win-bar"><i></i><i></i><i></i><span>Books · this month</span></div>
+        <div class="win-body">
+          <div class="k3"><div><small>Profit so far</small><b>£2,900</b></div><div><small>Money in</small><b>£4,200</b></div><div><small>Owed to you</small><b>£650</b></div></div>
+          <div class="chk"><h4>Monthly books-check <span>3 things to look at</span></h4>
+            <ul><li><span class="dot r"></span>2 receipts missing<em>Add a photo</em></li><li><span class="dot"></span>1 expense to tidy<em>Pick a category</em></li><li><span class="dot g"></span>Invoice 0042 is overdue<em>Chase</em></li></ul></div>
+        </div>
+      </div>
+      <div class="phone"><div class="scr">
+        <div class="st"><span>Receptionist</span><span>Today</span></div>
+        <div class="call"><b>Boiler not working</b><span>Mrs Carter · 07700 900123<br>Wants a call back this afternoon.</span><em class="tag">Call-back requested</em></div>
+        <div class="call"><b>Quote for a new bathroom</b><span>Mr Evans · Saltash<br>Asked about booking a visit.</span><em class="tag ok">Details captured</em></div>
+      </div></div>
+      <div class="float f1"><i>✓</i>Receipt filed <span style="color:#8A939B;font-weight:600">· Undo</span></div>
+      <div class="float f2"><i>☎</i>Call answered</div>
+      <span class="illus">Illustrative screens</span>
     </div>
   </div>
 </section>
+<div class="proof"><div class="wrap"><ul>
+  <li>Built in Saltash, Cornwall</li><li>Your accounts stay in your own software</li><li>We never sell your data</li><li>You deal with a real person</li>
+</ul></div></div>
 
-<section class="trades" aria-label="Who it's for">
+<section class="sec white" id="platform" aria-labelledby="plat-title">
   <div class="wrap">
-    <p>Roofers <i>/</i> Plumbers <i>/</i> Electricians <i>/</i> Builders <i>/</i> Heating engineers <i>/</i> Plasterers <i>/</i> Carpenters <i>/</i> Landscapers</p>
-    <small>Built in Saltash for trades across Cornwall, Plymouth and West Devon. One person, Gio, looks after both.</small>
+    <div class="head reveal"><p class="eyebrow">The platform</p><h2 id="plat-title">One team. Two products. One way of working.</h2><p class="lede">Localdesk is software built around how a trade business runs: the calls that bring the work in, and the paperwork that follows. Start with either, add the other whenever you like.</p></div>
+    <div class="plat reveal">
+      <div class="node"><span class="ico mia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></span><h3>Receptionist</h3><p>Work comes in. Every call answered, details captured, summary texted to you.</p></div>
+      <div class="node core">
+        <svg class="logo-mark" width="52" height="49" viewBox="-4 -4 228 214" role="img" aria-label="Localdesk logo" aria-hidden="true"><defs><linearGradient id="nw0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="nw1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient><linearGradient id="nw2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFD23F"/><stop offset="1" stop-color="#F5B800"/></linearGradient></defs><circle cx="110" cy="58" r="58" fill="url(#nw0)" stroke="#1F2328" stroke-width="6"/><g transform="translate(110 55) scale(2.2)"><path d="M-9 3V-1a9 9 0 0 1 18 0V3" fill="none" stroke="#1F2328" stroke-width="2.8" stroke-linecap="round"/><rect x="-12.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><rect x="6.5" y="-1" width="6" height="11" rx="2.5" fill="#1F2328"/><path d="M9.5 10Q9.5 13 4 13H0" fill="none" stroke="#1F2328" stroke-width="2.4" stroke-linecap="round"/><circle cx="-1" cy="13" r="2" fill="#1F2328"/></g><circle cx="60" cy="144" r="58" fill="url(#nw1)" stroke="#1F2328" stroke-width="6"/><g transform="translate(60 144) scale(2.2)"><rect x="-12" y="-9.5" width="24" height="21.5" rx="3.6" fill="#1F2328"/><rect x="-7.6" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="4.4" y="-13" width="3.2" height="6.5" rx="1.6" fill="#1F2328"/><rect x="-12" y="-5" width="24" height="2.4" fill="#F5B800"/><path d="M-5.8 5.2L-1.6 9L6.2 0.8" fill="none" stroke="#F5B800" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g><circle cx="160" cy="144" r="58" fill="url(#nw2)" stroke="#1F2328" stroke-width="6"/><g transform="translate(160 146) scale(2.2)"><path d="M-12 -10.5h24a3.5 3.5 0 0 1 3.5 3.5v11a3.5 3.5 0 0 1-3.5 3.5H-1.5L-9 15v-6.5h-3a3.5 3.5 0 0 1-3.5-3.5V-7a3.5 3.5 0 0 1 3.5-3.5Z" fill="#1F2328" transform="scale(.82) translate(0 -1)"/><rect x="-8.5" y="-6.8" width="17" height="2.6" rx="1.3" fill="#F5B800"/><rect x="-8.5" y="-1.8" width="10.5" height="2.6" rx="1.3" fill="#F5B800"/></g></svg>
+        <h3>Localdesk</h3><p>One company, one set-up, one person to deal with. Each product is priced on its own.</p></div>
+      <div class="node"><span class="ico bk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></span><h3>Books</h3><p>Work gets done. Receipts, invoices and your monthly check, in the software you already use.</p>
+        <div class="under"><span>QuickBooks</span><span>FreeAgent</span><span>Xero</span></div></div>
+    </div>
+    <p class="plat-note">The accounting software on the right is what Books connects to. They are not Localdesk products.</p>
   </div>
 </section>
 
-<section class="duo ecosystem" id="products" aria-labelledby="duo-title">
-  <div class="wrap">
-    <p class="kicker">Products &amp; services</p>
-    <h2 class="display" id="duo-title">One Localdesk. Less admin for your trade.</h2>
-    <p class="eco-lede">Two tools built for tradespeople, looked after by one person in Saltash. Use one, or run both together.</p>
-    <div class="duo-grid">
-      <article class="duo-card prod reveal">
-        <span class="badge">Available now</span>
-        <div class="peek" role="img" aria-label="Preview: a missed call answered by Mia, with the caller's name, number and job texted to the tradesperson.">
-          <div class="peek-bar"><i></i><i></i><i></i><span>Mia · incoming call</span></div>
-          <div class="bub them">Hi, my boiler's stopped working.</div>
-          <div class="bub mia">Sorry to hear that. Can I take your name and number?</div>
-          <div class="chip-row"><span>Name taken</span><span>Number taken</span><span>Job noted</span></div>
-          <div class="peek-sms">Text sent to you: <b>Boiler fault, ring back today</b></div>
-        </div>
-        <h3>Localdesk Receptionist</h3>
-        <p class="tag">An AI receptionist for tradespeople.</p>
-        <ul class="feat"><li>Answers calls 24/7, day and night</li><li>Captures customer details and what the job is</li><li>Handles booking and call-back requests</li><li>Helps you stop missing enquiries</li></ul>
-        <p class="duo-price"><b>£397</b> a month <small>7-day free trial, setup waived for founding clients</small></p>
-        <div class="ctas"><a class="btn btn-yellow js-book" href="#contact">Book a 15-minute demo</a><a class="btn line" href="receptionist/">Find out more</a></div>
-      </article>
-      <article class="duo-card prod reveal">
-        <span class="badge">Available now</span>
-        <div class="peek" role="img" aria-label="Preview: a receipt filed into the accounting software, with this month's money in, money out and what is owed.">
-          <div class="peek-bar"><i></i><i></i><i></i><span>Books · this month</span></div>
-          <div class="filed"><b>Receipt filed</b><span>Screwfix · £84.00 · Materials</span><em>Undo</em></div>
-          <div class="figs"><div><small>Money in</small><b>£4,200</b></div><div><small>Money out</small><b>£1,300</b></div><div><small>Owed to you</small><b>£650</b></div></div>
-          <div class="peek-sms">Monthly summary texted to you on the 1st</div>
-        </div>
-        <h3>Books by Localdesk</h3>
-        <p class="tag">Bookkeeping built around tradespeople.</p>
-        <ul class="feat"><li>Photograph a receipt and it's filed for you</li><li>Expenses, invoices and income tracking</li><li>A monthly books-check that flags what's missing</li><li>Works with your own accounting software</li></ul>
-        <p class="duo-price"><b>£150</b> a month <small>plus £395 setup</small></p>
-        <div class="ctas"><a class="btn btn-yellow" href="#contact">Get started</a><a class="btn line" href="books/">Find out more</a></div>
-      </article>
-    </div>
-
-    <div class="integ reveal" id="integrations" aria-labelledby="integ-title">
-      <div class="integ-head"><h3 id="integ-title">Books connects with the accounting software you already use</h3><p>These are the platforms Books works with. They aren't Localdesk products, and you keep your own subscription with them.</p></div>
-      <ul class="integ-grid">
-        <li><b class="wm">QuickBooks</b><span class="st ok">Available</span><small>QuickBooks Online</small></li>
-        <li><b class="wm">FreeAgent</b><span class="st ok">Available</span><small>Tested on FreeAgent's sandbox. Live company connections are being confirmed.</small></li>
-        <li><b class="wm">Xero</b><span class="st soon">Being verified</span><small>Built and tested. The real-service connection is still being verified.</small></li>
+<section class="sec mia-sec" id="products" aria-labelledby="mia-title">
+  <div class="wrap prod">
+    <div class="copy reveal">
+      <p class="chipx mia"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></i>Available now</p>
+      <h2 id="mia-title">Localdesk Receptionist</h2>
+      <p class="lede">An AI receptionist for tradespeople. It answers when you're up a ladder, so a missed call doesn't become a missed job.</p>
+      <ul class="caps">
+        <li><b>Answers 24/7</b>Day, night and weekends.</li>
+        <li><b>Captures the details</b>Name, number and what the job is.</li>
+        <li><b>Bookings and call-backs</b>Handles booking and call-back requests.</li>
+        <li><b>A text after every call</b>A short summary straight to your phone.</li>
       </ul>
+      <p class="price-line"><b>£397</b> a month · 7-day free trial, setup waived for founding clients</p>
+      <div class="cta-row" style="margin-top:0"><a class="btn btn-d js-book" href="#contact">Book a 15-minute demo</a><a class="btn btn-o arrow" href="receptionist/">See Receptionist </a></div>
     </div>
-
-    <div class="more reveal"><div><b>More tools coming</b><p>Localdesk is growing into a wider toolkit for tradespeople. Tell us what would save you the most time.</p></div><a class="btn line" href="#contact">Tell us what you need</a></div>
+    <div class="canvas mia reveal" role="img" aria-label="Illustration: Receptionist's call list showing caller details, and the text summary sent to the tradesperson.">
+      <div class="pane dk">
+        <div class="ph">Calls <small>Illustrative</small></div>
+        <div class="row"><span class="av">MC</span><span><b>Boiler not working</b><span>Wants a call back this afternoon</span></span><span class="time">10:42</span></div>
+        <div class="row"><span class="av">TE</span><span><b>New bathroom enquiry</b><span>Asked to book a visit</span></span><span class="time">09:15</span></div>
+        <div class="tr"><div class="bub a">Hi, my boiler's stopped working.</div><div class="bub b">Sorry to hear that. Can I take your name and number?</div></div>
+        <div class="sms"><small>Text sent to you</small>Boiler fault. Mrs Carter wants a call back today.</div>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="how" id="how" aria-labelledby="how-title">
+<section class="sec bk-sec" aria-labelledby="bk-title">
+  <div class="wrap prod flip">
+    <div class="canvas bk reveal" role="img" aria-label="Illustration: Books showing profit, money in and owed, a receipt filed with an Undo option, and the monthly books-check.">
+      <div class="pane">
+        <div class="ph">Books <small>This month · Illustrative</small></div>
+        <div class="fig"><div><small>Profit so far</small><b>£2,900</b></div><div><small>Money in</small><b>£4,200</b></div><div><small>Owed to you</small><b>£650</b></div></div>
+        <div class="b-row"><span class="ok">✓</span><span><b style="display:block">Receipt filed</b><span style="color:var(--steel);font-size:.82rem">Screwfix · £84.00 · Materials</span></span><span class="undo">Undo</span></div>
+        <div class="chk2"><h4>Monthly books-check</h4><div class="pills"><span><i class="dot r"></i>2 receipts missing</span><span><i class="dot"></i>1 to tidy</span><span><i class="dot g"></i>1 overdue invoice</span></div></div>
+      </div>
+    </div>
+    <div class="copy reveal">
+      <p class="chipx bk"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/></svg></i>Available now</p>
+      <h2 id="bk-title">Books by Localdesk</h2>
+      <p class="lede">Bookkeeping built around tradespeople. Snap a receipt and it's filed in your own accounting software, with Undo if you change your mind.</p>
+      <ul class="caps">
+        <li><b>Receipts and expenses</b>Photograph a receipt and it's filed for you.</li>
+        <li><b>Invoices and income</b>Send invoices and see who owes you.</li>
+        <li><b>A monthly books-check</b>Flags missing receipts and things to tidy, plus a monthly summary.</li>
+        <li><b>Works with your software</b>Connects to QuickBooks and FreeAgent. Xero is being verified.</li>
+      </ul>
+      <p class="price-line"><b>£150</b> a month · plus £395 setup</p>
+      <div class="cta-row" style="margin-top:0"><a class="btn btn-t" href="#contact">Get started</a><a class="btn btn-o arrow" href="books/">See Books </a></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec white" id="integrations" aria-labelledby="int-title">
   <div class="wrap">
-    <p class="kicker">How it works</p>
-    <h2 class="display" id="how-title">Start with either. Add the other later.</h2>
+    <div class="head reveal"><p class="eyebrow">Integrations</p><h2 id="int-title">Books connects to the accounting software you already use.</h2><p class="lede">These are accounting platforms Books works with. They aren't Localdesk products, and you keep your own subscription with them.</p></div>
+    <div class="integ">
+      <article class="int reveal"><div class="wm"><i style="background:#2CA01C">Q</i>QuickBooks</div><span class="badge ok">Available</span><p>Books works with QuickBooks Online, filing receipts and invoices into your own account.</p></article>
+      <article class="int reveal"><div class="wm"><i style="background:#0A6EFF">F</i>FreeAgent</div><span class="badge ok">Available</span><p>Tested on FreeAgent's sandbox. Connections to live FreeAgent companies are still being confirmed.</p></article>
+      <article class="int reveal"><div class="wm"><i style="background:#13B5EA">X</i>Xero</div><span class="badge soon">Being verified</span><p>Built and tested. The real-service connection is still being verified, so we're not offering it to customers yet.</p></article>
+    </div>
+    <p class="int-note">QuickBooks, FreeAgent and Xero are trademarks of their owners. Books isn't endorsed by them.</p>
+  </div>
+</section>
+
+<section class="sec dark" id="why" aria-labelledby="why-title">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Why Localdesk</p><h2 id="why-title">Software that gives you the day back.</h2></div>
+    <div class="ben reveal">
+      <div><span class="n">01</span><h3>Don't lose work to a missed call</h3><p>Every call answered, every enquiry captured and texted to you.</p></div>
+      <div><span class="n">02</span><h3>Paperwork in seconds</h3><p>Photograph a receipt and it's filed. No shoebox at the end of the quarter.</p></div>
+      <div><span class="n">03</span><h3>Know where you stand</h3><p>See what's come in, what's gone out and who owes you, without opening a spreadsheet.</p></div>
+      <div><span class="n">04</span><h3>Stay in control</h3><p>Books can undo what it files, and your accounts stay in your own software.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="how" aria-labelledby="how-title">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">How it works</p><h2 id="how-title">Start with either. Add the other later.</h2></div>
     <ol class="steps">
-      <li class="reveal"><b>Pick the one that hurts most</b><span>Missing calls? Start with Mia. Drowning in paperwork? Start with Books. You don't need both on day one.</span></li>
+      <li class="reveal"><b>Pick the one that hurts most</b><span>Missing calls? Start with the Receptionist. Drowning in paperwork? Start with Books. You don't need both on day one.</span></li>
       <li class="reveal"><b>We set it up for you</b><span>A short chat, then we build it around your business. You deal with Gio directly, not a call centre.</span></li>
       <li class="reveal"><b>Add the other when you're ready</b><span>Each product is priced on its own, and you can add the second at any time. Same person, same easy set-up.</span></li>
     </ol>
   </div>
 </section>
 
-<section class="pricing two" id="pricing" aria-labelledby="pricing-title">
-  <div class="wrap">
-    <div class="reveal">
-      <p class="kicker" style="color:#9AA3AB">Pricing</p>
-      <h2 class="display" id="pricing-title">Simple prices. No surprises.</h2>
-      <p class="lede">No VAT to add on either. Cancel Books on 30 days' notice. Mia has a 3-month minimum after your free trial, then it rolls month to month.</p>
+<section class="sec dark" id="trust" aria-labelledby="trust-title">
+  <div class="wrap trust">
+    <div class="reveal"><p class="eyebrow">Trust</p><h2 id="trust-title">Built carefully, because it's your business.</h2><p class="lede">We handle phone calls and financial records, so we keep the promises simple and put them in writing.</p></div>
+    <div class="tgrid reveal">
+      <div><b>Your accounts stay yours</b><p>Books works inside your own accounting software. Disconnect and everything already filed stays there.</p></div>
+      <div><b>We never sell your data</b><p>Not for advertising, not to anyone. Read our <a href="privacy.html">privacy policy</a> and the <a href="books/privacy.html">Books privacy policy</a>.</p></div>
+      <div><b>A real person</b><p>You deal with Gio Petrucci directly, from the first chat to set-up and any changes after.</p></div>
+      <div><b>Clear terms</b><p>Plain-English <a href="terms.html">terms</a> and <a href="books/terms.html">Books terms</a>. Cancel Books on 30 days' notice.</p></div>
     </div>
-    <div class="panels">
-      <div class="price-panel reveal">
-        <div class="stamp">7-day free trial<small>setup waived for founding clients</small></div>
-        <h3>Mia</h3>
-        <div class="price"><b>£397</b><span>a month<br>no VAT to add</span></div>
+  </div>
+</section>
+
+<section class="sec" id="pricing" aria-labelledby="pricing-title">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Pricing</p><h2 id="pricing-title">Simple prices. No surprises.</h2><p class="lede">No VAT to add on either. Cancel Books on 30 days' notice. The Receptionist has a 3-month minimum after your free trial, then it rolls month to month.</p></div>
+    <div class="price-grid">
+      <div class="pp mia reveal">
+        <span class="tagp">7-day free trial · setup waived for founding clients</span>
+        <h3>Localdesk Receptionist</h3>
+        <div class="big"><b>£397</b><span>a month<br>no VAT to add</span></div>
         <ul><li>AI receptionist answering 24/7</li><li>300 minutes of calls a month included</li><li>Caller details and call-back requests</li><li>A text summary after every call</li></ul>
         <p class="setup">Extra minutes are 25p each. Setup fee <s>£497</s>, waived for our first 5 founding clients.</p>
-        <a class="btn btn-yellow js-book" href="#contact">Book a 15-minute demo</a>
+        <a class="btn btn-d js-book" href="#contact">Book a 15-minute demo</a>
       </div>
-      <div class="price-panel reveal">
-        <div class="stamp">Now taking<small>our first clients</small></div>
-        <h3>Books</h3>
-        <div class="price"><b>£150</b><span>a month<br>no VAT to add</span></div>
-        <ul><li>Books phone app, set up on your QuickBooks</li><li>Receipts, invoices, quotes and chasing</li><li>Flags what's missing, a monthly summary and a quarterly accountant pack</li><li>Phone and email support in working hours</li></ul>
-        <p class="setup"><b>One-off setup: £395.</b> You also need your own QuickBooks Online subscription.</p>
-        <a class="btn btn-yellow" href="#contact">Get started</a>
+      <div class="pp bk reveal">
+        <span class="tagp">Now taking our first clients</span>
+        <h3>Books by Localdesk</h3>
+        <div class="big"><b>£150</b><span>a month<br>no VAT to add</span></div>
+        <ul><li>Books phone app, set up on your accounting software</li><li>Receipts, invoices, quotes and chasing</li><li>Flags what's missing, a monthly summary and a quarterly accountant pack</li><li>Phone and email support in working hours</li></ul>
+        <p class="setup"><b>One-off setup: £395.</b> You also need your own accounting software subscription, such as QuickBooks Online.</p>
+        <a class="btn btn-t" href="#contact">Get started</a>
       </div>
     </div>
   </div>
 </section>
 
-<section class="faq" id="faq" aria-labelledby="faq-title">
+<section class="sec white" id="faq" aria-labelledby="faq-title">
   <div class="wrap">
-    <h2 class="display" id="faq-title">What you might want to know.</h2>
+    <div class="head reveal"><h2 id="faq-title">What you might want to know.</h2></div>
     <div class="qa">
       <div>
         <details><summary>Do I need both?</summary><p>No. Plenty of people only want the phone answered, and others only want the bookkeeping sorted. Start with whichever helps most.</p></details>
@@ -530,32 +520,44 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
       <div>
         <details><summary>Where are you based?</summary><p>Saltash, Cornwall. We work with trades across Cornwall, Plymouth and West Devon, and both products work anywhere in the UK.</p></details>
         <details><summary>Is my information safe?</summary><p>Yes. We never sell it or use it for advertising. See our <a href="privacy.html">privacy policy</a> and the <a href="books/privacy.html">Books privacy policy</a>.</p></details>
-        <details><summary>Where are the full details and terms?</summary><p>On each product's page: <a href="receptionist/">Mia</a> and <a href="books/">Books</a>. Terms are at <a href="terms.html">Localdesk terms</a> and <a href="books/terms.html">Books terms</a>.</p></details>
+        <details><summary>Where are the full details and terms?</summary><p>On each product's page: <a href="receptionist/">Receptionist</a> and <a href="books/">Books</a>. Terms are at <a href="terms.html">Localdesk terms</a> and <a href="books/terms.html">Books terms</a>.</p></details>
       </div>
     </div>
   </div>
 </section>
 
-<div class="hazard" aria-hidden="true"></div>
-<section class="contact" id="contact" aria-labelledby="contact-title">
-  <div class="wrap">
+<section class="sec" id="about" aria-labelledby="about-title">
+  <div class="wrap about">
+    <div class="reveal"><p class="eyebrow">About</p><h2 id="about-title">Software for the people who keep Britain running.</h2><p class="lede">Localdesk builds practical software for UK tradespeople. We started in Saltash, Cornwall, with two products that take the admin off your plate: a receptionist that answers your calls and bookkeeping that files your receipts. More tools are coming.</p></div>
+    <div class="facts reveal">
+      <div><span>Company</span><b>Localdesk, a trading name of Gio Petrucci, sole trader</b></div>
+      <div><span>Based in</span><b>Saltash, Cornwall</b></div>
+      <div><span>Products</span><b>Receptionist and Books</b></div>
+      <div><span>Works with</span><b>QuickBooks, FreeAgent (Xero being verified)</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec contact" id="contact" aria-labelledby="contact-title">
+  <div class="wrap cgrid">
     <div>
-      <h2 class="display" id="contact-title">Let's talk.</h2>
+      <p class="eyebrow">Contact</p>
+      <h2 id="contact-title">Let's talk.</h2>
       <p class="lede">Tell us what you'd like help with, or book a 15-minute call. We'll come back to you within one working day.</p>
+      <dl class="details">
+        <div><dt>Demo line</dt><dd><a href="tel:+441752741686">01752 741686</a></dd></div>
+        <div><dt>Book a call</dt><dd><a class="btn btn-y js-book" href="https://calendly.com/hello-localdeskai/30min" target="_blank" rel="noopener">Choose a time</a></dd></div>
+        <div><dt>Email</dt><dd><a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a></dd></div>
+        <div><dt>Contact</dt><dd>Gio Petrucci</dd></div>
+      </dl>
       <p class="me">You'll deal with me, Gio Petrucci, directly. We never share your details, and an enquiry doesn't commit you to anything.</p>
     </div>
-    <dl class="details">
-      <div><dt>Demo line</dt><dd><a href="tel:+441752741686">01752 741686</a></dd></div>
-      <div><dt>Book a call</dt><dd><a class="btn btn-yellow js-book" href="https://calendly.com/hello-localdeskai/30min" target="_blank" rel="noopener">Choose a time</a></dd></div>
-      <div><dt>Email</dt><dd><a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a></dd></div>
-      <div><dt>Contact</dt><dd>Gio Petrucci</dd></div>
-    </dl>
     <form class="enq" id="enquiry" novalidate>
       <h3>Send us an enquiry</h3>
       <p class="small">Tell us a little and we'll come back to you. No obligation, and we never share your details.</p>
-      <label>What are you interested in?<select name="product"><option value="receptionist">Receptionist (Mia answers your calls)</option><option value="books">Books (bookkeeping)</option><option value="unsure" selected>Not sure yet</option></select></label>
-      <div class="row"><label>Your name<input name="name" autocomplete="name" required></label><label>Phone number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" required></label></div>
-      <div class="row"><label>Business name (if you have one)<input name="business" autocomplete="organization"></label><label>Anything you'd like us to know<input name="message" maxlength="400"></label></div>
+      <label>What are you interested in?<select name="product"><option value="receptionist">Receptionist (answers your calls)</option><option value="books">Books (bookkeeping)</option><option value="unsure" selected>Not sure yet</option></select></label>
+      <div class="r"><label>Your name<input name="name" autocomplete="name" required></label><label>Phone number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" required></label></div>
+      <div class="r"><label>Business name (if you have one)<input name="business" autocomplete="organization"></label><label>Anything you'd like us to know<input name="message" maxlength="400"></label></div>
       <div class="hp" aria-hidden="true"><label>Leave this empty<input name="website" tabindex="-1" autocomplete="off"></label></div>
       <button type="submit">Send enquiry</button>
       <p class="msg" role="status" aria-live="polite"></p>
@@ -566,8 +568,17 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
 
 <footer class="foot">
   <div class="wrap">
-    <span>© <span id="year">2026</span> Localdesk, a trading name of Gio Petrucci, sole trader. <a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a></span>
-    <nav aria-label="Legal"><a href="receptionist/">Receptionist</a><a href="books/">Books</a><a href="privacy.html">Privacy policy</a><a href="terms.html">Terms</a></nav>
+    <div class="fgrid">
+      <div><a class="brand" href="#" aria-label="Localdesk, home"><span><span class="brand-name">LOCALDESK</span><span class="brand-sub">FOR TRADES</span></span></a><p class="about-line">Practical software for UK tradespeople. Built in Saltash, Cornwall.</p></div>
+      <div><h4>Products</h4><ul><li><a href="receptionist/">Receptionist</a></li><li><a href="books/">Books</a></li><li><a href="#pricing">Pricing</a></li></ul></div>
+      <div><h4>Integrations</h4><ul><li><a href="#integrations">QuickBooks</a></li><li><a href="#integrations">FreeAgent</a></li><li><a href="#integrations">Xero</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="#about">About</a></li><li><a href="#faq">FAQ</a></li><li><a href="#contact">Contact</a></li></ul></div>
+      <div><h4>Contact</h4><ul><li><a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a></li><li><a href="tel:+441752741686">01752 741686</a></li><li>Saltash, Cornwall</li></ul></div>
+    </div>
+    <div class="legal">
+      <span>© <span id="year">2026</span> Localdesk, a trading name of Gio Petrucci, sole trader.</span>
+      <nav aria-label="Legal" style="display:flex;gap:18px;flex-wrap:wrap"><a href="privacy.html">Privacy policy</a><a href="terms.html">Terms</a><a href="books/privacy.html">Books privacy</a><a href="books/terms.html">Books terms</a></nav>
+    </div>
   </div>
 </footer>
 
@@ -579,8 +590,21 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
   (function () {
     var els = document.querySelectorAll('.reveal');
     if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
-    var io = new IntersectionObserver(function (en) { en.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } }); }, { threshold: .12 });
+    var io = new IntersectionObserver(function (en) { en.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } }); }, { threshold: .1 });
     els.forEach(function (e) { io.observe(e); });
+  })();
+  (function () {
+    var top = document.getElementById('top'), burger = top.querySelector('.burger'), dd = top.querySelector('.dd'), ddb = dd.querySelector('button');
+    function scrolled() { top.classList.toggle('scrolled', window.scrollY > 12); }
+    scrolled(); window.addEventListener('scroll', scrolled, { passive: true });
+    function setDD(on) { dd.classList.toggle('show', on); ddb.setAttribute('aria-expanded', on ? 'true' : 'false'); }
+    ddb.addEventListener('click', function () { var hov = matchMedia('(hover:hover) and (min-width:941px)').matches; setDD(hov ? true : !dd.classList.contains('show')); });
+    dd.addEventListener('mouseenter', function () { if (matchMedia('(hover:hover) and (min-width:941px)').matches) setDD(true); });
+    dd.addEventListener('mouseleave', function () { if (matchMedia('(hover:hover) and (min-width:941px)').matches) setDD(false); });
+    document.addEventListener('click', function (e) { if (!dd.contains(e.target)) setDD(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { setDD(false); top.classList.remove('open'); burger.setAttribute('aria-expanded', 'false'); } });
+    burger.addEventListener('click', function () { var o = top.classList.toggle('open'); burger.setAttribute('aria-expanded', o ? 'true' : 'false'); });
+    top.querySelectorAll('.nav a').forEach(function (a) { a.addEventListener('click', function () { top.classList.remove('open'); burger.setAttribute('aria-expanded', 'false'); setDD(false); }); });
   })();
 </script>
 <script>
