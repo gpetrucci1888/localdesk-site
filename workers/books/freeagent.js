@@ -184,6 +184,14 @@ export function createFreeAgent(D) { // D: { ACCOUNT_NAMES, getClient, logChange
     return list.map(e => ({ id: idOf(e.url), date: e.dated_on, total: Math.abs(Number(e.gross_value)), supplier: String(e.description || '').split(' - ')[0], jobId: '', job: '' }));
   }
 
+  // Monthly books-check input: spending in the last 90 days with no receipt attached.
+  async function noReceipt(env, store, realmId) {
+    const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const list = (await call(env, store, realmId, 'GET', `/expenses?from_date=${from}&per_page=100`)).expenses || [];
+    return list.filter(e => !e.attachment && Number(e.gross_value) < 0)
+      .map(e => ({ id: idOf(e.url), date: e.dated_on, supplier: String(e.description || '').split(' - ')[0], total: Math.abs(Number(e.gross_value)), account: '' }));
+  }
+
   async function newInvoice(env, store, realmId, r, sendAllowed) {
     const t = await token(env, store, realmId);
     const amount = r.cis ? round2((Number(r.labour) || 0) + (Number(r.materials) || 0)) : round2(r.amount);
@@ -252,5 +260,5 @@ export function createFreeAgent(D) { // D: { ACCOUNT_NAMES, getClient, logChange
     return { ok: steps.every(s => s.ok), steps };
   }
 
-  return { call, token, selftest, fileReceipt, undo, owed, summary, recent, newInvoice, status, categories, registered, untidy: async () => [], noReceipt: async () => [] };
+  return { call, token, selftest, fileReceipt, undo, owed, summary, recent, newInvoice, status, categories, registered, untidy: async () => [], noReceipt };
 }

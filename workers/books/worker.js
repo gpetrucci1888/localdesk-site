@@ -1584,7 +1584,7 @@ async function purgeDue(env, store) {
 async function health(env, store, opts = {}) {
   const companies = await (await store.fetch('https://store/tokens')).json();
   const clients = [];
-  for (const c of companies) {
+  const rows = await Promise.all(companies.map(async (c) => { // every connected business is checked at once, so the page doesn't wait on them one by one
     const client = (await getClient(store, c.realmId)) || {};
     const row = { realmId: c.realmId, name: client.name || c.realmId, ok: true };
     if (PLATFORMS[c.platform]) { // other software: their module refreshes its own tokens; same figures as a QuickBooks row
@@ -1603,8 +1603,7 @@ async function health(env, store, opts = {}) {
         row.seenDays = seen && seen.at ? Math.floor((Date.now() - seen.at) / 86400000) : null;
         row.chased = log.filter(e => e.kind === 'chase' && e.at > week).length;
       } catch (err) { row.ok = false; row.problem = String(err && err.message || err).slice(0, 120); }
-      clients.push(row);
-      continue;
+      return row;
     }
     try {
       // Intuit drops a connection that isn't used for 100 days; refreshing well before keeps it alive.
@@ -1632,8 +1631,9 @@ async function health(env, store, opts = {}) {
       row.ok = false; row.problem = String(err && err.message || err).slice(0, 120);
       await alertOwner(env, store, `conn:${c.realmId}`, `Books: ${row.name}'s QuickBooks isn't working (${row.problem}). They may need a fresh connect link.`).catch(() => {});
     }
-    clients.push(row);
-  }
+    return row;
+  }));
+  clients.push(...rows);
   const have = new Set(companies.map(c => c.realmId));
   for (const c of await (await store.fetch('https://store/clients')).json()) {
     if (c.disconnected_at && !c.ended_at && !have.has(c.realmId)) clients.push({ realmId: c.realmId, name: c.name || c.realmId, ok: false, problem: `disconnected in QuickBooks on ${String(c.disconnected_at).slice(0, 10)}` });

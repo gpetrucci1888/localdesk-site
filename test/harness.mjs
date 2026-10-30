@@ -112,7 +112,7 @@ export class FakeFA {
     if (path === '/company') return ok({ company: this.company });
     if (path === '/categories') return ok(this.categories);
     if (path === '/expenses' && method === 'GET') { const from = u.searchParams.get('from_date'), to = u.searchParams.get('to_date'); return ok({ expenses: this.expenses.filter(e => (!from || e.dated_on >= from) && (!to || e.dated_on <= to)) }); }
-    if (path === '/expenses' && method === 'POST') { const e = { ...body.expense, url: `https://api.freeagent.com/v2/expenses/${++this.n}` }; delete e.attachment; e.hasAttachment = Boolean(body.expense.attachment); this.expenses.push(e); return ok({ expense: e }, 201); }
+    if (path === '/expenses' && method === 'POST') { const e = { ...body.expense, url: `https://api.freeagent.com/v2/expenses/${++this.n}` }; if (body.expense.attachment) e.attachment = { content_type: body.expense.attachment.content_type }; else delete e.attachment; e.hasAttachment = Boolean(body.expense.attachment); this.expenses.push(e); return ok({ expense: e }, 201); }
     let m = path.match(/^\/expenses\/(\d+)$/);
     if (m && method === 'DELETE') { this.expenses = this.expenses.filter(e => !e.url.endsWith('/' + m[1])); return new Response(null, { status: 200 }); }
     if (path === '/contacts' && method === 'GET') return ok({ contacts: this.contacts });

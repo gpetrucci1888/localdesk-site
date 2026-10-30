@@ -189,3 +189,12 @@ test('the setup check reads a FreeAgent client without changing anything', async
   assert.ok(r.categories && Array.isArray(r.problems) && typeof r.ok === 'boolean');
   assert.equal(fa.expenses.length + fa.invoices.length + fa.contacts.length, 0, 'nothing written');
 });
+
+test('the monthly check lists FreeAgent spending that has no receipt attached', async (t) => {
+  const w = world(); const { fa } = network(t); const { call } = await faClient(w);
+  await call('POST', '/c/file', { supplier: 'Screwfix', date: new Date().toISOString().slice(0, 10), total: 30, vat: 5, category: 'Materials', image: PHOTO });
+  await call('POST', '/c/file', { supplier: 'Shell', date: new Date().toISOString().slice(0, 10), total: 50, vat: 8, category: 'Fuel' });
+  const none = await (await call('GET', '/c/noreceipt')).json();
+  assert.deepEqual(none.map(i => i.supplier), ['Shell']);
+  assert.equal(fa.expenses.length, 2);
+});
