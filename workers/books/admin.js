@@ -55,15 +55,18 @@ details summary{cursor:pointer;font-weight:800;margin-top:8px}
 <script>
 var $=function(id){return document.getElementById(id)};
 var KEY='';try{KEY=sessionStorage.getItem('books-admin-key')||''}catch(e){}
+// Behind the owner HQ the page is served from a prefix and the HQ adds the key itself, so there is nothing to paste.
+var BASE=(document.querySelector('meta[name=base]')||{}).content||'';
+if(document.querySelector('meta[name=prekey]'))KEY='via-hq';
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function say(t,bad){$('msg').hidden=!t;$('msg').textContent=t||'';$('msg').className='msg'+(bad?' err':'')}
 async function api(method,path,body){
-  var r=await fetch(path,{method:method,headers:{'X-Key':KEY,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  var r=await fetch(BASE+path,{method:method,headers:{'X-Key':KEY,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
   if(r.status===403){lock();throw new Error('That key was not accepted.')}
   var t=await r.text(),d;try{d=JSON.parse(t)}catch(e){d={error:t.replace(/^Error: /,'')}}
   if(!r.ok||d.error)throw new Error(d.error||('Failed ('+r.status+')'));return d;
 }
-function lock(){KEY='';try{sessionStorage.removeItem('books-admin-key')}catch(e){}$('app').hidden=true;$('keyCard').hidden=false}
+function lock(){if(document.querySelector('meta[name=prekey]')){say('The HQ session has ended. Log in to the HQ again.',true);return}KEY='';try{sessionStorage.removeItem('books-admin-key')}catch(e){}$('app').hidden=true;$('keyCard').hidden=false}
 async function unlock(){
   try{await api('GET','/health');$('keyCard').hidden=true;$('app').hidden=false;say('');load()}
   catch(err){lock();say(err.message,true)}
