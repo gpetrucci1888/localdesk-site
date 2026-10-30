@@ -2082,9 +2082,16 @@ async function qb(env, store, realmId, method, path, body) {
   const sep = path.includes('?') ? '&' : '?';
   const headers = { Authorization: `Bearer ${access}`, Accept: 'application/json' };
   if (body && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  const res = await fetch(`${base}/v3/company/${realmId}/${path}${sep}minorversion=${MINOR_VERSION}`, {
-    method, headers, body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
-  });
+  // QuickBooks answers 429 when it is asked too often (500 a minute per company). That passes in a moment, so wait and ask again
+  // (up to 3 more times) before treating it as a problem. A body can only be sent once, so retries are for reads and JSON writes.
+  let res;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch(`${base}/v3/company/${realmId}/${path}${sep}minorversion=${MINOR_VERSION}`, {
+      method, headers, body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status !== 429 || attempt >= 3 || body instanceof FormData) break;
+    await new Promise(r => setTimeout(r, 700 * (attempt + 1) + Math.random() * 300));
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.Fault) {
     const e = data.Fault && data.Fault.Error && data.Fault.Error[0];
