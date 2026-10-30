@@ -1,6 +1,6 @@
 # Localdesk site and Books
 
-**This repo is public.** Never commit secrets, client data or real client phone numbers.
+**This repo is public.** Never commit secrets, access keys or links containing them (app keys, invite, pack or `/d/` links), client data or real people's phone numbers.
 
 ## Business
 Localdesk: Giovanni (Gio) Petrucci, sole trader, Saltash, Cornwall. Sells to local trades:
@@ -53,7 +53,7 @@ No build step, no `package.json`, no test suite.
 - Live checks, read-only: the demo app below.
 
 ## Demo links
-- Books demo, JCM branding, QuickBooks sandbox, no login (safe to show prospects): `https://receipt-demo.gpetrucci93.workers.dev/<demo key>/`
+- Books demo, JCM branding, QuickBooks sandbox, no login (for prospects): `https://receipt-demo.gpetrucci93.workers.dev/<demo key>/`. The key is an access credential: keep it out of this repo. Gio has the full link.
 - Books connector: `https://books.gpetrucci93.workers.dev` (OAuth `/callback`, customer invoice pages `/d/<id>`, accountant packs `/pack/<id>`)
 - Website demo roofer site: `/example` on the website
 - Mia demo line: 01752 741686
