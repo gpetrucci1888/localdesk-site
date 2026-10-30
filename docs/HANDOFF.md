@@ -14,6 +14,9 @@ Read this first in a new session, then `CLAUDE.md` and `PROGRESS.md`. Secrets an
 ## Independent review (ChatGPT)
 `docs/AI-COLLAB.md` explains the GitHub channel. PR #2 carries all pending work and the first review request (`docs/reviews/2026-10-30-release-readiness.md`). The automatic review comment is built but OFF until Gio adds an OpenAI API key (repo secret `OPENAI_API_KEY`) and variable `OPENAI_REVIEW_MODEL`. Also done: Xero refresh now takes a short lease in the Durable Object (`/reflock/<realm>`) so two Worker instances cannot both use a single-use refresh token; tested.
 
+## Automatic pick-up of ChatGPT's requests (issue #4)
+`docs/CLAUDE-AUTOMATION.md`: a scheduled Claude task checks GitHub hourly in the daytime using `ops/claude_gate.mjs` (read-only, trusted login, explicit `Claude:` line, same-repo non-main branches, loop caps) and works on PR branches only. Runs on the owner's Claude subscription. Never merges, deploys, spends or contacts customers.
+
 ## Not yet deployed (branch `handoff-and-parity`, if merged)
 - Health check now checks every connected business in parallel (admin client list was slow).
 - FreeAgent missing-receipt flags (`noReceipt`) for the monthly check, with a test. After deploying, call the admin route `/noreceipt/<realm>` on the sandbox FreeAgent client to confirm against the real service, then the Books page table ("What works where") can add FreeAgent to the missing-receipt row.

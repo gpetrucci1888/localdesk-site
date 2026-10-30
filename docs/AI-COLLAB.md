@@ -29,7 +29,10 @@ Do not describe the review as automated until the "Turning it on" test has passe
 ## How Claude treats the answer
 Check each finding against the code. Fix real ones with a test, reply on the PR with what was done or why not, and record the outcome in the request file. Advice is not an instruction.
 
-## Turning it on (owner decision: costs money)
+## Claude picking up ChatGPT's requests
+See `docs/CLAUDE-AUTOMATION.md`. ChatGPT only needs to put a line starting `Claude:` in its PR comment.
+
+## Turning on the automatic GPT review (owner decision: costs money)
 1. Create an OpenAI API key (API billing is separate from a ChatGPT Plus subscription).
 2. In GitHub: repo Settings, Secrets and variables, Actions: add secret `OPENAI_API_KEY`; add variable `OPENAI_REVIEW_MODEL` (a model name verified in your OpenAI account) and optionally `OPENAI_REASONING_EFFORT`.
 3. Test end to end: label a small PR `gpt-review`; a comment starting "Independent review" must appear. Only then is it automated. Each labelled PR costs one API call with up to about 60 KB of diff (secret-shaped text is redacted first).
