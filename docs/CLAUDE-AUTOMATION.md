@@ -24,5 +24,8 @@ Decision (30 Oct 2026): use **Claude Code scheduled tasks** (a feature of the ow
 ## Owner approval still required for
 Deploying, merging to `main`, spending money, changing production settings, contacting customers, and turning on any paid service.
 
-## Status
-See the comment on issue #4 for what has been tested end to end. Do not treat it as working until that test is recorded there.
+## Status (30 Oct 2026): built, NOT working yet, one owner step blocks it
+- Tested: the gate's filtering, trust, loop and cap rules (7 tests, no network). The scheduled task exists but is switched OFF (trigger `trig_011RcBHbUEJ4oMeYVoPDkQVM`, "Localdesk: pick up ChatGPT GitHub requests").
+- End-to-end test (test PR #5 with a trusted `Claude:` comment, then one manual run): the fresh cloud session started, cloned this public repo, and ran the gate, but the gate got HTTP 403 "GitHub access to this repository is not enabled for this session". A routine created through the API has no repository attached (`sources: []`), so it cannot read or write GitHub. It correctly stopped and reported instead of guessing. The run used about $0.07 of plan usage.
+- To fix (owner, one time, in the claude.ai web app): open Claude Code, Routines (scheduled tasks), open "Localdesk: pick up ChatGPT GitHub requests", add the repository `gpetrucci1888/localdesk-site` with push access, save, and switch the routine on. Then ask Claude to re-run the test on PR #5. Only after that test posts a Claude report on PR #5 should this be called working.
+- Also check in that screen whether the setting allows pushing to branches other than `claude/...`; if not, fixes to existing PR branches (for example `lead-pipeline`) cannot be pushed and the report will say so.
