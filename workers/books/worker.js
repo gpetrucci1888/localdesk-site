@@ -103,6 +103,7 @@
 
 import { ADMIN_PAGE } from './admin.js';
 import { createFreeAgent, faAuthorizeUrl, faExchange, faCreds } from './freeagent.js';
+import { createXero, xeroAuthorizeUrl, xeroExchange, xeroCreds, xeroDisconnect } from './xero.js';
 
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -171,12 +172,19 @@ const PROBLEMS_PER_HOUR = 3;
 // FreeAgent clients are served by freeagent.js. QuickBooks clients never touch it.
 let faInstance;
 const FA = () => (faInstance = faInstance || createFreeAgent({ ACCOUNT_NAMES, getClient, logChange, markUndone, alertOwner, clientName, ukToday, money }));
-async function onFA(store, realmId) {
+// Xero clients are served by xero.js, the same way. A new platform is one module with the same methods, one line in PLATFORMS and one in SOFTWARE.
+let xeroInstance;
+const XE = () => (xeroInstance = xeroInstance || createXero({ ACCOUNT_NAMES, getClient, logChange, markUndone, alertOwner, clientName, ukToday, money }));
+const PLATFORMS = { freeagent: FA, xero: XE };
+const SOFTWARE = { quickbooks: 'QuickBooks', freeagent: 'FreeAgent', xero: 'Xero' };
+const platformOf = (p) => (SOFTWARE[p] ? p : 'quickbooks');
+async function ext(store, realmId) { // the module for this client's platform, or null for QuickBooks
   const r = await store.fetch(`https://store/tokens/${realmId}`);
-  return r.ok && (await r.json()).platform === 'freeagent';
+  const p = r.ok ? (await r.json()).platform : null;
+  return PLATFORMS[p] ? PLATFORMS[p]() : null;
 }
 async function emailAllowed(env, store, realmId) { return !isDemoClient(await getClient(store, realmId)); }
-const FA_LATER = 'That feature is not available for FreeAgent yet. Receipts, invoices, who owes you and your monthly summary all work.';
+const later = (p) => `That feature is not available for ${SOFTWARE[p] || 'this software'} yet. Receipts, invoices, who owes you and your monthly summary all work.`;
 
 async function sendDoc(env, store, realmId, kind, id, email) {
   if (isDemoClient(await getClient(store, realmId))) return false;
@@ -224,6 +232,7 @@ async function route(request, env) {
         const state = crypto.randomUUID();
         await store.fetch('https://store/state', { method: 'PUT', body: JSON.stringify({ value: state, invite: invite.id, env: which, platform: invite.platform || 'quickbooks' }) });
         if (invite.platform === 'freeagent') return Response.redirect(faAuthorizeUrl(env, which, redirectUri, state), 302);
+        if (invite.platform === 'xero') return Response.redirect(xeroAuthorizeUrl(env, redirectUri, state), 302);
         const go = new URL(AUTH_URL);
         go.search = new URLSearchParams({ client_id: creds(env, which).id, response_type: 'code', scope: SCOPE, redirect_uri: redirectUri, state }).toString();
         return Response.redirect(go.toString(), 302);
@@ -234,13 +243,16 @@ async function route(request, env) {
         if (!ok.ok) return page('That link has expired. Ask Gio for a fresh one.', 400);
         const st = await ok.json();
         const code = url.searchParams.get('code');
-        const software = st.platform === 'freeagent' ? 'FreeAgent' : 'QuickBooks';
+        const software = SOFTWARE[platformOf(st.platform)];
         let realmId = url.searchParams.get('realmId');
-        if (!code || (st.platform !== 'freeagent' && !realmId)) return page(`${software} didn't connect. Nothing was changed.`, 400);
+        if (!code || (!PLATFORMS[st.platform] && !realmId)) return page(`${software} didn't connect. Nothing was changed.`, 400);
         let tokens;
         if (st.platform === 'freeagent') {
           const fa = await faExchange(env, st.env, redirectUri, code);
           realmId = fa.realmId; tokens = fa.tokens;
+        } else if (st.platform === 'xero') {
+          const xe = await xeroExchange(env, st.env, redirectUri, code);
+          realmId = xe.realmId; tokens = xe.tokens;
         } else tokens = await tokenRequest(env, st.env, { grant_type: 'authorization_code', code, redirect_uri: redirectUri });
         await store.fetch(`https://store/tokens/${realmId}`, { method: 'PUT', body: JSON.stringify(tokens) });
         if (!st.invite) return page('Connected ✓ You can close this page.');
@@ -293,7 +305,7 @@ async function route(request, env) {
       }
 
       // The app, for one client: X-App (their app key) plus X-Session (from logging in with a texted code).
-      const c = url.pathname.match(/^\/c\/([a-z]+(?:\/[a-z]+)?)(?:\/(\d+))?$/);
+      const c = url.pathname.match(/^\/c\/([a-z]+(?:\/[a-z]+)?)(?:\/([\w-]+))?$/);
       if (c) return await clientRoute(c[1], c[2], request, url, env, store, origin);
 
       if (!(await sameKey(request.headers.get('X-Key'), env.ADMIN_KEY))) return text('Not allowed', 403);
@@ -303,8 +315,8 @@ async function route(request, env) {
       if (url.pathname === '/invite' && request.method === 'POST') {
         const r = await request.json();
         const which = r.env === 'sandbox' ? 'sandbox' : 'production';
-        const platform = r.platform === 'freeagent' ? 'freeagent' : 'quickbooks';
-        if (!(platform === 'freeagent' ? faCreds(env, which) : creds(env, which)).id) throw new Error(`No ${which} ${platform === 'freeagent' ? 'FreeAgent' : 'QuickBooks'} keys set up yet`);
+        const platform = platformOf(r.platform);
+        if (!(platform === 'freeagent' ? faCreds(env, which) : platform === 'xero' ? xeroCreds(env) : creds(env, which)).id) throw new Error(`No ${platform === 'xero' ? '' : which + ' '}${SOFTWARE[platform]} keys set up yet`);
         const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: ukMobile(r.phone), brand: String(r.brand || ''), extras: String(r.extras || ''),
           vat: ['yes', 'no'].includes(r.vat) ? r.vat : '', chase: r.chase === 'on' ? 'on' : '', env: which, platform, created: Date.now() };
         await store.fetch(`https://store/invites/${inv.id}`, { method: 'PUT', body: JSON.stringify(inv) });
@@ -323,10 +335,11 @@ async function route(request, env) {
       if (rv && request.method === 'POST') {
         const leaving = await getClient(store, rv[1]);
         const leaveTokens = await store.fetch(`https://store/tokens/${rv[1]}`).then(r => (r.ok ? r.json() : null)).catch(() => null);
-        const software = leaveTokens && leaveTokens.platform === 'freeagent' ? 'FreeAgent' : 'QuickBooks';
+        const software = SOFTWARE[platformOf(leaveTokens && leaveTokens.platform)];
         if (leaving && leaving.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, leaving.phone, `Books is now disconnected from your ${software}. Everything already filed stays in your ${software}, and nothing else will be changed. Thanks for using Books.`).catch(() => {});
         const t = await (await store.fetch(`https://store/tokens/${rv[1]}`)).json().catch(() => null);
-        if (t && t.platform !== 'freeagent') { // FreeAgent has no revoke call: our access ends when the saved tokens are deleted below
+        if (t && t.platform === 'xero') await xeroDisconnect(t); // Xero: delete our connection there too
+        else if (t && t.platform !== 'freeagent') { // FreeAgent has no revoke call: our access ends when the saved tokens are deleted below
           const c = creds(env, t.env);
           await fetch(REVOKE_URL, { method: 'POST', headers: { Authorization: 'Basic ' + btoa(`${c.id}:${c.secret}`), 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ token: t.refresh_token }) });
         }
@@ -363,7 +376,7 @@ async function route(request, env) {
         return Response.json({ exported: new Date().toISOString(), client: { ...cl, appKey: undefined }, mileage: trips, changeLog: log, notificationDevices: pushes.length });
       }
 
-      const a = url.pathname.match(/^\/([a-z]+)\/(\d+)(?:\/(\d+))?$/);
+      const a = url.pathname.match(/^\/([a-z]+)\/(\d+)(?:\/([\w-]+))?$/);
       if (a) {
         const res = await handle(a[1], a[2], a[3], request, url, env, store, origin);
         if (res) return res;
@@ -402,18 +415,18 @@ const AGREEMENT_VERSION = '2026-10'; // change when the terms or privacy policy 
 // What a customer sees. QuickBooks' own wording ("Object Not Found", "Stale object", a code number) means nothing to a plumber,
 // so it is replaced by a sentence that says what happened and whether anything was saved. The full text still goes to Gio.
 function friendly(msg) {
-  const m = /^(?:QuickBooks|FreeAgent) (\d{3})/.exec(msg);
+  const m = /^(QuickBooks|FreeAgent|Xero)(?: said)? (\d{3})/.exec(msg);
   if (!m) return msg;
-  const code = Number(m[1]);
+  const sw = m[1], code = Number(m[2]);
   if (code === 401 || code === 403) return "Books can't reach your accounts software right now. Gio has been told. Nothing was saved";
   if (code === 429) return 'Your accounts software is busy. Wait a minute and try again. Nothing was saved';
-  if (code >= 500) return "QuickBooks isn't answering at the moment. Try again in a few minutes. Nothing was saved";
-  if (/inactive|not found|no longer|deleted|stale/i.test(msg)) return 'That has changed in QuickBooks since you opened it. Pull down to refresh and try again. Nothing was saved';
-  return "QuickBooks wouldn't accept that. Nothing was saved. Gio has been told";
+  if (code >= 500) return `${sw} isn't answering at the moment. Try again in a few minutes. Nothing was saved`;
+  if (/inactive|not found|no longer|deleted|stale/i.test(msg)) return `That has changed in ${sw} since you opened it. Pull down to refresh and try again. Nothing was saved`;
+  return `${sw} wouldn't accept that. Nothing was saved. Gio has been told`;
 }
 
 // Errors that mean something is broken, rather than a missing amount or a typo.
-const SYSTEM_ERROR = /^(QuickBooks \d|FreeAgent \d|QuickBooks company|FreeAgent company|Text failed|Texts are not set up|Could not understand)/;
+const SYSTEM_ERROR = /^(QuickBooks \d|FreeAgent \d|Xero \d|Xero said \d|QuickBooks company|FreeAgent company|Xero organisation|Text failed|Texts are not set up|Could not understand)/;
 const ALERT_HOURS = 12;
 
 // Texts Gio about a problem, at most once per key every ALERT_HOURS.
@@ -637,15 +650,17 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
   // Run once right after a client connects (read-only): will VAT codes and accounts line up in THIS QuickBooks company?
   // Admin only, FreeAgent clients: a connection test that cleans up after itself (entries named TEST are created and deleted).
   if (what === 'selftest' && post) {
-    if (!(await onFA(store, realmId))) return Response.json({ error: 'That client is not on FreeAgent' }, { status: 400 });
-    return Response.json(await FA().selftest(env, store, realmId));
+    const X = await ext(store, realmId);
+    if (!X) return Response.json({ error: 'That client is not on FreeAgent or Xero' }, { status: 400 });
+    return Response.json(await X.selftest(env, store, realmId));
   }
   if (what === 'precheck' && request.method === 'GET') {
-    if (await onFA(store, realmId)) {   // read-only: connection, VAT status and whether each category has a matching FreeAgent category
-      const cats = await FA().categories(env, store, realmId), registered = !!(await FA().registered(store, realmId));
+    const XP = await ext(store, realmId);
+    if (XP) {   // read-only: connection, VAT status and whether each category has a matching account in their software
+      const cats = (await XP.categories(env, store, realmId)).map(c => ({ description: c.description || c.Name })), registered = !!(await XP.registered(store, realmId));
       const found = Object.fromEntries(CATEGORIES.map(c => { const k = (ACCOUNT_NAMES[c] || []).find(n => cats.some(x => String(x.description || '').toLowerCase().includes(n))); return [c, k ? cats.find(x => String(x.description || '').toLowerCase().includes(k)).description : null]; }));
       const unmatched = Object.entries(found).filter(([k, v]) => !v && k !== 'Other').map(([k]) => k);
-      const problems = unmatched.length ? [`No matching FreeAgent category for: ${unmatched.join(', ')}. Those go under a general category`] : [];
+      const problems = unmatched.length ? [`No matching expense account for: ${unmatched.join(', ')}. Those go under a general category`] : [];
       return Response.json({ vatRegistered: registered, vat: {}, banks: [], categories: found, problems, ok: problems.length === 0 });
     }
     const accounts = (await query(env, store, realmId, 'select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
@@ -717,7 +732,7 @@ const ACCOUNT_NAMES = {
 };
 
 async function fileReceipt(env, store, realmId, r) {
-  if (await onFA(store, realmId)) return FA().fileReceipt(env, store, realmId, r);
+  { const X = await ext(store, realmId); if (X) return X.fileReceipt(env, store, realmId, r); }
   const q = (sql) => qb(env, store, realmId, 'GET', 'query?query=' + encodeURIComponent(sql)).then(d => d.QueryResponse || {});
   const total = round(r.total), vat = round(r.vat);
   if (!(total > 0)) throw new Error('No total on the receipt');
@@ -822,7 +837,7 @@ async function query(env, store, realmId, sql) {
 const TAX_POT = 0.25;
 
 async function summary(env, store, realmId, month) {
-  if (await onFA(store, realmId)) return FA().summary(env, store, realmId, month, TAX_POT);
+  { const X = await ext(store, realmId); if (X) return X.summary(env, store, realmId, month, TAX_POT); }
   const m = /^\d{4}-\d{2}$/.test(month || '') ? month : ukToday().slice(0, 7);
   const [y, mo] = m.split('-').map(Number);
   const end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
@@ -840,7 +855,7 @@ async function summary(env, store, realmId, month) {
 }
 
 async function owed(env, store, realmId) {
-  if (await onFA(store, realmId)) return FA().owed(env, store, realmId);
+  { const X = await ext(store, realmId); if (X) return X.owed(env, store, realmId); }
   const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail, PrivateNote from Invoice where Balance > '0' maxresults 1000")).Invoice || [];
   const today = Date.now();
   const cisOf = (i) => Number((String(i.PrivateNote || '').match(/CIS job\. Expected deduction £(\d+(?:\.\d+)?)/) || [])[1]) || 0;
@@ -916,7 +931,7 @@ async function cisSuffered(env, store, realmId) {
 
 // Only expenses this app filed can be undone (they carry our note).
 async function undoPurchase(env, store, realmId, id) {
-  if (await onFA(store, realmId)) return FA().undo(env, store, realmId, id);
+  { const X = await ext(store, realmId); if (X) return X.undo(env, store, realmId, id); }
   const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
   if (!/added from a receipt photo|added in Books/.test(p.PrivateNote || '')) throw new Error('Only expenses added from the app can be undone here');
   await qb(env, store, realmId, 'POST', 'purchase?operation=delete', { Id: p.Id, SyncToken: p.SyncToken });
@@ -965,7 +980,7 @@ async function saleParts(env, store, realmId, r) {
 }
 
 async function newInvoice(env, store, realmId, r) {
-  if (await onFA(store, realmId)) return FA().newInvoice(env, store, realmId, r, await emailAllowed(env, store, realmId));
+  { const X = await ext(store, realmId); if (X) return X.newInvoice(env, store, realmId, r, await emailAllowed(env, store, realmId)); }
   const { doc, email, cisDeduction } = await saleParts(env, store, realmId, r);
   const created = (await qb(env, store, realmId, 'POST', 'invoice', doc)).Invoice;
   let sentTo = '';
@@ -1104,7 +1119,7 @@ async function setJob(env, store, realmId, id, customerId, quiet) {
 }
 
 async function recent(env, store, realmId) {
-  if (await onFA(store, realmId)) return FA().recent(env, store, realmId);
+  { const X = await ext(store, realmId); if (X) return X.recent(env, store, realmId); }
   const list = (await query(env, store, realmId, 'select * from Purchase orderby MetaData.CreateTime desc maxresults 10')).Purchase || [];
   return list.map(p => {
     const job = (p.Line || []).map(l => l.AccountBasedExpenseLineDetail && l.AccountBasedExpenseLineDetail.CustomerRef).find(Boolean);
@@ -1151,7 +1166,7 @@ Today is ${today}. Reply with ONLY a JSON object:
 // ---------- tidy up: expenses left in Uncategorised ----------
 
 async function untidy(env, store, realmId, countOnly) {
-  if (await onFA(store, realmId)) return [];
+  { const X = await ext(store, realmId); if (X) return X.untidy(env, store, realmId); }
   const list = (await query(env, store, realmId, 'select * from Purchase orderby TxnDate desc maxresults 300')).Purchase || [];
   const items = [];
   for (const p of list) {
@@ -1176,6 +1191,7 @@ ${items.slice(0, 30).map((i, n) => `${n + 1}. ${i.supplier || 'unknown supplier'
 
 async function tidy(env, store, realmId, id, category) {
   if (!CATEGORIES.includes(category)) throw new Error('Pick a category');
+  { const X = await ext(store, realmId); if (X) { if (!X.tidy) throw new Error(later(platformOf((await store.fetch(`https://store/tokens/${realmId}`).then(r => r.json())).platform))); return X.tidy(env, store, realmId, id, category); } }
   const p = (await qb(env, store, realmId, 'GET', `purchase/${id}`)).Purchase;
   const accounts = (await query(env, store, realmId, 'select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
   const target = pickAccount(accounts.filter(a => a.AccountType === 'Expense' || a.AccountType === 'Cost of Goods Sold'), category);
@@ -1399,7 +1415,7 @@ async function quarterRun(env) {
   for (const c of companies) {
     const client = await getClient(store, c.realmId);
     if (isDemoClient(client)) continue;
-    if (c.platform === 'freeagent') { report.push(`${(client && client.name) || c.realmId}: no accountant pack for FreeAgent yet.`); continue; }
+    if (PLATFORMS[c.platform]) { report.push(`${(client && client.name) || c.realmId}: no accountant pack for ${SOFTWARE[c.platform]} yet.`); continue; }
     try {
       const link = await packLink(store, origin, c.realmId, p);
       if (client && client.phone) await sendSms(env, client.phone, `Your books for the quarter to ${new Date(p.to).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })} are ready for your accountant: ${link} (open Books and tap "Send to accountant", or forward this link).`);
@@ -1571,16 +1587,18 @@ async function health(env, store, opts = {}) {
   for (const c of companies) {
     const client = (await getClient(store, c.realmId)) || {};
     const row = { realmId: c.realmId, name: client.name || c.realmId, ok: true };
-    if (c.platform === 'freeagent') { // FreeAgent: no refresh dance (its tokens don't rotate); same figures as a QuickBooks row
+    if (PLATFORMS[c.platform]) { // other software: their module refreshes its own tokens; same figures as a QuickBooks row
       try {
-        await FA().token(env, store, c.realmId);
-        const [late, log, seen] = await Promise.all([
-          FA().owed(env, store, c.realmId).then(l => l.filter(i => i.daysOverdue > 0)),
+        const X = PLATFORMS[c.platform]();
+        await X.token(env, store, c.realmId);
+        const [late, tidyList, log, seen] = await Promise.all([
+          X.owed(env, store, c.realmId).then(l => l.filter(i => i.daysOverdue > 0)),
+          X.untidy(env, store, c.realmId).catch(() => []),
           store.fetch(`https://store/log/${c.realmId}`).then(r => r.json()),
           store.fetch(`https://store/seen/${c.realmId}`).then(r => r.json()).catch(() => null),
         ]);
         const week = Date.now() - 7 * 86400000;
-        row.toTidy = 0; row.late = late.length; row.platform = 'freeagent';
+        row.toTidy = tidyList.length; row.late = late.length; row.platform = c.platform;
         row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length;
         row.seenDays = seen && seen.at ? Math.floor((Date.now() - seen.at) / 86400000) : null;
         row.chased = log.filter(e => e.kind === 'chase' && e.at > week).length;
@@ -1690,7 +1708,7 @@ async function uploadReceipt(env, store, realmId, purchaseId, image) {
 // and HMRC can ask for these, so the app asks for a photo.
 const NO_RECEIPT_DAYS = 90;
 async function noReceipt(env, store, realmId) {
-  if (await onFA(store, realmId)) return [];
+  { const X = await ext(store, realmId); if (X) return X.noReceipt(env, store, realmId); }
   const from = isoDay(new Date(Date.now() - NO_RECEIPT_DAYS * 86400000));
   const d = await expenses(env, store, realmId, new URLSearchParams({ from }));
   return d.items.filter(i => !i.hasReceipt && i.total > 0).map(i => ({ id: i.id, date: i.date, supplier: i.supplier, total: i.total, account: i.account }));
@@ -1905,7 +1923,7 @@ async function trend(env, store, realmId) {
 }
 
 async function status(env, store, realmId) {
-  if (await onFA(store, realmId)) return FA().status(env, store, realmId);
+  { const X = await ext(store, realmId); if (X) return X.status(env, store, realmId); }
   const t = await (await store.fetch(`https://store/tokens/${realmId}`)).json().catch(() => null);
   try {
     const info = (await qb(env, store, realmId, 'GET', `companyinfo/${realmId}`)).CompanyInfo;
@@ -1988,7 +2006,7 @@ async function hourlyRun(env) {
   const store = env.STORE.get(env.STORE.idFromName('main'));
   const companies = await (await store.fetch('https://store/tokens')).json();
   for (const c of companies) {
-    if (isDemoClient(await getClient(store, c.realmId)) || c.platform === 'freeagent') continue; // payment alerts for FreeAgent come later
+    if (isDemoClient(await getClient(store, c.realmId)) || PLATFORMS[c.platform]) continue; // payment alerts for other software come later
     const subs = await (await store.fetch(`https://store/pushsubs/${c.realmId}`)).json();
     if (!subs.length) continue;
     const since = await store.fetch(`https://store/paycheck/${c.realmId}`).then(r => (r.ok ? r.text() : ''));
@@ -2166,7 +2184,7 @@ async function accessToken(env, store, realmId, force, retried) {
   const res = await store.fetch(`https://store/tokens/${realmId}`);
   if (!res.ok) throw new Error(`QuickBooks company ${realmId} isn't connected`);
   const t = await res.json();
-  if (t.platform === 'freeagent') throw new Error(FA_LATER);
+  if (PLATFORMS[t.platform]) throw new Error(later(t.platform));
   t.env = t.env || 'sandbox';
   if (!force && t.expires_at - Date.now() > 60_000) return t;
   let fresh;

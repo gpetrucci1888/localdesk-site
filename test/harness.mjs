@@ -136,16 +136,97 @@ export class FakeFA {
   }
 }
 
+
+// A small pretend Xero: just the routes Books uses, with Xero's real field names, id formats and /Date-free DateString values.
+export class FakeXero {
+  constructor() {
+    this.n = 0; this.calls = []; this.refreshes = 0; this.fail429 = 0; this.mails = [];
+    this.tenant = '8a7f3c10-1111-4222-8333-444455556666';
+    this.org = { Name: 'Demo Company (UK)', SalesTaxBasis: 'ACCRUAL', IsDemoCompany: true };
+    this.accounts = [
+      { AccountID: 'acc-bank', Code: '090', Name: 'Business Bank Account', Type: 'BANK' },
+      { AccountID: 'acc-motor', Code: '449', Name: 'Motor Vehicle Expenses', Type: 'OVERHEADS' },
+      { AccountID: 'acc-cos', Code: '300', Name: 'Purchases', Type: 'DIRECTCOSTS' },
+      { AccountID: 'acc-gen', Code: '429', Name: 'General Expenses', Type: 'OVERHEADS' },
+      { AccountID: 'acc-susp', Code: '999', Name: 'Suspense', Type: 'EXPENSE' }];
+    this.tx = []; this.contacts = []; this.invoices = []; this.attachments = {};
+    this.pl = { 'Total Income': '4200.00', 'Total Cost of Sales': '300.00', 'Total Operating Expenses': '1000.00', 'Net Profit': '2900.00' };
+  }
+  id(p) { return `${p}-${++this.n}`; }
+  handle(url, init = {}) {
+    const u = new URL(url), method = (init.method || 'GET').toUpperCase(), path = u.pathname.replace(/^\/api\.xro\/2\.0/, '');
+    const h = init.headers || {};
+    const body = init.body && typeof init.body === 'string' && init.body.startsWith('{') ? JSON.parse(init.body) : null;
+    this.calls.push({ method, path, query: u.search, auth: h.Authorization, tenant: h['xero-tenant-id'], ua: h['User-Agent'], body });
+    const ok = (o, status = 200) => Response.json(o, { status });
+    if (u.host === 'identity.xero.com') {
+      const p = new URLSearchParams(String(init.body));
+      if (p.get('grant_type') === 'refresh_token') { this.refreshes++; return ok({ access_token: 'xe-access-' + this.refreshes, refresh_token: 'xe-refresh-' + this.refreshes, expires_in: 1800 }); }
+      if (p.get('code') === 'bad') return ok({ error: 'invalid_grant' }, 400);
+      return ok({ access_token: 'xe-access-0', refresh_token: 'xe-refresh-0', expires_in: 1800 });
+    }
+    if (path === '/connections' && method === 'GET') return ok([{ id: 'conn-1', tenantId: this.tenant, tenantType: 'ORGANISATION', tenantName: this.org.Name }]);
+    let m = path.match(/^\/connections\/(.+)$/);
+    if (m && method === 'DELETE') { this.disconnected = m[1]; return new Response(null, { status: 200 }); }
+    if (this.fail429 > 0) { this.fail429--; return new Response('{}', { status: 429, headers: { 'Retry-After': '0' } }); }
+    if (path === '/Organisation') return ok({ Organisations: [this.org] });
+    if (path === '/Accounts') return ok({ Accounts: this.accounts });
+    if (path === '/Contacts' && method === 'GET') { const w = u.searchParams.get('where') || '', n = (/Name=="(.*)"/.exec(w) || [])[1]; return ok({ Contacts: this.contacts.filter(c => !n || c.Name === n) }); }
+    if (path === '/Contacts' && method === 'PUT') { const c = { ...body, ContactID: this.id('contact'), ContactStatus: 'ACTIVE' }; this.contacts.push(c); return ok({ Contacts: [c] }); }
+    m = path.match(/^\/Contacts\/(.+)$/);
+    if (m && method === 'POST') { const c = this.contacts.find(x => x.ContactID === m[1]); if (c) c.ContactStatus = body.ContactStatus; return ok({ Contacts: [c] }); }
+    const when = (b) => `${b.Date}T00:00:00`;
+    if (path === '/BankTransactions' && method === 'GET') {
+      const w = decodeURIComponent(u.searchParams.get('where') || ''), eq = /Date==DateTime\((\d+),(\d+),(\d+)\)/.exec(w), ge = /Date>=DateTime\((\d+),(\d+),(\d+)\)/.exec(w);
+      const iso = (x) => `${x[1]}-${String(x[2]).padStart(2, '0')}-${String(x[3]).padStart(2, '0')}`;
+      return ok({ BankTransactions: this.tx.filter(b => (!eq || b.Date === iso(eq)) && (!ge || b.Date >= iso(ge))).sort((a, b) => b.Date.localeCompare(a.Date)) });
+    }
+    if (path === '/BankTransactions' && method === 'PUT') {
+      const total = body.LineItems.reduce((t, l) => t + l.UnitAmount * l.Quantity, 0);
+      const b = { ...body, BankTransactionID: this.id('bt'), Status: 'AUTHORISED', Total: total, DateString: when(body), HasAttachments: false, Contact: { Name: body.Contact.Name } };
+      this.tx.push(b); return ok({ BankTransactions: [b] });
+    }
+    m = path.match(/^\/BankTransactions\/([^/]+)$/);
+    if (m && method === 'GET') return ok({ BankTransactions: this.tx.filter(b => b.BankTransactionID === m[1]) });
+    if (m && method === 'POST') { const b = this.tx.find(x => x.BankTransactionID === m[1]); if (b) Object.assign(b, body); return ok({ BankTransactions: [b] }); }
+    m = path.match(/^\/BankTransactions\/([^/]+)\/Attachments\/(.+)$/);
+    if (m && method === 'PUT') { const b = this.tx.find(x => x.BankTransactionID === m[1]); if (b) b.HasAttachments = true; this.attachments[m[1]] = { name: m[2], type: h['Content-Type'] }; return ok({ Attachments: [{ FileName: m[2] }] });}
+    if (path === '/Invoices' && method === 'GET') {
+      const st = (u.searchParams.get('Statuses') || '').split(',');
+      return ok({ Invoices: this.invoices.filter(i => (!st[0] || st.includes(i.Status)) && i.Type === 'ACCREC') });
+    }
+    if (path === '/Invoices' && method === 'PUT') {
+      const net = body.LineItems.reduce((t, l) => t + l.UnitAmount * l.Quantity, 0), rate = ({ OUTPUT2: 0.2, RROUTPUT: 0.05 })[body.LineItems[0].TaxType] || 0;
+      const total = Math.round(net * (1 + rate) * 100) / 100, c = this.contacts.find(x => x.ContactID === body.Contact.ContactID);
+      const inv = { ...body, InvoiceID: this.id('inv'), InvoiceNumber: `INV-${String(this.invoices.length + 1).padStart(4, '0')}`, Total: total, AmountDue: total, DateString: `${body.Date}T00:00:00`, DueDateString: `${body.DueDate}T00:00:00`, Contact: { ContactID: c.ContactID, Name: c.Name, EmailAddress: c.EmailAddress } };
+      this.invoices.push(inv); return ok({ Invoices: [inv] });
+    }
+    m = path.match(/^\/Invoices\/([^/]+)\/Email$/);
+    if (m && method === 'POST') { this.mails.push({ id: m[1] }); return ok({}); }
+    m = path.match(/^\/Invoices\/([^/]+)$/);
+    if (m && method === 'POST') { const i = this.invoices.find(x => x.InvoiceID === m[1]); if (i) { i.Status = body.Status; if (body.Status === 'VOIDED') i.AmountDue = 0; } return ok({ Invoices: [i] }); }
+    if (path === '/Reports/ProfitAndLoss') {
+      const row = (k, v) => ({ RowType: 'Row', Cells: [{ Value: k }, { Value: v }] });
+      return ok({ Reports: [{ Rows: [{ RowType: 'Header', Cells: [{ Value: '' }, { Value: 'Total' }] }, { RowType: 'Section', Title: 'Income', Rows: [{ RowType: 'SummaryRow', Cells: [{ Value: 'Total Income' }, { Value: this.pl['Total Income'] }] }] },
+        { RowType: 'Section', Title: 'Less Cost of Sales', Rows: [{ RowType: 'SummaryRow', Cells: [{ Value: 'Total Cost of Sales' }, { Value: this.pl['Total Cost of Sales'] }] }] },
+        { RowType: 'Section', Title: 'Less Operating Expenses', Rows: [{ RowType: 'SummaryRow', Cells: [{ Value: 'Total Operating Expenses' }, { Value: this.pl['Total Operating Expenses'] }] }] },
+        { RowType: 'Section', Title: '', Rows: [row('Net Profit', this.pl['Net Profit'])] }] }] });
+    }
+    return ok({ Message: 'Unmocked Xero route: ' + method + ' ' + path }, 404);
+  }
+}
+
 // Replaces global fetch for one test. Returns what was called, plus the fake QuickBooks and SMS log.
 export function network(t, { token } = {}) {
   const original = globalThis.fetch;
-  const qb = new FakeQB(), fa = new FakeFA();
+  const qb = new FakeQB(), fa = new FakeFA(), xe = new FakeXero();
   const log = { sms: [], revokes: 0, tokenCalls: 0, other: [], downloads: [] };
   const state = { token: token || (() => Response.json({ access_token: 'access-2', refresh_token: 'refresh-2', expires_in: 3600, x_refresh_token_expires_in: 8640000 })) };
   globalThis.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url;
     if (/quickbooks\.api\.intuit\.com/.test(url)) return qb.handle(url, init);
     if (/api\.(sandbox\.)?freeagent\.com/.test(url)) return fa.handle(url, init);
+    if (/(api|identity)\.xero\.com/.test(url)) return xe.handle(url, init);
     if (/oauth\.platform\.intuit\.com/.test(url)) { log.tokenCalls++; return state.token(init); }
     if (/developer\.api\.intuit\.com/.test(url)) { log.revokes++; return new Response('{}'); }
     if (/api\.twilio\.com/.test(url)) { log.sms.push(Object.fromEntries(new URLSearchParams(String(init.body)))); return Response.json({}, { status: 201 }); }
@@ -154,7 +235,7 @@ export function network(t, { token } = {}) {
     return new Response('unmocked ' + url, { status: 599 });
   };
   t.after(() => { globalThis.fetch = original; });
-  return { qb, fa, log, state };
+  return { qb, fa, xe, log, state };
 }
 
 // One fresh world: storage, Store stub, env for the books worker, env for the app worker.
@@ -167,7 +248,7 @@ export function world(extra = {}) {
     STORE: { idFromName: () => 'main', get: () => stub },
     ADMIN_KEY: ADMIN, QB_CLIENT_ID: 'sandbox-id', QB_CLIENT_SECRET: 'sandbox-secret', QB_PROD_CLIENT_ID: 'prod-id', QB_PROD_CLIENT_SECRET: 'prod-secret',
     TWILIO_ACCOUNT_SID: 'ACtest', TWILIO_AUTH_TOKEN: 'twilio-test-token', SMS_FROM: 'Books', OWNER_PHONE: '+447700900001',
-    APP_URL: 'https://app.test', BOOKS_URL: 'https://books.test', AI: ai, FA_SANDBOX_CLIENT_ID: 'fa-sandbox-id', FA_SANDBOX_CLIENT_SECRET: 'fa-sandbox-secret', FA_CLIENT_ID: 'fa-prod-id', FA_CLIENT_SECRET: 'fa-prod-secret', ...extra,
+    APP_URL: 'https://app.test', BOOKS_URL: 'https://books.test', AI: ai, FA_SANDBOX_CLIENT_ID: 'fa-sandbox-id', FA_SANDBOX_CLIENT_SECRET: 'fa-sandbox-secret', FA_CLIENT_ID: 'fa-prod-id', FA_CLIENT_SECRET: 'fa-prod-secret', XERO_CLIENT_ID: 'xero-id', XERO_CLIENT_SECRET: 'xero-secret', ...extra,
   };
   const appEnv = {
     AI: ai,
