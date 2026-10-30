@@ -10,7 +10,7 @@ const TOKEN = 'https://identity.xero.com/connect/token';
 const API = 'https://api.xero.com/api.xro/2.0';
 const UA = 'Localdesk Books (hello@localdeskai.co.uk)';
 const SOFTWARE = 'Xero';
-export const XERO_SCOPES = 'offline_access accounting.transactions accounting.contacts accounting.settings accounting.attachments accounting.reports.read';
+export const XERO_SCOPES = 'offline_access accounting.invoices accounting.banktransactions accounting.contacts accounting.settings accounting.attachments accounting.reports.profitandloss.read';
 
 export const xeroCreds = (env) => ({ id: env.XERO_CLIENT_ID, secret: env.XERO_CLIENT_SECRET });
 export const xeroAuthorizeUrl = (env, redirectUri, state) =>
