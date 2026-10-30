@@ -210,7 +210,7 @@ html.app .top .sub{color:var(--muted)}
 html.app .hbtn{background:var(--card);color:var(--ink);border:1px solid var(--line)}
 html.app main{max-width:1120px;margin:0;padding:18px 40px 56px;gap:18px}
 html.app #tab-home{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
-html.app #tab-home>#waitCard,html.app #tab-home>#startCard,html.app #tab-home>.snaps{grid-column:1/-1}
+html.app #tab-home>#waitCard,html.app #tab-home>#startCard,html.app #tab-home>#installCard,html.app #tab-home>.snaps{grid-column:1/-1}
 html.app #tab-home>.snaps{grid-template-columns:2fr 1fr}
 html.app .snap{min-height:96px;flex-direction:row;gap:12px}
 html.app section:not(#tab-home){max-width:860px}
@@ -1071,8 +1071,8 @@ var installEvt=null;
 function installSnoozed(){try{return Date.now()-Number(localStorage.getItem('books-install-later')||0)<7*86400000}catch(e){return false}}
 function showInstall(){
   if(standalone||installSnoozed())return;
-  if(iPhone){$('installIos').hidden=false;$('installCard').hidden=false}
-  else if(installEvt){$('installAndroid').hidden=false;$('installCard').hidden=false}
+  if(iPhone){$('installIos').hidden=false;$('installCard').hidden=false;$('startStep1').hidden=true}
+  else if(installEvt){$('installAndroid').hidden=false;$('installCard').hidden=false;$('startStep1').hidden=true}
 }
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installEvt=e;showInstall()});
 window.addEventListener('appinstalled',function(){$('installCard').hidden=true});
