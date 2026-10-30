@@ -11,6 +11,9 @@
 //                               shared links, app link). Their record, mileage and change log are then held for RETENTION_DAYS (30)
 //                               and purged (see PURGE_MODE below)
 //   POST /purge/<realmId>?confirm=<realmId>  (X-Key) delete everything Books holds for an ended client now (refused on legal hold)
+//   GET  /backup                (X-Key) everything that can't be recreated (not connection tokens), as one JSON file
+//   POST /restore[?overwrite=1] (X-Key) put a backup file back; existing records are kept unless overwrite=1
+//   (Daily 07:00 cron also writes the backup to the BACKUPS bucket if one is bound, keeping 30 days)
 //   GET  /export/<realmId>      (X-Key) everything Books holds about that client, as JSON (handover and data requests)
 //   GET  /app/<appKey>          (X-Key) which company an app link belongs to
 //   GET  /companies             (X-Key header) which QuickBooks companies are connected
@@ -314,6 +317,16 @@ async function route(request, env) {
         if (cl.hold) return Response.json({ error: 'This client is on legal hold. Clear the hold first' }, { status: 409 });
         if (!cl.ended_at) return Response.json({ error: 'This client has not been ended (POST /revoke first)' }, { status: 409 });
         return Response.json({ ok: true, deleted: await (await store.fetch(`https://store/purge/${pg[1]}`, { method: 'POST' })).json() });
+      }
+
+      if (url.pathname === '/backup' && request.method === 'GET') {
+        const entries = await (await store.fetch('https://store/dump')).json();
+        return Response.json({ version: 1, made: new Date().toISOString(), count: Object.keys(entries).length, entries });
+      }
+      if (url.pathname === '/restore' && request.method === 'POST') {
+        const b = await request.json().catch(() => null);
+        if (!b || b.version !== 1 || typeof b.entries !== 'object') return Response.json({ error: 'That is not a Books backup file' }, { status: 400 });
+        return store.fetch('https://store/load', { method: 'POST', body: JSON.stringify({ entries: b.entries, overwrite: url.searchParams.get('overwrite') === '1' }) });
       }
 
       const ex = url.pathname.match(/^\/export\/(\d+)$/);
@@ -1436,6 +1449,19 @@ async function tripsFor(store, realmId, from, to) {
 // ---------- daily check, chasing and the weekly report ----------
 
 const DAILY_CRON = '0 7 * * *';
+const BACKUP_KEYS = /^(client|appkey|trips|log|push|chased|pack|doc|seen|paycheck|invite):/;
+const BACKUP_DAYS = 30;
+
+// Writes today's backup to the BACKUPS bucket (if one is bound) and keeps the last 30. Returns how many records, or -1 if no bucket.
+async function backupNow(env, store) {
+  if (!env.BACKUPS) return -1;
+  const entries = await (await store.fetch('https://store/dump')).json();
+  const made = new Date().toISOString();
+  await env.BACKUPS.put(`books/${made.slice(0, 10)}.json`, JSON.stringify({ version: 1, made, count: Object.keys(entries).length, entries }));
+  const old = (await env.BACKUPS.list({ prefix: 'books/' })).objects.map(o => o.key).sort().slice(0, -BACKUP_DAYS);
+  for (const key of old) await env.BACKUPS.delete(key);
+  return Object.keys(entries).length;
+}
 const CHASE_INVOICE_DAYS = [7, 14, 28]; // days late
 const CHASE_QUOTE_DAYS = [3, 7];        // days since the quote
 const CHASES_PER_DAY = 10;
@@ -1444,6 +1470,7 @@ async function dailyRun(env) {
   const store = env.STORE.get(env.STORE.idFromName('main'));
   const report = await health(env, store, { refresh: true, chase: true });
   await store.fetch('https://store/housekeeping', { method: 'POST' }).catch(() => {});
+  await backupNow(env, store).catch(async err => { if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books: the daily backup failed: ${String(err && err.message || err).slice(0, 150)}`).catch(() => {}); });
   const retention = await purgeDue(env, store);
   if (new Date().getUTCDay() === 1 && env.OWNER_PHONE && retention.due.length) {
     await sendSms(env, env.OWNER_PHONE, `Books: ${retention.due.length} ended client${retention.due.length > 1 ? 's are' : ' is'} past the ${RETENTION_DAYS}-day holding period and still held (nothing deleted yet): ${retention.due.join(', ')}. Export first if they want a copy, then switch automatic deletion on.`).catch(() => {});
@@ -2229,6 +2256,24 @@ export class Store {
       await this.storage.delete(key);
       out.client = cl ? 1 : 0;
       return Response.json(out);
+    }
+    // Backup and restore. Only what can't be recreated: clients, their app links, mileage, change log, notification devices,
+    // shared links, chasing history. Never connection tokens (they are credentials and Intuit rotates them, so an old copy is useless:
+    // after a restore each client reconnects), sessions, login codes or counters.
+    if (url.pathname === '/dump' && request.method === 'GET') {
+      const out = {};
+      for (const [key, value] of await this.storage.list()) if (BACKUP_KEYS.test(key)) out[key] = value;
+      return Response.json(out);
+    }
+    if (url.pathname === '/load' && request.method === 'POST') {
+      const { entries, overwrite } = JSON.parse(await request.text());
+      let written = 0, skipped = 0;
+      for (const [key, value] of Object.entries(entries || {})) {
+        if (!BACKUP_KEYS.test(key)) { skipped++; continue; }
+        if (!overwrite && (await this.storage.get(key)) !== undefined) { skipped++; continue; }
+        await this.storage.put(key, value); written++;
+      }
+      return Response.json({ written, skipped });
     }
     if (url.pathname === '/housekeeping' && request.method === 'POST') {
       // Old invites (they hold a name and phone), login codes, sessions and counters that nobody needs any more.
