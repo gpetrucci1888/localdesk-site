@@ -75,7 +75,7 @@ async function validSession(env, vault, epoch, cookie) {
   if (!m || !vault || !vault.active || Number(m[1]) < Date.now() / 1000) return false;
   return same(m[3], hex(await hmac(await sessionKey(env, vault, epoch), `${m[1]}.${m[2]}`)));
 }
-const cookie = (value, maxAge) => `hq=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
+const cookie = (value, maxAge) => `hq=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 
 
 // ---------- responses ----------

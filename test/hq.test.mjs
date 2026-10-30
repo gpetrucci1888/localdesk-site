@@ -86,7 +86,7 @@ test('first login enrols the authenticator: a wrong code fails, the right one lo
   const good = await call(w, '/login', { method: 'POST', form: { password: PASS, code: await totp(key, Math.floor(Date.now() / 30000)) } });
   assert.equal(good.status, 303); assert.equal(good.headers.get('location'), '/');
   const c = good.headers.get('set-cookie');
-  for (const flag of ['HttpOnly', 'Secure', 'SameSite=Strict', 'Path=/']) assert.match(c, new RegExp(flag));
+  for (const flag of ['HttpOnly', 'Secure', 'SameSite=Lax', 'Path=/']) assert.match(c, new RegExp(flag));
   assert.equal((await call(w, '/', { cookie: sessionCookie(good) })).status, 200);
 });
 
@@ -261,4 +261,12 @@ test('"log out every device" ends every session at once, including ones that wer
   const again = await call(w, '/login', { method: 'POST', form: { password: PASS, code: await totp(a.key, Math.floor(Date.now() / 30000)) }, ip: '192.0.2.77' });
   assert.equal(again.status, 303, 'logging back in still works');
   assert.equal((await call(w, '/', { cookie: sessionCookie(again) })).status, 200);
+});
+
+test('a link tapped in another app (a cross-site navigation) still arrives logged in: the cookie is Lax, never Strict', async () => {
+  const w = world(); const { cookie, res } = await enrol(w);
+  assert.doesNotMatch(res.headers.get('set-cookie') || '', /SameSite=Strict/); assert.match(res.headers.get('set-cookie') || '', /SameSite=Lax/);
+  assert.equal((await call(w, '/')).status, 303, 'without the cookie: login page');
+  const ok = await call(w, '/', { cookie, headers: { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate' } });
+  assert.equal(ok.status, 200, 'with the cookie, a cross-site link lands on Home');
 });
