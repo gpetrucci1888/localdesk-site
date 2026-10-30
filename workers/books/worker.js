@@ -54,6 +54,7 @@
 //   POST /mileoff/<realmId>/<id> (X-Key) deletes a trip
 //   GET  /cis/<realmId>         (X-Key) CIS taken off their pay this tax year (they claim it back)
 //   GET  /health                (X-Key) the daily check: every client's connection, anything stuck
+//   POST /enquiry               (public, from the website form) texts the owner and keeps the enquiry 90 days
 //   GET  /admin                 Gio's admin page (asks for the admin key, then uses the routes above)
 //   GET  /client/<realmId>      (X-Key) one client's settings and their app link
 //   GET  /expenses/<realmId>    (X-Key) ?from&to&q&cat every expense in a period, searchable, with receipt flags
@@ -264,6 +265,9 @@ async function route(request, env) {
         }
         return new Response(await docPage(env, store, link, `${url.origin}/d/${dl[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
       }
+
+      // Website enquiry form (public, called from www.localdeskai.co.uk). Texts the owner and keeps the enquiry for 90 days.
+      if (url.pathname === '/enquiry') return await enquiry(request, env, store);
 
       if (url.pathname === '/admin' && request.method === 'GET') {
         const nonce = randomKey();
@@ -2008,6 +2012,29 @@ function pickTaxCode(codes, kind) {
   return found;
 }
 
+const ENQUIRY_ORIGINS = ['https://www.localdeskai.co.uk', 'https://localdeskai.co.uk'];
+const ENQUIRY_PRODUCTS = { receptionist: 'Receptionist', books: 'Books', unsure: 'Not sure yet' };
+async function enquiry(request, env, store) {
+  const origin = request.headers.get('Origin') || '';
+  const cors = { 'Access-Control-Allow-Origin': ENQUIRY_ORIGINS.includes(origin) ? origin : ENQUIRY_ORIGINS[0], 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Vary': 'Origin' };
+  const reply = (obj, status = 200) => Response.json(obj, { status, headers: cors });
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+  if (request.method !== 'POST') return reply({ error: 'Not found' }, 404);
+  if (origin && !ENQUIRY_ORIGINS.includes(origin)) return reply({ error: 'Not allowed' }, 403);
+  const b = await request.json().catch(() => null);
+  if (!b || typeof b !== 'object') return reply({ error: 'Something went wrong. Please try again, or email hello@localdeskai.co.uk.' }, 400);
+  if (b.website) return reply({ ok: true }); // hidden field only a robot fills in
+  const clean = (v, n) => String(v || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, n);
+  const name = clean(b.name, 80), business = clean(b.business, 100), message = clean(b.message, 600), phone = clean(b.phone, 40);
+  const product = ENQUIRY_PRODUCTS[b.product] ? b.product : 'unsure';
+  if (name.length < 2) return reply({ error: 'Please tell us your name.' }, 400);
+  if (phone.replace(/\D/g, '').length < 10) return reply({ error: 'Please give us a phone number we can reach you on.' }, 400);
+  if (!(await throttle(store, `enq:${await visitor(request)}`, 5, 3600)) || !(await throttle(store, 'enq:all', 40, 86400))) return reply({ error: 'That is a lot of enquiries at once. Please email hello@localdeskai.co.uk instead.' }, 429);
+  await store.fetch('https://store/enquiry', { method: 'POST', body: JSON.stringify({ name, phone, business, product, message, at: Date.now() }) });
+  if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `New ${ENQUIRY_PRODUCTS[product]} enquiry: ${name}${business ? ` (${business})` : ''}, ${phone}.${message ? ' ' + message.slice(0, 160) : ''}`).catch(() => {});
+  return reply({ ok: true });
+}
+
 // UK mobile numbers as people write them ("07700 900123", "+44 7700 900123", "0044 7700 900123", "(07700) 900-123")
 // all become +447700900123. Anything that isn't a UK mobile is refused with a plain message, so a wrong number is
 // caught when it is saved and not when a login code silently fails to arrive. A blank stays blank.
@@ -2296,6 +2323,10 @@ export class Store {
       }
       return Response.json({ written, skipped });
     }
+    if (url.pathname === '/enquiry' && request.method === 'POST') {
+      await this.storage.put(`enquiry:${Date.now()}:${crypto.randomUUID().slice(0, 6)}`, JSON.parse(await request.text()));
+      return Response.json({ ok: true });
+    }
     if (url.pathname === '/housekeeping' && request.method === 'POST') {
       // Old invites (they hold a name and phone), login codes, sessions and counters that nobody needs any more.
       const now = Date.now();
@@ -2305,6 +2336,7 @@ export class Store {
         codes: await dropWhere(this.storage, 'code:', v => (!v.expires || now > v.expires) && !(v.sent || []).some(t => now - t < 3600000)),
         sessions: await dropWhere(this.storage, 'session:', v => now - v.created > SESSION_DAYS * 86400000),
         alerts: await dropWhere(this.storage, 'alert:', v => now - v > 7 * 86400000),
+        enquiries: await dropWhere(this.storage, 'enquiry:', v => now - v.at > 90 * 86400000),
       });
     }
     const c = url.pathname.match(/^\/clients\/(\d+)$/);

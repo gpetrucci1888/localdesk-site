@@ -19,6 +19,9 @@ section.s{padding:clamp(36px,6vw,64px) 0}section.s .wrap{max-width:1000px}sectio
 details{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:10px}summary{font-weight:700;cursor:pointer}details p{margin:.7em 0 0;color:var(--steel)}
 .note{background:#FFF4D6;border:1px solid #F1D88C;border-radius:14px;padding:14px 18px;color:#5b4300;margin-top:18px}
 footer.f{padding:30px 0 50px;color:var(--steel);font-size:.95rem}footer.f a{margin-right:16px}
+.enq{grid-column:1/-1;background:#fff;color:#1F2328;border-radius:18px;padding:clamp(20px,4vw,32px);display:grid;gap:14px}.enq h3{margin:0;font-size:1.3rem;font-weight:900;font-stretch:85%}.enq p.small{margin:0;color:#566069;font-size:.95rem}
+.enq .row{display:grid;gap:14px}@media(min-width:760px){.enq .row{grid-template-columns:1fr 1fr}}.enq label{display:grid;gap:6px;font-weight:700;font-size:.95rem}.enq input,.enq select,.enq textarea{font:inherit;font-size:1.05rem;padding:13px 14px;min-height:52px;border:2px solid #C9CED3;border-radius:12px;background:#fff;color:#1F2328;width:100%}.enq textarea{min-height:96px;resize:vertical}.enq input:focus,.enq select:focus,.enq textarea:focus{outline:none;border-color:#1F2328}
+.enq button{font:inherit;font-weight:800;font-size:1.05rem;min-height:54px;padding:12px 28px;border:0;border-radius:12px;background:#F5B800;color:#1F2328;cursor:pointer;justify-self:start}.enq button:disabled{opacity:.6}.enq .hp{position:absolute;left:-9999px;height:0;overflow:hidden}.enq .msg{font-weight:700;min-height:1.4em}.enq .msg.ok{color:#16794a}.enq .msg.bad{color:#B3361F}
 </style>
 </head>
 <body>
@@ -78,7 +81,17 @@ footer.f{padding:30px 0 50px;color:var(--steel);font-size:.95rem}footer.f a{marg
   <h2>Get started</h2>
   <!-- AWAITING OWNER APPROVAL: "within one working day" reply promise -->
   <p class="sub">We're taking on our first Books clients now. Tell us a little about your business and we'll come back to you within one working day.</p>
-  <div class="cta"><a class="btn btn-yellow" href="mailto:hello@localdeskai.co.uk?subject=Localdesk%20Books%20enquiry&body=Hi%2C%20I%27d%20like%20to%20find%20out%20about%20Books.%0A%0AMy%20name%3A%0AMy%20business%3A%0AMy%20mobile%3A%0AI%20use%20QuickBooks%20already%3A%20yes%20%2F%20no">Email us about Books</a><a class="btn" style="background:#fff;border:2px solid var(--charcoal)" href="../#contact">Book a call</a></div>
+  <form class="enq" id="enquiry" novalidate>
+      <h3>Send us an enquiry</h3>
+      <p class="small">Tell us a little and we'll come back to you. No obligation, and we never share your details.</p>
+      <label>What are you interested in?<select name="product"><option value="receptionist">Receptionist (Mia answers your calls)</option><option value="books" selected>Books (bookkeeping)</option><option value="unsure">Not sure yet</option></select></label>
+      <div class="row"><label>Your name<input name="name" autocomplete="name" required></label><label>Phone number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" required></label></div>
+      <div class="row"><label>Business name (if you have one)<input name="business" autocomplete="organization"></label><label>Anything you'd like us to know<input name="message" maxlength="400"></label></div>
+      <div class="hp" aria-hidden="true"><label>Leave this empty<input name="website" tabindex="-1" autocomplete="off"></label></div>
+      <button type="submit">Send enquiry</button>
+      <p class="msg" role="status" aria-live="polite"></p>
+    </form>
+  <div class="cta" style="margin-top:16px"><a class="btn" style="background:#fff;border:2px solid var(--charcoal)" href="https://calendly.com/hello-localdeskai/30min" target="_blank" rel="noopener">Or book a call</a><a class="btn" style="background:#fff;border:2px solid var(--charcoal)" href="mailto:hello@localdeskai.co.uk?subject=Localdesk%20Books%20enquiry">Or email us</a></div>
   <p class="sub" style="margin-top:18px">We'll never share your details. By enquiring you're not committing to anything.</p>
 </div></section>
 </main>
@@ -87,4 +100,23 @@ footer.f{padding:30px 0 50px;color:var(--steel);font-size:.95rem}footer.f a{marg
   <a href="../">Localdesk home</a><a href="privacy.html">Books privacy</a><a href="terms.html">Books terms</a><a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a>
   <p>Localdesk is a trading name of Gio Petrucci, sole trader, Saltash, Cornwall.</p>
 </div></footer>
+<script>
+(function () {
+  var f = document.getElementById('enquiry'); if (!f) return;
+  var msg = f.querySelector('.msg'), btn = f.querySelector('button');
+  f.addEventListener('submit', function (e) {
+    e.preventDefault(); msg.className = 'msg'; msg.textContent = '';
+    var d = {}; new FormData(f).forEach(function (v, k) { d[k] = v; });
+    if (!d.name.trim() || d.phone.replace(/\D/g, '').length < 10) { msg.className = 'msg bad'; msg.textContent = 'Please add your name and a phone number we can reach you on.'; return; }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    fetch('https://books.localdeskai.co.uk/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (x.ok) { f.reset(); msg.className = 'msg ok'; msg.textContent = 'Thank you. We have your details and will be in touch soon.'; btn.textContent = 'Sent'; return; }
+        msg.className = 'msg bad'; msg.textContent = x.j.error || 'Something went wrong.'; btn.disabled = false; btn.textContent = 'Send enquiry';
+      })
+      .catch(function () { msg.className = 'msg bad'; msg.innerHTML = 'Sorry, that did not send. Please email <a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a> or ring 01752 741686.'; btn.disabled = false; btn.textContent = 'Send enquiry'; });
+  });
+})();
+</script>
 </body></html>
