@@ -505,6 +505,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--yell
 
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
+  var mbar = document.getElementById('mbar'), hero = document.querySelector('.hero'), contact = document.getElementById('contact');
+  function bar() { var past = hero.getBoundingClientRect().bottom < 0, atContact = contact.getBoundingClientRect().top < window.innerHeight; mbar.classList.toggle('show', past && !atContact); }
+  window.addEventListener('scroll', bar, { passive: true }); bar();
   (function () {
     var els = document.querySelectorAll('.reveal');
     if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); return; }
