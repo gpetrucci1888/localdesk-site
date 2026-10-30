@@ -170,7 +170,7 @@ test('adding a client: the form, a bad number is explained, a good one gives a o
 test('a client page shows plain facts, saves changes, and ending or logging out always asks first', async (t) => {
   const w = world({}, t); const { cookie } = await enrol(w, t);
   const page = await (await call(w, '/books/client/111', { cookie })).text();
-  assert.match(page, /Real Plumbing/); assert.match(page, /Open their app/); assert.match(page, /End their service/); assert.match(page, /Check their QuickBooks setup/);
+  assert.match(page, /Real Plumbing/); assert.match(page, /Open their app/); assert.match(page, /End their service/); assert.match(page, /Check their accounting setup/);
   assert.ok(!page.replace(/href="[^"]*"/g, '').includes('REALKEY'), 'the app link is a tappable link, never written out as text');
   const save = await call(w, '/books/client/111/save', { method: 'POST', cookie, form: { name: 'Real Plumbing Ltd', phone: '07700 900123', accountant: 'a@example.test', vat: 'no', extras: '', chase: 'on' } });
   assert.equal(save.status, 303); assert.match(save.headers.get('location'), /done=saved/);

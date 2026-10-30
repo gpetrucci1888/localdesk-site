@@ -641,6 +641,13 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
     return Response.json(await FA().selftest(env, store, realmId));
   }
   if (what === 'precheck' && request.method === 'GET') {
+    if (await onFA(store, realmId)) {   // read-only: connection, VAT status and whether each category has a matching FreeAgent category
+      const cats = await FA().categories(env, store, realmId), registered = !!(await FA().registered(store, realmId));
+      const found = Object.fromEntries(CATEGORIES.map(c => { const k = (ACCOUNT_NAMES[c] || []).find(n => cats.some(x => String(x.description || '').toLowerCase().includes(n))); return [c, k ? cats.find(x => String(x.description || '').toLowerCase().includes(k)).description : null]; }));
+      const unmatched = Object.entries(found).filter(([, v]) => !v).map(([k]) => k);
+      const problems = unmatched.length ? [`No matching FreeAgent category for: ${unmatched.join(', ')}. Those go under a general category`] : [];
+      return Response.json({ vatRegistered: registered, vat: {}, banks: [], categories: found, problems, ok: problems.length === 0 });
+    }
     const accounts = (await query(env, store, realmId, 'select Id, Name, AccountType, Active from Account maxresults 1000')).Account || [];
     const registered = await vatRegistered(env, store, realmId);
     const codes = (await query(env, store, realmId, 'select Id, Name, Active from TaxCode')).TaxCode || [];
@@ -2010,7 +2017,7 @@ function lastMonth() {
   return d.toISOString().slice(0, 7);
 }
 
-const gbp = n => '£' + Math.round(n).toLocaleString('en-GB');
+const gbp = n => (n < 0 && Math.round(n) !== 0 ? '-' : '') + '£' + Math.abs(Math.round(n)).toLocaleString('en-GB');
 
 async function monthlyText(env, store, realmId, month) {
   const m = month || lastMonth();

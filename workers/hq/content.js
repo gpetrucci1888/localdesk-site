@@ -103,7 +103,7 @@ Open Help, then "If something goes wrong". Personal data leak: tell the ICO with
 2. In HQ, open **Books**, then **Add a new client**. Fill in the form and tap **Make the connect link**.
 3. Send them the link on WhatsApp or by text, using the buttons on the next screen.
 4. They open it, log in to their QuickBooks and tap **Allow**. They get their app link by text, and so do you.
-5. Open their page in HQ and tap **Check their QuickBooks setup**. If it lists anything, fix it in their QuickBooks before they start.
+5. Open their page in HQ and tap **Check their accounting setup**. If it lists anything, fix it in their QuickBooks before they start.
 6. On a call, help them log in, tick the terms, snap one test receipt and add their accountant's email.
 
 ## When a client leaves

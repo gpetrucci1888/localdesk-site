@@ -225,6 +225,7 @@ html.app .drop{position:fixed;inset:0 0 0 248px;z-index:30;background:color-mix(
 html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
 @media (max-width:1023px){.navbrand,.navfoot{display:none}}
 @media (min-width:1024px){html.app .drop.on{display:grid}}
+.notqb #trendCard,.notqb #acctCard{display:none}
 </style></head><body>
 <header class="top"><script>document.documentElement.classList.add('app')</script><div class="in"><button class="hbtn" id="back" hidden aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></button>{{LOGO}}<div class="t"><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div>
 <button class="hbtn" data-tab="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
@@ -256,7 +257,7 @@ html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
   <div class="card todo" id="todo" hidden><h2>To do</h2><ul id="todoList"></ul></div>
   <div class="card" id="cisCard" hidden><h2>CIS taken off this tax year</h2><p class="big" id="cisTotal">…</p><p class="note">Contractors paid this to HMRC for you. It comes off your tax bill (or comes back to you) through your tax return.</p></div>
   <div class="card"><h2>Owed to you</h2><p class="big" id="owedTotal">…</p><p class="note" id="owedCount"></p><button class="link" data-tab="owed">See who owes you →</button></div>
-  <div class="card"><h2>For your accountant</h2><p class="sub" id="qDates"></p>
+  <div class="card" id="acctCard"><h2>For your accountant</h2><p class="sub" id="qDates"></p>
     <div class="grid2" style="margin-top:10px"><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
     <p class="note" id="qDue"></p>
     <p class="ready" id="qReady" hidden></p>
@@ -1149,6 +1150,10 @@ if(location.search)history.replaceState(null,'',location.pathname);
 if(start==='settings'||start==='changes')start='home';
 show(TITLES[start]?start:'home');
 flush();
+
+(function(){var done=0;api('status').then(function(st){var sw=st&&st.software;if(!sw||sw==='QuickBooks'||done)return;done=1;document.body.classList.add('notqb');
+function fix(n){if(n.nodeType===3){if(n.nodeValue.indexOf('QuickBooks')>-1)n.nodeValue=n.nodeValue.split('QuickBooks').join(sw)}else if(n.childNodes)n.childNodes.forEach(fix)}
+fix(document.body);new MutationObserver(function(m){m.forEach(function(r){r.addedNodes.forEach(fix);if(r.type==='characterData')fix(r.target)})}).observe(document.body,{childList:true,subtree:true,characterData:true})}).catch(function(){})})();
 </script></body></html>`;
 
 // Logging in on a new phone: a 6-digit code texted to the client's number. Same head and styles as the app.

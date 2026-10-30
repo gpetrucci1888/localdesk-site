@@ -84,7 +84,7 @@ async function load(){
     $('list').innerHTML=rows.map(function(c){var hh=c.health;
       return '<div class="cl" data-realm="'+esc(c.realmId)+'"><b>'+esc(c.name||c.realmId)+'</b> '+(hh.ok?'<span class="pill ok">Connected</span>':'<span class="pill no">Not connected</span>')+(c.env==='sandbox'?'<span class="pill">Practice</span>':'')+(c.demo?'<span class="pill">Open demo</span>':'')+
         '<div class="meta">'+(hh.ok?(hh.filed+' filed this week · '+hh.toTidy+' to sort · '+hh.late+' late · app '+(hh.seenDays==null?'never opened':hh.seenDays===0?'used today':'used '+hh.seenDays+'d ago')):esc(hh.problem||''))+'</div>'+
-        '<div class="meta">Phone '+esc(c.phone||'none')+' · VAT '+esc(c.vat||'by QuickBooks')+' · extras '+esc(c.extras||'none')+' · brand '+esc(c.brand||'Localdesk')+' · chasing '+esc(c.chase||'off')+'</div>'+
+        '<div class="meta">Phone '+esc(c.phone||'none')+' · VAT '+esc(c.vat||'by their software')+' · extras '+esc(c.extras||'none')+' · brand '+esc(c.brand||'Localdesk')+' · chasing '+esc(c.chase||'off')+'</div>'+
         '<div class="acts"><button class="ghost" data-act="link">App link</button><button class="ghost" data-act="edit">Change</button><button class="ghost" data-act="monthly">Preview monthly text</button><button class="ghost" data-act="logout">Log out all phones</button><button class="bad" data-act="revoke">Disconnect</button></div><div class="out" hidden></div></div>'}).join('')||'<p class="meta">No clients connected yet.</p>';
   }catch(err){$('list').innerHTML='';say(err.message,true)}
 }

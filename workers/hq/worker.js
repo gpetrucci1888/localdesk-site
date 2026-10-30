@@ -325,10 +325,10 @@ function newClientForm(msg = '', v = {}) {
 <div class="card"><form method="post" action="/books/new">
 <label for="n">Business name</label><input id="n" name="name" value="${esc(v.name || '')}" required>
 <label for="p">Owner's mobile number<small>Login codes and texts go here. Any normal UK format works.</small></label><input id="p" name="phone" inputmode="tel" value="${esc(v.phone || '')}" placeholder="07700 900123" required>
-<label for="v">Are they VAT registered?</label><select id="v" name="vat"><option value="">Not sure, let QuickBooks tell us</option><option value="yes">Yes</option><option value="no">No</option></select>
+<label for="v">Are they VAT registered?</label><select id="v" name="vat"><option value="">Not sure, let their software tell us</option><option value="yes">Yes</option><option value="no">No</option></select>
 <label for="q">Include quotes?<small>The quotes add-on.</small></label><select id="q" name="extras"><option value="">No</option><option value="quotes">Yes</option></select>
 <label for="s">Which accounting software do they use?</label><select id="s" name="platform"><option value="quickbooks">QuickBooks Online</option><option value="freeagent">FreeAgent</option></select>
-<label for="e">Real or practice company?</label><select id="e" name="env"><option value="production">A real customer's QuickBooks</option><option value="sandbox">A practice company (testing only)</option></select>
+<label for="e">Real or practice company?</label><select id="e" name="env"><option value="production">A real customer's company</option><option value="sandbox">A practice company (testing only)</option></select>
 <div class="sp"></div><button class="btn block" style="margin-top:16px">Make the connect link</button></form></div>`, '/books');
 }
 async function createClient(request, env) {
@@ -336,12 +336,13 @@ async function createClient(request, env) {
   const res = await books(env, '/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: v.name, phone: v.phone, vat: v.vat, extras: v.extras, platform: v.platform === 'freeagent' ? 'freeagent' : 'quickbooks', env: v.env === 'sandbox' ? 'sandbox' : 'production' }) });
   const out = await res.json().catch(() => ({}));
   if (!res.ok || !out.link) return html(newClientForm(String(out.error || await res.text().catch(() => '') || 'That didn\'t work.').replace(/^Error: /, ''), v), 400);
-  const msg = `Hi, here is the link to connect your QuickBooks to Books: ${out.link} (it works once, for 14 days). Log in to QuickBooks and tap Allow. Your app link comes straight after.`;
+  const sw = v.platform === 'freeagent' ? 'FreeAgent' : 'QuickBooks', approve = sw === 'FreeAgent' ? 'Approve' : 'Allow';
+  const msg = `Hi, here is the link to connect your ${sw} to Books: ${out.link} (it works once, for 14 days). Log in to ${sw} and tap ${approve}. Your app link comes straight after.`;
   const digits = String(out.phone || v.phone || '').replace(/\D/g, '').replace(/^0/, '44');
   return html(shell('Link ready', `<h1>Link ready</h1>${banner('ok', `Connect link for ${esc(v.name)}`, 'Send it to them now. It only works once.')}
 <div class="card"><h2>Send it</h2><div class="stack">${btn(`https://wa.me/${digits}?text=${encodeURIComponent(msg)}`, 'Send on WhatsApp', '', true)}${btn(`sms:${digits ? '+' + digits : ''}?&body=${encodeURIComponent(msg)}`, 'Send as a text', 'dark')}</div>
 <p class="help">Or copy this link yourself:</p><p><code>${esc(out.link)}</code></p></div>
-<div class="card"><h2>What happens next</h2><ol class="steps"><li>They open the link, log in to QuickBooks and tap <b>Allow</b>.</li><li>They get their own app link by text, and so do you.</li><li>Open their page here and run <b>Check their QuickBooks setup</b>.</li></ol></div>${btn('/books', 'Back to Books', 'line')}`, '/books'));
+<div class="card"><h2>What happens next</h2><ol class="steps"><li>They open the link, log in to ${sw} and tap <b>${approve}</b>.</li><li>They get their own app link by text, and so do you.</li><li>Open their page here and run <b>Check their accounting setup</b>.</li></ol></div>${btn('/books', 'Back to Books', 'line')}`, '/books'));
 }
 async function pageClient(env, realm, url) {
   const [c, hr] = await Promise.all([books(env, `/client/${realm}`).then(r => r.ok ? r.json() : null), books(env, '/health').then(r => r.json()).catch(() => ({}))]);
@@ -361,7 +362,7 @@ ${c.appUrl ? `<div class="card"><h2>Their app</h2>${btn(c.appUrl, isDemo ? 'Open
 <label for="q">Quotes add-on</label><select id="q" name="extras"><option value=""${!c.extras ? ' selected' : ''}>Off</option><option value="quotes"${c.extras === 'quotes' ? ' selected' : ''}>On</option></select>
 <label for="c">Chase late invoices automatically?</label><select id="c" name="chase"><option value="off"${c.chase !== 'on' ? ' selected' : ''}>No</option><option value="on"${c.chase === 'on' ? ' selected' : ''}>Yes</option></select>
 <button class="btn block" style="margin-top:16px">Save changes</button></form></div>
-<div class="card"><h2>Tools</h2><div class="stack">${btn(`/books/client/${esc(realm)}/check`, 'Check their QuickBooks setup', 'line')}${btn(`/books/client/${esc(realm)}/monthly`, 'See their monthly text', 'line')}${btn(`/books/client/${esc(realm)}/confirm/logout`, 'Log out their phones', 'line')}</div><p class="help">Checking their setup is read-only. It confirms the VAT codes and accounts are right.</p></div>
+<div class="card"><h2>Tools</h2><div class="stack">${btn(`/books/client/${esc(realm)}/check`, 'Check their accounting setup', 'line')}${btn(`/books/client/${esc(realm)}/monthly`, 'See their monthly text', 'line')}${btn(`/books/client/${esc(realm)}/confirm/logout`, 'Log out their phones', 'line')}</div><p class="help">Checking their setup is read-only. It confirms the VAT codes and accounts are right.</p></div>
 ${isDemo ? '' : `<div class="card"><h2>Ending their service</h2><p class="mute">Stops Books straight away. Their data is held for 30 days, then deleted.</p>${btn(`/books/client/${esc(realm)}/confirm/end`, 'End their service', 'danger')}</div>`}`, '/books'));
 }
 async function saveClient(request, env, realm) {
@@ -384,8 +385,8 @@ async function doConfirmed(env, realm, what) {
 }
 async function pageCheck(env, realm) {
   const r = await books(env, `/precheck/${realm}`).then(x => x.ok ? x.json() : null).catch(() => null);
-  if (!r) return shell('Setup check', `${crumb(`/books/client/${esc(realm)}`, 'Back')}${banner('warn', 'Couldn\'t check just now', 'Books couldn\'t reach their QuickBooks. Try again in a minute.', btn(`/books/client/${esc(realm)}/check`, 'Try again', 'line'))}`, '/books');
-  return shell('Setup check', `${crumb(`/books/client/${esc(realm)}`, 'Back')}<h1>QuickBooks setup check</h1>
+  if (!r) return shell('Setup check', `${crumb(`/books/client/${esc(realm)}`, 'Back')}${banner('warn', 'Couldn\'t check just now', 'Books couldn\'t reach their accounting software. Try again in a minute.', btn(`/books/client/${esc(realm)}/check`, 'Try again', 'line'))}`, '/books');
+  return shell('Setup check', `${crumb(`/books/client/${esc(realm)}`, 'Back')}<h1>Setup check</h1>
 ${r.ok ? banner('ok', 'Looks right', 'VAT codes, bank account and expense accounts all line up. They can start using Books.') : banner('warn', `${r.problems.length} thing${r.problems.length > 1 ? 's' : ''} to look at`, 'Fix these in their QuickBooks before their first receipt.')}
 ${r.problems.length ? `<div class="card"><h2>To fix</h2><ol class="steps">${r.problems.map(p => `<li>${esc(p)}</li>`).join('')}</ol></div>` : ''}
 <div class="card"><h2>What we found</h2><div class="kv"><div><span>VAT registered</span><b>${r.vatRegistered ? 'Yes' : 'No'}</b></div><div><span>Bank account</span><b>${esc((r.banks || []).join(', ') || 'None')}</b></div><div><span>20% VAT code</span><b>${esc(r.vat.standard || 'Not found')}</b></div><div><span>5% VAT code</span><b>${esc(r.vat.reduced || 'Not found')}</b></div><div><span>0% VAT code</span><b>${esc(r.vat.zero || 'Not found')}</b></div></div></div>`, '/books');

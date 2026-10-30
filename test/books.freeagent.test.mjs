@@ -182,3 +182,10 @@ test('the invoice that is not emailed is still marked as sent so it shows under 
   assert.equal(fa.invoices[0].status, 'Sent');
   assert.equal((await (await call('GET', '/c/owed')).json())[0].customer, 'Mr Jago');
 });
+
+test('the setup check reads a FreeAgent client without changing anything', async (t) => {
+  const w = world(); const { fa } = network(t); await faClient(w);
+  const r = await (await asAdmin(w, 'GET', `/precheck/${FA_REALM}`)).json();
+  assert.ok(r.categories && Array.isArray(r.problems) && typeof r.ok === 'boolean');
+  assert.equal(fa.expenses.length + fa.invoices.length + fa.contacts.length, 0, 'nothing written');
+});

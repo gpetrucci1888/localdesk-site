@@ -44,7 +44,7 @@ const { chromium } = require('playwright');
       ck(t(`page ${p} fits the screen`), await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
     }
     await page.goto(base + '/books'); await page.click('a.item'); await page.waitForTimeout(500);
-    ck(t('tapping a client opens their page'), /Details/.test(await page.textContent('body')) && /Check their QuickBooks setup/.test(await page.textContent('body')));
+    ck(t('tapping a client opens their page'), /Details/.test(await page.textContent('body')) && /Check their accounting setup/.test(await page.textContent('body')));
     await page.goto(base + '/books/new'); await page.fill('#n', 'Synthetic Roofing'); await page.fill('#p', '07700 900123'); await page.selectOption('#e', 'sandbox'); await page.click('.btn'); await page.waitForTimeout(900);
     ck(t('adding a client gives a one-time connect link and send buttons'), /connect\?invite=/.test(await page.textContent('body')) && /Send on WhatsApp/.test(await page.textContent('body')));
     ck(t('the admin key never reached the browser'), !(await page.content()).includes(H.ADMIN));
