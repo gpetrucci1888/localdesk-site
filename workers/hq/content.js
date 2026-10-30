@@ -28,113 +28,148 @@ export const LINKS = {
 
 // Where each credential lives. NAMES AND PLACES ONLY.
 export const REGISTER = [
-  { name: 'HQ passphrase (OWNER_PASSWORD)', where: 'Cloudflare: Workers > hq > Settings > Variables and Secrets. Your own password manager.', use: 'Logging in to this HQ', recover: 'Set a new one in Cloudflare; all HQ sessions end' },
-  { name: 'HQ authenticator', where: 'Your phone\'s authenticator app', use: 'Second step of the HQ login', recover: 'Set a new value for RESET_TOTP in Cloudflare, then log in and enrol again' },
-  { name: 'Books admin key (ADMIN_KEY)', where: 'Cloudflare secret on the books worker AND the hq worker', use: 'Lets HQ run Books admin actions for you', recover: 'Set a new value on both workers (Docs: Rotate a key)' },
-  { name: 'QuickBooks app keys (QB_CLIENT_ID / QB_CLIENT_SECRET, production versions after approval)', where: 'Intuit developer dashboard; copied into the books worker secrets', use: 'Connecting clients\' QuickBooks', recover: 'Regenerate in Intuit, update the secret' },
-  { name: 'Twilio account SID and auth token', where: 'Twilio console; copied into the books worker secrets', use: 'Login codes and text messages', recover: 'Rotate the auth token in Twilio, update the secret' },
-  { name: 'Push notification keys (VAPID)', where: 'Public half: books worker setting. Private half: books worker secret only', use: 'Phone notifications', recover: 'Cannot be recovered. Generate a new pair; every client turns notifications on again' },
-  { name: 'Stripe restricted read key (STRIPE_KEY)', where: 'Stripe: Developers > API keys; copied into the hq worker secret', use: 'HQ shows customers and subscriptions', recover: 'Delete the key in Stripe, make a new one' },
-  { name: 'Vapi API key and assistant IDs', where: 'Vapi dashboard', use: 'Mia receptionist set-up scripts', recover: 'Regenerate in Vapi' },
-  { name: 'Cloudflare login and API tokens', where: 'Your Cloudflare account (turn on two-step login). Any API token is made in Cloudflare', use: 'Everything', recover: 'Cloudflare account recovery. Keep recovery codes somewhere safe, away from your computer' },
-  { name: 'Password manager and recovery codes', where: 'Your own, outside Localdesk systems', use: 'Holds every password above', recover: 'Set up emergency access with someone you trust' },
+  { name: 'Your HQ passphrase', where: 'Your password manager. A copy is stored (hidden) in Cloudflare', use: 'Logging in to this HQ', recover: 'Set a new one in Cloudflare (Help: Your HQ login)' },
+  { name: 'Your HQ phone app code', where: 'The authenticator app on your phone', use: 'The second step of logging in', recover: 'Lost your phone? Help: Your HQ login' },
+  { name: 'Books admin key', where: 'Hidden inside Cloudflare, on the Books and HQ workers. You never need to type it', use: 'Lets HQ manage Books clients for you', recover: 'Set a new one on both workers (Help: Changing a password or key)' },
+  { name: 'QuickBooks connection keys', where: 'Your Intuit developer account, copied into Cloudflare', use: 'Connecting each client\'s QuickBooks to Books', recover: 'Make new ones in Intuit and update Cloudflare' },
+  { name: 'Text message account (Twilio)', where: 'Your Twilio account, copied into Cloudflare', use: 'Login codes and text messages', recover: 'Make a new token in Twilio and update Cloudflare' },
+  { name: 'Phone notification keys', where: 'Hidden inside Cloudflare, on the Books worker', use: 'Sending alerts to clients\' phones', recover: 'Can\'t be recovered. New ones are made and clients turn notifications on again' },
+  { name: 'Stripe read-only key', where: 'Your Stripe account, copied into Cloudflare (HQ worker)', use: 'Showing your customers and payments in HQ', recover: 'Delete it in Stripe and make a new one (Help: Connect Stripe)' },
+  { name: 'Vapi key (Mia)', where: 'Your Vapi account', use: 'Setting up and running Mia', recover: 'Make a new one in Vapi' },
+  { name: 'Your Cloudflare login', where: 'Your own account. Turn on two-step login and keep the recovery codes somewhere safe, away from your computer', use: 'Everything: it holds all of the above', recover: 'Cloudflare account recovery' },
+  { name: 'Your password manager', where: 'Your own, outside Localdesk', use: 'Holds every password', recover: 'Set up emergency access with someone you trust' },
 ];
 
 export const DOCS = [
-  { id: 'start', title: 'Start here: running Localdesk without Claude', about: 'What exists, where it lives, who to ask', body: `# Localdesk, in one page
+  { id: 'owner', title: 'Owner guide: running Localdesk without Claude', about: 'Where everything is, how to log in, what to do if Claude stops', body: `# Owner guide
 
-- **This HQ** (hq address): your private control room. You log in with a passphrase and an authenticator code. It does not depend on Claude.
-- **Books** is two Cloudflare workers: the *books* connector (QuickBooks, texts, backups) and the *receipt-demo* app clients use on their phones. Code is in the GitHub repo under workers/.
-- **Mia** (receptionist) runs on Vapi and Twilio. Vapi dashboard and Twilio console are linked on the Products page.
-- **Website** is the public site, deployed from the GitHub repo main branch.
-- **Money**: Stripe (customers, subscriptions, payouts).
-- Everything is in your accounts: Cloudflare, GitHub, Stripe, Twilio, Vapi, Intuit. If you stop using Claude, none of it stops working. To change code later, any developer can use the repo and the docs here.
+## Your control room
+**https://hq.localdeskai.co.uk** (bookmark it on your phone and computer). Log in with your passphrase and the 6-digit code from the Google Authenticator app. From there:
+- **Home**: what needs you today.
+- **Customers** and **Payments**: who pays what, failed payments.
+- **Books**: add a client, change a client, see their setup, end a client.
+- **Receptionist**: links to Vapi (Mia), Twilio (numbers and texts) and Calendly.
+- **Backups**: a Books backup every morning. Download one weekly.
+- **Settings** and **Help**: where each password lives, and step-by-step guides.
 
-## Rules that protect you
-- The repo is public. Never put secrets, customer details, phone numbers, access links or keys in it.
-- Never send a password or key in a chat or email. Type secrets only into Cloudflare, Stripe or your password manager.
-- Do not deploy the workers without testing: the repo has tests (see Books: deploy and rollback).` },
-  { id: 'setup-hq', title: 'Setting up this HQ (one-off)', about: 'Passphrase, authenticator, address, backups', body: `# One-off setup
+## Where everything lives (all in accounts you own)
+- **Cloudflare**: runs HQ, Books and the website, and holds the hidden keys. Log in at dash.cloudflare.com. This is the most important account.
+- **GitHub** (gpetrucci1888/localdesk-site): all the code and its history. Public, so no secrets in it.
+- **Stripe**: customers and payments. **Twilio**: phone numbers and texts. **Vapi**: Mia. **Intuit developer**: the QuickBooks connection. **Namecheap**: the domain. **Calendly**: booked calls.
+- **Books addresses**: app.localdeskai.co.uk (client app, being switched on), books.localdeskai.co.uk (connector), hq.localdeskai.co.uk (HQ). The older gpetrucci93.workers.dev addresses still work.
 
-1. In Cloudflare open Workers, then the **hq** worker, then Settings, Variables and Secrets.
-2. Add a secret **OWNER_PASSWORD**: a long passphrase (four or more random words) that exists only in your password manager.
-3. Add a secret **ADMIN_KEY**: the same value as the Books admin key. (Add it to the books worker too if you rotate it.)
-4. Optional: **STRIPE_KEY** (Docs: Connect Stripe).
-5. Open the HQ address. Enter the passphrase. The first time, it shows a setup key: add it to an authenticator app by choosing "enter a setup key", then type the 6-digit code. From then on login needs the passphrase and a current code.
-6. Save the passphrase and a note of the authenticator in your password manager. Keep the setup key as a recovery option.
+## Keeping your passwords safe
+Use a password manager (Bitwarden is free). Put these in it, and nowhere else: logins and recovery codes for Cloudflare, GitHub, Stripe, Twilio, Vapi, Intuit, Namecheap, Google; your HQ passphrase. Keep the HQ authenticator's setup key there too. Turn on two-step login for Cloudflare, GitHub and Stripe. Never put a password or key in GitHub, an email or a chat.
 
-## If you lose the authenticator
-In Cloudflare, set a new value (any text) for the plain variable **RESET_TOTP** on the hq worker. The next login asks you to enrol again.
+## If you stop using Claude
+Nothing stops. HQ, Books, Mia, the website and the daily backup all run on Cloudflare, Vapi and Twilio, not on Claude. Two things only Claude did, and what replaces them:
+1. **Updating the software.** Hire any developer, give them access to GitHub and Cloudflare, and point them at the docs folder and the Help page. Updating takes one command (npx wrangler deploy, with the config files in workers/), or the ops/deploy_workers.py script with a Cloudflare API token.
+2. **Setting up new things.** The ops folder has scripts that print their plan and change nothing until run with --apply.
 
-## If you forget the passphrase
-Set a new OWNER_PASSWORD in Cloudflare. All sessions end.
+## Making a Cloudflare API token (for a developer, when needed)
+Cloudflare, profile icon, **My Profile**, **API Tokens**, **Create Token**, use the **Edit Cloudflare Workers** template, limit it to your account, and store it in your password manager. Give it to a developer only while they work, then delete it.
 
-## Lock-out
-Five wrong tries from one place locks that place out for 15 minutes.` },
-  { id: 'books-onboard', title: 'Books: taking on a new client', about: 'ID check, invite, first login, first checks', body: `# Taking on a Books client
+## Before you take your first paying Books client
+1. Register with HMRC for money laundering supervision (Books is bookkeeping for others).
+2. Sign the data addendum and agreement with each client, after a professional has checked them.
+3. Set up the Stripe payment link for £395 setup and £150 a month. Don't switch on live payments until the steps above are checked.
 
-1. Anti-money-laundering: ID check done and recorded in your own files, agreement and data processing addendum signed, payment set up (Stripe payment link).
-2. Books admin (in HQ): New client. Business name, mobile (any normal UK format), practice or real QuickBooks, VAT yes or no, extras.
-3. Send them the connect link. They sign in to QuickBooks and tap Allow. They are texted their app link. You are texted that they connected.
-4. Run the pre-check (Books admin, client, Check): it tells you whether VAT codes, the bank account and expense accounts line up. Fix anything it lists in their QuickBooks.
-5. They open the app, log in with a texted code, and tick the terms.
-6. Snap one test receipt together, add their accountant's email.
-7. Figures are on the cash basis. For an accrual client use the client settings.
+## If something breaks
+Open Help, then "If something goes wrong". Personal data leak: tell the ICO within 72 hours if people could be harmed, and write down your reasons either way.
+` },
+  { id: 'start', title: 'How everything fits together', about: 'What you have, and that none of it needs Claude', body: `# Localdesk on one page
 
-## Ending a client
-Books admin, client, End. Access stops at once. Their Books data is held 30 days then deleted (when deletion is switched to live). Keep your own ID record for as long as the law requires (check with your AML supervisor).` },
-  { id: 'deploy', title: 'Books: deploy and rollback', about: 'How code gets live and how to undo it', body: `# Deploying Books
+- **HQ** (this site) is your control room. You log in with your passphrase and a code from your phone app. It does not depend on Claude.
+- **Books** is the bookkeeping service for tradespeople. Clients use an app on their phone that files receipts straight into their own QuickBooks.
+- **Receptionist (Mia)** answers your customers' calls. It runs on Vapi (the voice) and Twilio (the phone numbers and texts).
+- **Your website** is www.localdeskai.co.uk.
+- **Money** goes through Stripe: customers, monthly payments and payouts to you.
+- All of it sits in accounts that belong to you: Cloudflare, Stripe, Twilio, Vapi, GitHub and Intuit. If you stopped using Claude tomorrow, nothing would stop working.
 
-Workers are uploaded to Cloudflare with the API (not by pushing to GitHub). Only the website deploys on a push to main.
+## Three rules that protect you
+1. Never send a password or key by email or chat. Type them only into Cloudflare, Stripe or your password manager.
+2. Never put a password, key or customer detail into GitHub. It is a public website.
+3. If you aren't sure, don't change it. Ask a developer to look at the Cloudflare account and the GitHub repository. Everything they need is there.` },
+  { id: 'books-onboard', title: 'Taking on a new Books client', about: 'From ID check to their first receipt', body: `# Taking on a new Books client
 
-1. Run the tests: \`node --test test/*.test.mjs\` (all must pass) and the browser checks in test/browser/.
-2. Save the live code first (Cloudflare API: download the worker content). That is your rollback copy.
-3. Upload the books worker, then the receipt-demo worker. Keep secrets (keep_bindings: secret_text).
-4. Check: the demo link opens, admin page loads, a new client link works.
-5. Rollback: upload the saved copy of whichever worker broke. Takes about a minute.
+1. **Before anything else:** check their ID and keep a copy in your own files. Get the agreement and data addendum signed and set up their payment.
+2. In HQ, open **Books**, then **Add a new client**. Fill in the form and tap **Make the connect link**.
+3. Send them the link on WhatsApp or by text, using the buttons on the next screen.
+4. They open it, log in to their QuickBooks and tap **Allow**. They get their app link by text, and so do you.
+5. Open their page in HQ and tap **Check their QuickBooks setup**. If it lists anything, fix it in their QuickBooks before they start.
+6. On a call, help them log in, tick the terms, snap one test receipt and add their accountant's email.
 
-Domain, VAT, billing and backup set-up scripts are in the ops folder of the repo. Each one prints a plan and changes nothing until you run it with --apply.` },
-  { id: 'backups', title: 'Backups and restore', about: 'What is saved, where, and how to restore', body: `# Backups
+## When a client leaves
+Open their page and tap **End their service**. Books stops straight away. Their data is held for 30 days and then deleted. Keep your own ID check for as long as the law requires.` },
+  { id: 'setup-hq', title: 'Your HQ login: setting up and fixing', about: 'Passphrase, phone app, lost phone', body: `# Your HQ login
 
-**What is saved:** clients, their app links, mileage, change log, notification devices, shared links, chasing history.
-**What is not saved, on purpose:** connection tokens (they are credentials and they rotate, so an old copy is useless), logins, codes, counters. After a restore each client reconnects with a new connect link.
-**QuickBooks data** is not Books' to back up: it lives in each client's own QuickBooks.
+You log in with two things: your **passphrase** and a **6-digit code** from the authenticator app on your phone.
 
-## Daily
-When a storage bucket named BACKUPS is connected to the books worker, a backup is written every morning and the last 30 are kept. Without the bucket, download a backup from the HQ Backups page every week and keep it in your password manager's secure notes or an encrypted drive.
+## If you've lost your phone
+1. In Cloudflare open **Workers & Pages**, then **hq**, then **Settings**, then **Variables and Secrets**.
+2. Change the variable **RESET_TOTP** to any new word and save.
+3. Log in with your passphrase. HQ shows a new setup key for your new phone.
 
-## Restore
-1. Books admin key needed (or ask a developer). POST the backup file to the books worker /restore (add ?overwrite=1 only if you mean to replace what is there).
-2. Send each client a fresh connect link.
-3. Practise a restore on a test copy before you need one.` },
-  { id: 'stripe', title: 'Connect Stripe to HQ', about: 'A read-only key so HQ can show customers', body: `# Connect Stripe
+## If you've forgotten the passphrase
+Edit **OWNER_PASSWORD** in the same place, type a new one, and save it in your password manager first. Every device is logged out.
 
-1. Stripe dashboard, Developers, API keys, **Create restricted key**.
-2. Give it read-only access to Customers, Subscriptions, Charges and Invoices. Nothing else.
-3. Paste it into Cloudflare as the secret **STRIPE_KEY** on the hq worker. Never paste it anywhere else.
-4. Reload HQ: customers and subscriptions appear.
+## Locked out
+Five wrong tries from one device locks that device for 15 minutes. Wait, then try again.` },
+  { id: 'stripe', title: 'Connect Stripe (so HQ shows your money)', about: 'A read-only key, about 3 minutes', body: `# Connect Stripe
 
-## Billing for Books
-£395 setup and £150 a month through one Stripe payment link (ops/books_stripe.py prints the plan). Failed payments: Stripe retries and emails the client; turn on Smart Retries and reminder emails in Stripe, Settings, Billing. If unpaid after 14 days, pause the client; after 30 days end the agreement (as the agreement says). Cancellations: the client uses the link in their Stripe receipt; it takes effect at the end of the month already paid.` },
-  { id: 'rotate', title: 'Rotate a key', about: 'Changing a secret safely', body: `# Rotating a secret
+HQ only needs permission to look, never to change anything.
 
-- **Books admin key:** choose a new long random value. Set it as the ADMIN_KEY secret on the books worker AND the hq worker. Old value stops working at once.
-- **Twilio token / Stripe key / Intuit secret:** create the new one in that service, update the secret in Cloudflare, then delete the old one in the service.
-- **HQ passphrase:** set a new OWNER_PASSWORD. Sessions end.
-After any rotation, open HQ and check the Overview loads.` },
-  { id: 'incident', title: 'If something goes wrong', about: 'Outage, leaked data, 72-hour breach rule', body: `# If something goes wrong
+1. In Stripe go to **Developers**, then **API keys**, then **Create restricted key**. Name it "Localdesk HQ".
+2. Set **Customers**, **Subscriptions**, **Charges** and **Invoices** to **Read**. Leave everything else on **None**.
+3. Create the key and copy it.
+4. In Cloudflare open **Workers & Pages**, then **hq**, then **Settings**, then **Variables and Secrets**, then **Add**. Type: **Secret**. Name: \`STRIPE_KEY\`. Paste the key as the value, then **Add variable and deploy**.
+5. Reload HQ. Your customers and payments appear.
 
-## Books is down or a client says it is
-1. HQ Overview: look for a client marked "needs attention".
-2. Cloudflare status and QuickBooks status pages.
-3. Roll back the last deploy (Docs: Books deploy and rollback).
+## When a payment fails
+Stripe tries again automatically and emails the customer. If it's still unpaid after 14 days, phone them. After 30 days you can end their service, as the agreement says.` },
+  { id: 'backups', title: 'Backups and restore', about: 'What is saved and how to bring it back', body: `# Backups
 
-## Personal data may have leaked (a breach)
-1. Stop the leak. Write down the time you became aware.
-2. Decide whether it risks people's rights and freedoms. If it does, report it to the ICO within **72 hours** of becoming aware. Even if you decide it does not, write down the assessment and your reasons.
-3. Tell the affected clients (you are their processor): within 48 hours under the addendum.
-4. Keep the record in your private notes.
+**What's saved:** your Books clients, their app links, mileage logs, the change log and notification settings. A backup is made every morning at about 6:30 and the last 30 are kept in HQ.
 
-## A key has leaked
-Rotate it (Docs: Rotate a key) then look at what it could reach.` },
+**What isn't saved, on purpose:** the links that connect to each client's QuickBooks (they are like passwords and they change every day, so an old copy is useless). After a restore each client reconnects with a fresh link.
+
+**Their accounting data** is in their own QuickBooks. It isn't yours to back up.
+
+## Keep your own copy
+Once a week, open **Backups** in HQ, tap **Download a backup now** and save the file somewhere safe, like your password manager's secure notes.
+
+## If you ever need to restore
+This is a job for a developer: they send the backup file to Books' restore feature. Then send each client a fresh connect link from HQ.` },
+  { id: 'deploy', title: 'Changing the Books software', about: 'For a developer: how updates go live and roll back', body: `# For a developer: updating Books
+
+The code is in the GitHub repository (public: no secrets in it). The workers are uploaded to Cloudflare through its API. Only the website deploys automatically when \`main\` is pushed.
+
+1. Run the tests: \`node --test test/*.test.mjs\` (all must pass) and the browser checks in \`test/browser/\`.
+2. Download the live code first. That is the way back.
+3. Upload the books worker, then the receipt-demo worker, keeping existing secrets.
+4. Check the demo opens, HQ loads, and a new client link works.
+5. To roll back, upload the saved copy of whichever worker broke.
+
+The \`ops\` folder has setup scripts. Each prints its plan and changes nothing until run with \`--apply\`.` },
+  { id: 'rotate', title: 'Changing a password or key', about: 'How to swap one safely', body: `# Changing a password or key
+
+- **HQ passphrase:** edit \`OWNER_PASSWORD\` in Cloudflare (hq worker).
+- **Books admin key:** set a new long random value as \`ADMIN_KEY\` on BOTH the books worker and the hq worker. The old one stops working at once.
+- **Twilio, Stripe or Intuit:** create the new one in that service, put it in Cloudflare, then delete the old one in the service.
+
+After any change, open HQ and check Home loads without warnings.` },
+  { id: 'incident', title: 'If something goes wrong', about: 'Outage, a leak, and the 72-hour rule', body: `# If something goes wrong
+
+## A client says Books isn't working
+1. Open HQ Home. A problem shows as a red box with what to do.
+2. Check Cloudflare and QuickBooks' own status pages.
+3. If it started after an update, ask a developer to roll it back.
+
+## Personal information may have leaked
+1. Stop it from spreading, and write down the time you found out.
+2. Decide whether people could be harmed. If so, you must tell the ICO within **72 hours** of finding out. Even if you decide not to, write down your reasons and keep them.
+3. Tell your affected clients quickly. The data addendum says within 48 hours.
+
+## A password or key may have leaked
+Change it straight away (Help, "Changing a password or key"), then look at what it could have reached.` },
 ];

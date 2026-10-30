@@ -1,0 +1,14 @@
+// Deploys the Books connector: from the repository root run   npx wrangler deploy -c workers/books/wrangler.jsonc
+// Needs a Cloudflare login (npx wrangler login) or an API token in CLOUDFLARE_API_TOKEN. Secrets and plain settings (ADMIN_KEY,
+// QB_*, TWILIO_*, VAPID_*, APP_URL, OWNER_PHONE, SMS_FROM...) already live in Cloudflare and are KEPT (keep_vars): never list
+// them here, this file is public. The Durable Object already exists (migration v1 applied), so no migrations are listed.
+{
+  "name": "books",
+  "main": "worker.js",
+  "compatibility_date": "2025-09-01",
+  "keep_vars": true,
+  "workers_dev": true,
+  "ai": { "binding": "AI" },
+  "durable_objects": { "bindings": [{ "name": "STORE", "class_name": "Store" }] },
+  "triggers": { "crons": ["0 * * * *", "0 7 * * *", "0 8 1 * *", "0 8 8 1,4,7,10 *"] }
+}

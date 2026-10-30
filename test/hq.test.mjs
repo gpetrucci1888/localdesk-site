@@ -15,11 +15,19 @@ function world(extra = {}, t) {
     OWNER_PASSWORD: PASS, ADMIN_KEY: ADMIN, STRIPE_KEY: STRIPE,
     VAULT: { idFromName: () => 'owner', get: () => stub },
     BOOKS: { fetch: async (url, init = {}) => {
-      const path = new URL(url).pathname; const key = (init.headers || {})['X-Key']; booksCalls.push({ path, method: init.method || 'GET', key });
-      if (path === '/admin') return new Response(BOOKS_HTML, { headers: { 'Content-Type': 'text/html' } });
+      const path = new URL(url).pathname; const key = (init.headers || {})['X-Key']; const method = init.method || 'GET';
+      booksCalls.push({ path, method, key, body: init.body });
       if (key !== ADMIN) return new Response('Not allowed', { status: 403 });
-      if (path === '/health') return Response.json({ clients: [{ name: 'Real Plumbing', ok: true, filed: 4, toTidy: 2, late: 1, seenDays: 0 }, { name: '<img src=x onerror=alert(1)>', ok: false, problem: 'QuickBooks 401' }] });
+      if (extra.booksDown) throw new Error('down');
+      if (path === '/health') return Response.json({ clients: [{ realmId: '111', name: 'Real Plumbing', ok: true, filed: 4, toTidy: 2, late: 1, seenDays: 0 }, { realmId: '222', name: '<img src=x onerror=alert(1)>', ok: false, problem: 'QuickBooks 401' }, { realmId: '333', name: 'JCM Group', ok: true }] });
       if (path === '/backup') return Response.json({ version: 1, entries: {} });
+      if (path === '/invite') { const b = JSON.parse(init.body); return b.phone === 'bad' ? Response.json({ error: 'Error: \"bad\" is not a UK mobile number' }, { status: 500 }) : Response.json({ ok: true, link: 'https://books.test/connect?invite=ONETIME', phone: '+447700900123' }); }
+      let m;
+      if ((m = path.match(/^\/client\/(\d+)$/)) && method === 'GET') return Response.json(m[1] === '333' ? { name: 'JCM Group', demo: true, appUrl: 'https://app.test/DEMOKEY/', vat: '', chase: 'off' } : { name: 'Real Plumbing', phone: '+447700900123', accountant: 'acct@example.test', vat: 'yes', extras: 'quotes', chase: 'on', appUrl: 'https://app.test/REALKEY/' });
+      if ((m = path.match(/^\/client\/(\d+)$/)) && method === 'PUT') return Response.json({ ok: true });
+      if (path.match(/^\/(logout|revoke)\/\d+$/)) return Response.json({ ok: true });
+      if (path.match(/^\/precheck\/\d+$/)) return Response.json({ ok: false, vatRegistered: true, vat: { standard: '20.0% S', reduced: null, zero: null, none: 'No VAT' }, banks: ['Current'], problems: ['No VAT code found for 5% reduced rate'] });
+      if (path.match(/^\/monthly\/\d+$/)) return Response.json({ text: 'Hi, here is your September summary' });
       return Response.json({ ok: true, path });
     } },
     ...extra,
@@ -36,7 +44,7 @@ const call = (w, path, { method = 'GET', form, cookie, ip = '203.0.113.5', heade
   method, redirect: 'manual',
   headers: { ...(cookie ? { Cookie: cookie } : {}), 'CF-Connecting-IP': ip, ...(form ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}), ...headers },
   body: form ? new URLSearchParams(form).toString() : undefined }), w.env);
-const setupKey = (html) => /<code>([A-Z2-7]{32})<\/code>/.exec(html)[1];
+const setupKey = (html) => /class="key">([A-Z2-7]{32})</.exec(html)[1];
 const sessionCookie = (res) => (res.headers.get('set-cookie') || '').split(';')[0];
 
 async function enrol(w, t) {
@@ -49,31 +57,32 @@ async function enrol(w, t) {
 
 test('with no passphrase set, HQ is switched off and nothing gets in', async () => {
   const w = world({ OWNER_PASSWORD: undefined });
-  for (const p of ['/', '/login', '/customers', '/ba/health']) assert.equal((await call(w, p)).status, 503, p);
+  for (const p of ['/', '/login', '/customers', '/books']) assert.equal((await call(w, p)).status, 503, p);
 });
 
-test('a visitor who is not logged in is sent to the login page, with strict headers and no scripts', async () => {
+test('a visitor who is not logged in is sent to the login page; the login page has strict headers, no scripts, and the brand font is public', async () => {
   const w = world();
-  for (const p of ['/', '/customers', '/products', '/settings', '/docs', '/backups', '/books-admin']) {
+  for (const p of ['/', '/customers', '/payments', '/books', '/books/new', '/books/client/111', '/books/client/111/check', '/receptionist', '/backups', '/settings', '/more', '/docs', '/docs/start']) {
     const r = await call(w, p); assert.equal(r.status, 303, p); assert.equal(r.headers.get('location'), '/login', p);
   }
-  assert.equal((await call(w, '/ba/health')).status, 401);
-  const login = await call(w, '/login');
-  assert.equal(login.status, 200);
+  for (const [m, p] of [['POST', '/books/new'], ['POST', '/books/client/111/do/end'], ['POST', '/books/client/111/save'], ['POST', '/backups/download']]) assert.equal((await call(w, p, { method: m })).status, 303, `${m} ${p}`);
+  assert.equal(w.booksCalls.length, 0, 'Books was never contacted');
+  const login = await call(w, '/login'); assert.equal(login.status, 200);
   const csp = login.headers.get('content-security-policy');
-  assert.match(csp, /default-src 'none'/); assert.doesNotMatch(csp, /script-src/); assert.match(csp, /frame-ancestors 'none'/);
+  assert.match(csp, /default-src 'none'/); assert.doesNotMatch(csp, /script-src/); assert.match(csp, /frame-ancestors 'none'/); assert.match(csp, /font-src 'self'/);
   assert.equal(login.headers.get('x-frame-options'), 'DENY'); assert.equal(login.headers.get('cache-control'), 'no-store');
   assert.match(login.headers.get('x-robots-tag'), /noindex/); assert.equal(login.headers.get('referrer-policy'), 'no-referrer');
   assert.ok(!(await login.text()).includes('<script'));
+  const font = await call(w, '/font.woff'); assert.equal(font.status, 200); assert.equal(font.headers.get('content-type'), 'font/woff'); assert.ok((await font.arrayBuffer()).byteLength > 50000);
 });
 
 test('first login enrols the authenticator: a wrong code fails, the right one logs in with a locked-down cookie', async (t) => {
   const w = world({}, t);
   const first = await call(w, '/login', { method: 'POST', form: { password: PASS } });
-  const html = await first.text(); assert.equal(first.status, 200); assert.match(html, /setup key/i);
-  const key = setupKey(html);
+  const page = await first.text(); assert.equal(first.status, 200); assert.match(page, /Enter a setup key/);
+  const key = setupKey(page);
   const bad = await call(w, '/login', { method: 'POST', form: { password: PASS, code: '000000' } });
-  assert.equal(bad.status, 401); assert.equal(bad.headers.get('set-cookie'), null);
+  assert.equal(bad.status, 401); assert.equal(bad.headers.get('set-cookie'), null); assert.match(await bad.text(), /wasn't right/);
   const good = await call(w, '/login', { method: 'POST', form: { password: PASS, code: await totp(key, Math.floor(Date.now() / 30000)) } });
   assert.equal(good.status, 303); assert.equal(good.headers.get('location'), '/');
   const c = good.headers.get('set-cookie');
@@ -81,31 +90,36 @@ test('first login enrols the authenticator: a wrong code fails, the right one lo
   assert.equal((await call(w, '/', { cookie: sessionCookie(good) })).status, 200);
 });
 
-test('a wrong passphrase, an empty one and a right one with a wrong code all fail the same way', async (t) => {
-  const w = world({}, t); const { key } = await enrol(w, t);
+test('a wrong passphrase, an empty one and a right one with a wrong code all fail the same plain way', async (t) => {
+  const w = world({}, t); await enrol(w, t);
   for (const form of [{ password: 'nope', code: '123456' }, { password: '', code: '' }, { password: PASS, code: '111111' }, { password: PASS }]) {
     const r = await call(w, '/login', { method: 'POST', form, ip: '198.51.100.1' + Math.floor(Math.random() * 90) });
-    assert.equal(r.status, 401); assert.match(await r.text(), /That did not work/);
+    assert.equal(r.status, 401); assert.match(await r.text(), /didn't work\. Check your passphrase/);
   }
-  assert.ok(key);
 });
 
 test('five wrong tries lock that visitor out for a while, but not the owner from somewhere else', async (t) => {
   const w = world({}, t); const { key } = await enrol(w, t);
   for (let i = 0; i < 5; i++) await call(w, '/login', { method: 'POST', form: { password: 'wrong', code: '000000' }, ip: '192.0.2.50' });
   const locked = await call(w, '/login', { method: 'POST', form: { password: PASS, code: await totp(key, Math.floor(Date.now() / 30000) + 1) }, ip: '192.0.2.50' });
-  assert.equal(locked.status, 429, 'even the right answer is refused while locked');
+  assert.equal(locked.status, 429); assert.match(await locked.text(), /wait 15 minutes/);
   t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 31000 });
   const elsewhere = await call(w, '/login', { method: 'POST', form: { password: PASS, code: await totp(key, Math.floor(Date.now() / 30000)) }, ip: '192.0.2.99' });
   assert.equal(elsewhere.status, 303);
 });
 
-test('an authenticator code cannot be used twice, and sessions stop working when tampered with, expired or logged out', async (t) => {
+test('mistyping the code while setting up never locks the owner out', async (t) => {
+  const w = world({}, t);
+  await call(w, '/login', { method: 'POST', form: { password: PASS } });
+  for (let i = 0; i < 8; i++) assert.equal((await call(w, '/login', { method: 'POST', form: { password: PASS, code: '000000' } })).status, 401);
+  assert.equal((await call(w, '/login', { method: 'POST', form: { password: PASS } })).status, 200, 'still not locked');
+});
+
+test('a code cannot be used twice; sessions fail when forged, expired or logged out', async (t) => {
   const w = world({}, t); const first = await enrol(w, t);
-  const replay = await call(w, '/login', { method: 'POST', form: { password: PASS, code: first.code }, ip: '192.0.2.7' });
-  assert.equal(replay.status, 401, 'the same code again is refused');
+  assert.equal((await call(w, '/login', { method: 'POST', form: { password: PASS, code: first.code }, ip: '192.0.2.7' })).status, 401, 'the same code again');
   const bits = first.cookie.split('.'); const forged = bits.slice(0, 2).join('.') + '.' + '0'.repeat(64);
-  assert.equal((await call(w, '/', { cookie: forged })).status, 303, 'forged signature');
+  assert.equal((await call(w, '/', { cookie: forged })).status, 303);
   assert.equal((await call(w, '/', { cookie: first.cookie })).status, 200);
   const out = await call(w, '/logout', { method: 'POST', cookie: first.cookie });
   assert.equal(out.status, 303); assert.match(out.headers.get('set-cookie'), /Max-Age=0/);
@@ -113,61 +127,85 @@ test('an authenticator code cannot be used twice, and sessions stop working when
   assert.equal((await call(w, '/', { cookie: first.cookie })).status, 303, 'a session lasts 12 hours');
 });
 
-test('the pages show Books and Stripe data, escape what clients typed, and never show a secret', async (t) => {
+test('every page opens, in plain English, with data from Books and Stripe, and never shows a secret or a raw status', async (t) => {
   const w = world({}, t); const { cookie } = await enrol(w, t);
   let all = '';
-  for (const p of ['/', '/customers', '/products', '/settings', '/docs', '/docs/start', '/docs/setup-hq', '/backups']) {
-    const r = await call(w, p, { cookie }); assert.equal(r.status, 200, p); all += await r.text();
-    assert.match(r.headers.get('content-security-policy'), /default-src 'none'/);
+  const pages = { '/': /coming in each month/, '/customers': /Receptionist customers/, '/payments': /Subscriptions/, '/books': /Your clients/, '/receptionist': /Mia answers/, '/backups': /Take one now/, '/settings': /Where your passwords and keys are kept/, '/docs': /Step-by-step guides/, '/docs/start': /Three rules/, '/more': /Log out of HQ/, '/books/new': /Add a new client/ };
+  for (const [p, re] of Object.entries(pages)) {
+    const r = await call(w, p, { cookie }); assert.equal(r.status, 200, p); const body = await r.text(); all += body; assert.match(body, re, p);
+    assert.match(r.headers.get('content-security-policy'), /default-src 'none'/); assert.ok(!body.includes('<script'), `${p} has no script`);
+    assert.match(body, /class="tabs"/); assert.match(body, /Home/);
   }
-  const overview = await (await call(w, '/', { cookie })).text();
-  assert.match(overview, /Books clients connected/); assert.match(overview, /£547\.00|£550\.00|£547/, 'monthly recurring from Stripe');
-  assert.match(overview, /past_due/);
-  const customers = await (await call(w, '/customers', { cookie })).text();
-  assert.match(customers, /Real Plumbing/); assert.match(customers, /Books monthly/);
-  assert.ok(!customers.includes('<img src=x'), 'a client name is escaped');
-  assert.match(customers, /&lt;img src=x/);
-  for (const secret of [PASS, ADMIN, STRIPE]) assert.ok(!all.includes(secret), 'a secret appeared in a page');
-  assert.match(all, /ADMIN_KEY/, 'the register names credentials');
+  const home = await (await call(w, '/', { cookie })).text();
+  assert.match(home, /£547|£546/, 'monthly income from Stripe'); assert.match(home, /payment failed/i); assert.match(home, /Books lost its link to their QuickBooks/);
+  const pay = await (await call(w, '/payments', { cookie })).text();
+  assert.match(pay, /Payment failed/); assert.match(pay, /Paying/); const words = pay.replace(/<style>[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' '); assert.ok(!/past_due|\bactive\b/.test(words), 'no raw Stripe words: ' + words.slice(Math.max(0, words.search(/past_due|\bactive\b/) - 60), words.search(/past_due|\bactive\b/) + 40));
+  const cust = await (await call(w, '/customers', { cookie })).text();
+  assert.ok(!cust.includes('<img src=x'), 'a client name is escaped'); assert.match(cust, /&lt;img src=x/);
+  const visible = all.replace(/href="[^"]*"/g, '');
+  for (const secret of [PASS, ADMIN, STRIPE, 'REALKEY', 'DEMOKEY']) assert.ok(!visible.includes(secret), 'a secret or key appeared in a page');
+  assert.ok(!all.includes(ADMIN) && !all.includes(STRIPE) && !all.includes(PASS), 'no real secret even inside a link');
 });
 
-test('without a Stripe key the pages still work and say so', async (t) => {
+test('without Stripe the pages still work and explain what to do; with Books down they say so kindly', async (t) => {
   const w = world({ STRIPE_KEY: undefined }, t); const { cookie } = await enrol(w, t);
-  const r = await (await call(w, '/', { cookie })).text();
-  assert.match(r, /Stripe is not connected yet/);
+  const r = await (await call(w, '/payments', { cookie })).text();
+  assert.match(r, /Stripe isn&#39;t connected yet/); assert.match(r, /href="\/docs\/stripe"/);
+  const d = world({ booksDown: true }, t); const c2 = (await enrol(d, t)).cookie;
+  const home = await call(d, '/', { cookie: c2 }); assert.equal(home.status, 200);
+  assert.match(await home.text(), /reach Books just now/);
 });
 
-test('Books admin is served inside HQ with the key added server side; only the admin routes it needs are allowed', async (t) => {
+test('adding a client: the form, a bad number is explained, a good one gives a one-time link and send buttons', async (t) => {
   const w = world({}, t); const { cookie } = await enrol(w, t);
-  const page = await call(w, '/books-admin', { cookie }); assert.equal(page.status, 200);
-  const body = await page.text(), csp = page.headers.get('content-security-policy');
-  assert.match(body, /<meta name="base" content="\/ba">/); assert.match(body, /<meta name="prekey"/);
-  assert.match(csp, /script-src 'nonce-abc123'/); assert.match(csp, /connect-src 'self'/);
-  assert.ok(!body.includes(ADMIN), 'the key is never sent to the browser');
-  const h = await call(w, '/ba/health', { cookie }); assert.equal(h.status, 200);
-  assert.equal(w.booksCalls.at(-1).key, ADMIN, 'the worker added the key');
-  assert.equal((await call(w, '/ba/invite', { method: 'POST', cookie, headers: { 'Content-Type': 'application/json' } })).status, 200);
-  for (const [m, p] of [['POST', '/ba/restore'], ['POST', '/ba/purge/123'], ['GET', '/ba/export'], ['DELETE', '/ba/client/123'], ['POST', '/ba/connect']]) {
-    assert.equal((await call(w, p, { method: m, cookie })).status, 403, `${m} ${p} is not allowed through HQ`);
-  }
-  assert.equal((await call(w, '/ba/health')).status, 401, 'no session, no admin');
+  const bad = await call(w, '/books/new', { method: 'POST', cookie, form: { name: 'Test Roofing', phone: 'bad', vat: '', extras: '', env: 'sandbox' } });
+  assert.equal(bad.status, 400); const bt = await bad.text(); assert.match(bt, /not a UK mobile number/); assert.match(bt, /value="Test Roofing"/, 'what they typed is kept');
+  const ok = await call(w, '/books/new', { method: 'POST', cookie, form: { name: 'Test Roofing', phone: '07700 900123', vat: 'yes', extras: 'quotes', env: 'production' } });
+  assert.equal(ok.status, 200); const t2 = await ok.text();
+  assert.match(t2, /connect\?invite=ONETIME/); assert.match(t2, /wa\.me\/447700900123\?text=/); assert.match(t2, /href="sms:\+447700900123/);
+  const sent = JSON.parse(w.booksCalls.filter(c => c.path === '/invite').at(-1).body);
+  assert.deepEqual([sent.name, sent.vat, sent.extras, sent.env], ['Test Roofing', 'yes', 'quotes', 'production']);
 });
 
-test('the daily job stores a Books backup in HQ, keeps 30, shows it, and lets the owner download any day', async (t) => {
+test('a client page shows plain facts, saves changes, and ending or logging out always asks first', async (t) => {
+  const w = world({}, t); const { cookie } = await enrol(w, t);
+  const page = await (await call(w, '/books/client/111', { cookie })).text();
+  assert.match(page, /Real Plumbing/); assert.match(page, /Open their app/); assert.match(page, /End their service/); assert.match(page, /Check their QuickBooks setup/);
+  assert.ok(!page.replace(/href="[^"]*"/g, '').includes('REALKEY'), 'the app link is a tappable link, never written out as text');
+  const save = await call(w, '/books/client/111/save', { method: 'POST', cookie, form: { name: 'Real Plumbing Ltd', phone: '07700 900123', accountant: 'a@example.test', vat: 'no', extras: '', chase: 'on' } });
+  assert.equal(save.status, 303); assert.match(save.headers.get('location'), /done=saved/);
+  const put = w.booksCalls.filter(c => c.method === 'PUT').at(-1); assert.equal(JSON.parse(put.body).name, 'Real Plumbing Ltd');
+  const confirm = await (await call(w, '/books/client/111/confirm/end', { cookie })).text();
+  assert.match(confirm, /End their service\?/); assert.match(confirm, /cannot be undone/); assert.ok(!w.booksCalls.some(c => c.path.startsWith('/revoke')), 'asking is not doing');
+  const done = await call(w, '/books/client/111/do/end', { method: 'POST', cookie }); assert.equal(done.status, 303); assert.match(done.headers.get('location'), /done=ended/);
+  assert.ok(w.booksCalls.some(c => c.path === '/revoke/111' && c.method === 'POST'));
+  assert.equal((await call(w, '/books/client/111/do/logout', { method: 'POST', cookie })).status, 303);
+  assert.equal((await call(w, '/books/client/111/do/purge', { method: 'POST', cookie })).status, 404, 'only the actions on the page exist');
+  assert.equal((await call(w, '/books/client/abc', { cookie })).status, 404);
+});
+
+test('the demo has no End button, the setup check explains each fix, and the monthly text can be previewed', async (t) => {
+  const w = world({}, t); const { cookie } = await enrol(w, t);
+  const demo = await (await call(w, '/books/client/333', { cookie })).text();
+  assert.match(demo, /Open the demo/); assert.ok(!/End their service/.test(demo));
+  const books = await (await call(w, '/books', { cookie })).text(); assert.match(books, /Open the demo for a prospect/);
+  const check = await (await call(w, '/books/client/111/check', { cookie })).text();
+  assert.match(check, /1 thing to look at/); assert.match(check, /No VAT code found for 5% reduced rate/);
+  assert.match(await (await call(w, '/books/client/111/monthly', { cookie })).text(), /September summary/);
+});
+
+test('the daily job stores a Books backup in HQ, keeps 30, shows it plainly, and lets the owner download any day', async (t) => {
   const w = world({}, t); const { cookie } = await enrol(w, t);
   assert.match(await (await call(w, '/backups', { cookie })).text(), /No backup yet/);
-  assert.match(await (await call(w, '/', { cookie })).text(), /No recent Books backup/);
+  assert.match(await (await call(w, '/', { cookie })).text(), /No recent backup of your Books data/);
   await backupDaily(w.env);
-  const page = await (await call(w, '/backups', { cookie })).text();
-  assert.match(page, /Last backup: 20\d\d-\d\d-\d\d/);
-  assert.ok(!(await (await call(w, '/', { cookie })).text()).includes('No recent Books backup'));
+  assert.match(await (await call(w, '/backups', { cookie })).text(), /Backed up/);
+  assert.ok(!(await (await call(w, '/', { cookie })).text()).includes('No recent backup'));
   const day = new Date().toISOString().slice(0, 10);
   const dl = await call(w, '/backups/download', { method: 'POST', cookie, form: { date: day } });
-  assert.equal(dl.status, 200); assert.match(dl.headers.get('content-disposition'), new RegExp(`books-backup-${day}`));
-  assert.equal((await dl.json()).version, 1);
+  assert.equal(dl.status, 200); assert.match(dl.headers.get('content-disposition'), new RegExp(`books-backup-${day}`)); assert.equal((await dl.json()).version, 1);
   assert.equal((await call(w, '/backups/download', { method: 'POST', cookie, form: { date: '1999-01-01' } })).status, 404);
-  const fresh = await call(w, '/backups/download', { method: 'POST', cookie }); assert.equal((await fresh.json()).version, 1);
-  assert.equal((await call(w, '/backups/download', { method: 'POST' })).status, 303, 'login needed');
+  assert.equal((await (await call(w, '/backups/download', { method: 'POST', cookie })).json()).version, 1);
 });
 
 test('a backup that is not a backup is never kept, and 30 days are kept in large pieces too', async (t) => {
@@ -176,19 +214,24 @@ test('a backup that is not a backup is never kept, and 30 days are kept in large
   await assert.rejects(() => backupDaily(w.env));
   assert.equal((await w.storage.list({ prefix: 'bkmeta:' })).size, 0);
   const big = JSON.stringify({ version: 1, entries: { x: 'y'.repeat(2500000) } });
-  w.env.BOOKS.fetch = async () => new Response(big);
   const stub = w.env.VAULT.get();
   for (let d = 1; d <= 33; d++) await (await stub.fetch('https://vault/bk/put', { method: 'POST', body: JSON.stringify({ date: `2026-09-${String(d).padStart(2, '0')}`, data: big }) })).json();
   assert.equal((await w.storage.list({ prefix: 'bkmeta:' })).size, 30);
-  const got = await (await stub.fetch('https://vault/bk/get', { method: 'POST', body: JSON.stringify({ date: '2026-09-33' }) })).json();
-  assert.equal(got.data, big, 'a 2.5 MB backup comes back exactly');
+  assert.equal((await (await stub.fetch('https://vault/bk/get', { method: 'POST', body: JSON.stringify({ date: '2026-09-33' }) })).json()).data, big);
 });
 
 test('losing the authenticator: changing RESET_TOTP clears it so the owner can enrol again', async (t) => {
   const w = world({}, t); await enrol(w, t);
   assert.equal(await w.storage.get('totp') !== undefined, true);
   w.env.RESET_TOTP = 'lost-my-phone';
-  const r = await call(w, '/login'); assert.equal(r.status, 200);
-  assert.equal(await w.storage.get('totp'), undefined, 'the old authenticator is gone');
-  assert.match(await (await call(w, '/login', { method: 'POST', form: { password: PASS } })).text(), /setup key/i);
+  assert.equal((await call(w, '/login')).status, 200);
+  assert.equal(await w.storage.get('totp'), undefined);
+  assert.match(await (await call(w, '/login', { method: 'POST', form: { password: PASS } })).text(), /Enter a setup key/);
+});
+
+test('an unexpected failure shows a friendly page, not a stack trace', async (t) => {
+  const w = world({}, t); const { cookie } = await enrol(w, t);
+  w.env.BOOKS.fetch = async () => { throw new Error('secret internal detail'); };
+  const r = await call(w, '/books/client/111', { cookie });
+  assert.ok(r.status < 600); const body = await r.text(); assert.ok(!body.includes('secret internal detail')); assert.match(body, /Localdesk/);
 });
