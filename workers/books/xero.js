@@ -145,8 +145,9 @@ export function createXero(D) { // D: { ACCOUNT_NAMES, getClient, logChange, mar
     const all = await accounts(env, store, realmId);
     const acc = pickAccount(expenseAccounts(all), r.category);
     if (!acc) throw new Error('No expense accounts found in Xero');
-    const bank = all.find(a => String(a.Type).toUpperCase() === 'BANK');
-    if (!bank) throw new Error('No bank account in Xero: add one there so receipts have somewhere to come out of');
+    const bank = all.find(a => String(a.Type).toUpperCase() === 'BANK')
+      || ((await call(env, store, realmId, 'GET', '/Accounts?where=' + encodeURIComponent('Type=="BANK"'))).Accounts || []).find(a => a.Status !== 'ARCHIVED');
+    if (!bank) throw new Error(`No bank account in Xero: add one there so receipts have somewhere to come out of (saw ${[...new Set(all.map(x => x.Type))].join(', ')})`);
     const reg = await registered(store, realmId, t);
     const net = round2(total - vat), rate = reg && vat > 0 && net > 0 ? Math.round((vat / net) * 100) : 0;
     const taxType = reg ? (rate === 20 ? 'INPUT2' : rate === 5 ? 'RRINPUT' : vat > 0 ? 'INPUT2' : 'NONE') : 'NONE';
@@ -277,12 +278,20 @@ export function createXero(D) { // D: { ACCOUNT_NAMES, getClient, logChange, mar
   // Read-write check of a new connection that cleans up after itself: every entry is named TEST and removed at the end.
   async function selftest(env, store, realmId) {
     const steps = [], step = async (name, fn) => { try { const note = await fn(); steps.push({ name, ok: true, note: note || '' }); return true; } catch (e) { steps.push({ name, ok: false, note: String(e.message).slice(0, 160) }); return false; } };
-    const made = { expense: null, invoice: null };
+    const made = { expense: null, invoice: null, bank: null };
     const TEST = 'TEST Books connection (delete me)';
     try {
       await step('Connected to Xero', async () => { const s = await status(env, store, realmId); if (!s.connected) throw new Error(s.problem); return s.sandbox ? 'demo company' : 'live'; });
       await step('Reads expense accounts', async () => { const c = await categories(env, store, realmId); if (!c.length) throw new Error('none found'); return `${c.length} found`; });
       await step('Reads figures and who owes you', async () => { await summary(env, store, realmId, null, 0.25); await recent(env, store, realmId); await noReceipt(env, store, realmId); return 'ok'; });
+      await step('Has a bank account for receipts (test connections only add one)', async () => {
+        const banks = ((await call(env, store, realmId, 'GET', '/Accounts?where=' + encodeURIComponent('Type=="BANK"'))).Accounts || []).filter(b => b.Status !== 'ARCHIVED');
+        if (banks.length) return 'found';
+        const t = await saved(store, realmId);
+        if (!t || t.env === 'production') throw new Error('no bank account: the customer needs one in Xero');
+        const b = ((await call(env, store, realmId, 'PUT', '/Accounts', { Code: '091', Name: 'TEST Books bank (delete me)', Type: 'BANK', BankAccountNumber: '12345678' })).Accounts || [])[0];
+        if (!b) throw new Error('could not add a test bank account'); made.bank = b.AccountID; return 'added a test one';
+      });
       await step('Files a test receipt', async () => {
         const r = await fileReceipt(env, store, realmId, { supplier: TEST, total: 1.2, vat: 0.2, category: 'Fuel', items: 'connection test', image: 'data:image/png;base64,iVBORw0KGgo=' });
         if (!r.ok || r.duplicate) throw new Error('not created'); made.expense = r.id; return `${r.account}, VAT ${r.vatCode}${r.attached ? ', receipt attached' : ''}`;
@@ -298,6 +307,7 @@ export function createXero(D) { // D: { ACCOUNT_NAMES, getClient, logChange, mar
     } finally {
       await step('Cleans up the test invoice', async () => { if (!made.invoice) return 'none made'; await call(env, store, realmId, 'POST', `/Invoices/${made.invoice}`, { InvoiceID: made.invoice, Status: 'VOIDED' }); });
       await step('Cleans up the test customer', async () => { const c = ((await call(env, store, realmId, 'GET', `/Contacts?where=${encodeURIComponent(`Name=="${TEST}"`)}`)).Contacts || []); for (const x of c) await call(env, store, realmId, 'POST', `/Contacts/${x.ContactID}`, { ContactID: x.ContactID, ContactStatus: 'ARCHIVED' }); return c.length ? 'archived' : 'none'; });
+      await step('Removes the test bank account', async () => { if (made.bank) await call(env, store, realmId, 'POST', `/Accounts/${made.bank}`, { AccountID: made.bank, Status: 'ARCHIVED' }); return made.bank ? 'archived' : 'none'; });
       await step('Cleans up any leftover test receipt', async () => { if (made.expense) await call(env, store, realmId, 'POST', `/BankTransactions/${made.expense}`, { BankTransactionID: made.expense, Status: 'DELETED' }); });
     }
     return { ok: steps.every(s => s.ok), steps };
