@@ -6,6 +6,8 @@ export const LINKS = {
     { name: 'Books privacy policy', url: 'https://www.localdeskai.co.uk/books/privacy.html', note: 'Public page clients see' },
     { name: 'Books terms', url: 'https://www.localdeskai.co.uk/books/terms.html', note: 'Public page clients see' },
     { name: 'Intuit developer dashboard', url: 'https://developer.intuit.com/app/developer/dashboard', note: 'QuickBooks app keys, redirect addresses, production approval' },
+    { name: 'FreeAgent developer dashboard', url: 'https://dev.freeagent.com/', note: 'FreeAgent app keys and redirect address (the same app serves sandbox and live)' },
+    { name: 'Xero developer portal', url: 'https://developer.xero.com/app/manage', note: 'Xero app keys and redirect address (5 organisations free, then a paid plan)' },
     { name: 'QuickBooks Online (UK)', url: 'https://quickbooks.intuit.com/uk/', note: 'Sign up for a trial company to test VAT' },
   ],
   receptionist: [
@@ -31,6 +33,7 @@ export const REGISTER = [
   { name: 'Your HQ passphrase', where: 'Your password manager. A copy is stored (hidden) in Cloudflare', use: 'Logging in to this HQ', recover: 'Set a new one in Cloudflare (Help: Your HQ login)' },
   { name: 'Your HQ phone app code', where: 'The authenticator app on your phone', use: 'The second step of logging in', recover: 'Lost your phone? Help: Your HQ login' },
   { name: 'Books admin key', where: 'Hidden inside Cloudflare, on the Books and HQ workers. You never need to type it', use: 'Lets HQ manage Books clients for you', recover: 'Set a new one on both workers (Help: Changing a password or key)' },
+  { name: 'FreeAgent and Xero connection keys', where: 'Your FreeAgent and Xero developer accounts, copied into Cloudflare (FA_ and XERO_ names)', use: 'Connecting each client\'s FreeAgent or Xero to Books', recover: 'Make new ones in the developer account and update Cloudflare' },
   { name: 'QuickBooks connection keys', where: 'Your Intuit developer account, copied into Cloudflare', use: 'Connecting each client\'s QuickBooks to Books', recover: 'Make new ones in Intuit and update Cloudflare' },
   { name: 'Text message account (Twilio)', where: 'Your Twilio account, copied into Cloudflare', use: 'Login codes and text messages', recover: 'Make a new token in Twilio and update Cloudflare' },
   { name: 'Phone notification keys', where: 'Hidden inside Cloudflare, on the Books worker', use: 'Sending alerts to clients\' phones', recover: 'Can\'t be recovered. New ones are made and clients turn notifications on again' },
@@ -87,7 +90,7 @@ Open Help, then "If something goes wrong". Personal data leak: tell the ICO with
   { id: 'start', title: 'How everything fits together', about: 'What you have, and that none of it needs Claude', body: `# Localdesk on one page
 
 - **HQ** (this site) is your control room. You log in with your passphrase and a code from your phone app. It does not depend on Claude.
-- **Books** is the bookkeeping service for tradespeople. Clients use an app on their phone that files receipts straight into their own QuickBooks.
+- **Books** is the bookkeeping service for tradespeople. Clients use an app on their phone that files receipts straight into their own accounting software (QuickBooks, FreeAgent or Xero).
 - **Receptionist (Mia)** answers your customers' calls. It runs on Vapi (the voice) and Twilio (the phone numbers and texts).
 - **Your website** is www.localdeskai.co.uk.
 - **Money** goes through Stripe: customers, monthly payments and payouts to you.
@@ -100,10 +103,10 @@ Open Help, then "If something goes wrong". Personal data leak: tell the ICO with
   { id: 'books-onboard', title: 'Taking on a new Books client', about: 'From ID check to their first receipt', body: `# Taking on a new Books client
 
 1. **Before anything else:** check their ID and keep a copy in your own files. Get the agreement and data addendum signed and set up their payment.
-2. In HQ, open **Books**, then **Add a new client**. Fill in the form and tap **Make the connect link**.
+2. In HQ, open **Books**, then **Add a new client**. Fill in the form, choose their accounting software and tap **Make the connect link**.
 3. Send them the link on WhatsApp or by text, using the buttons on the next screen.
-4. They open it, log in to their QuickBooks and tap **Allow**. They get their app link by text, and so do you.
-5. Open their page in HQ and tap **Check their accounting setup**. If it lists anything, fix it in their QuickBooks before they start.
+4. They open it, log in to their accounting software and tap **Allow** (**Approve** in FreeAgent, **Allow access** in Xero; in Xero they pick the right business). They get their app link by text, and so do you.
+5. Open their page in HQ and tap **Check their accounting setup**. If it lists anything, fix it in their accounting software before they start.
 6. On a call, help them log in, tick the terms, snap one test receipt and add their accountant's email.
 
 ## When a client leaves

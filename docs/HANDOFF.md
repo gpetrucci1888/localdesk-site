@@ -14,6 +14,7 @@ Read this first in a new session, then `CLAUDE.md` and `PROGRESS.md`. Secrets an
 ## Not yet deployed (branch `handoff-and-parity`, if merged)
 - Health check now checks every connected business in parallel (admin client list was slow).
 - FreeAgent missing-receipt flags (`noReceipt`) for the monthly check, with a test. After deploying, call the admin route `/noreceipt/<realm>` on the sandbox FreeAgent client to confirm against the real service, then the Books page table ("What works where") can add FreeAgent to the missing-receipt row.
+- HQ help text now covers FreeAgent and Xero (`workers/hq/content.js`); the HQ worker needs a deploy (`ops/deploy_workers.py hq`) for Gio to see it.
 - Deploy only with Gio's approval in the conversation. Before deploying a worker, merge latest `origin/main` and take a rollback copy of the live code.
 
 ## Feature coverage by platform (accurate as of now)
