@@ -26,7 +26,7 @@ test('no personal phone numbers (prospects, partners, clients) in the repo', () 
     for (const m of text.matchAll(/(?:\+44|\b0)[\d ]{9,12}\d/g)) {
       let d = m[0].replace(/\D/g, ''); if (d.startsWith('44')) d = '0' + d.slice(2);
       if (d.length < 10 || d.length > 11) continue;
-      if (d === PUBLIC_LINE || d === ICO_HELPLINE || /^07700900\d{3}$/.test(d)) continue;
+      if (d === PUBLIC_LINE || d === ICO_HELPLINE || /^(((00)?44|0)?7700900\d*|01914980\d{3})$/.test(d)) continue;
       if (createHash('sha256').update(d).digest('hex') === OWNER_HASH && OWNER_ONLY_IN.includes(f)) continue;
       bad.push(`${f}:${n} has a phone number (${mask(d)})`);
     }

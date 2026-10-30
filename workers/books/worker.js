@@ -224,7 +224,7 @@ async function route(request, env) {
         const app = `${env.APP_URL}/${client.appKey}/`;
         if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `Books: ${client.name || realmId} just connected their QuickBooks. Their app: ${app}`).catch(() => {});
         if (client.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, client.phone, `Welcome to Books. Your app: ${app} Open it on your phone and tap "Add to Home Screen". ${supportLine(env)}`).catch(() => {});
-        return page(`Connected ✓<br><br>Your Books app:<br><a href="${app}" style="font-weight:800;word-break:break-all">${app}</a><br><br><small>Open it on your phone, then "Add to Home Screen".</small>`);
+        return page(`Connected ✓<br><br>Your Books app:<br><a href="${app}" style="font-weight:800;word-break:break-all">${app}</a><br><br><small>On your phone, open it and tap "Add to Home Screen" so it sits with your other apps. On a computer, just bookmark it.</small>`);
       }
 
       if (url.pathname === '/disconnect') {
@@ -2270,5 +2270,11 @@ async function cutAccess(storage, realm, cl) {
 
 function text(body, status = 200) { return new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }); }
 function page(msg, status = 200) {
-  return new Response(`<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuickBooks</title><body style="font:18px system-ui;display:grid;place-items:center;min-height:90vh;margin:0;padding:16px;text-align:center"><p>${msg}</p></body>`, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
+  const html = `<!doctype html><html lang="en-GB"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Localdesk Books</title>
+<style>:root{color-scheme:light dark;--bg:#f4f6fa;--card:#fff;--ink:#14213d;--mute:#5b6577}@media(prefers-color-scheme:dark){:root{--bg:#0f1624;--card:#18223a;--ink:#f1f4fa;--mute:#a9b3c7}}
+body{font:18px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;box-sizing:border-box}
+main{background:var(--card);border-radius:16px;padding:28px 24px;max-width:440px;width:100%;text-align:center;box-shadow:0 2px 14px rgba(0,0,0,.08)}
+.brand{font-weight:800;font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}p{margin:0}small{color:var(--mute)}a{color:inherit}</style>
+<body><main><p class="brand">Localdesk Books</p><p>${msg}</p></main></body></html>`;
+  return new Response(html, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
 }

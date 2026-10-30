@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { world, network, seedClient, asAdmin, REALM } from './harness.mjs';
 
 const GOOD = ['07700 900123', '07700900123', '+44 7700 900123', '+447700900123', '0044 7700 900123', '(07700) 900-123', '7700 900123', '+44 (0)7700 900123'];
-const BAD = ['0191 496 0000', '12345', '+1 202 555 0143', 'call me', '077009001', '0770090012345', '+44 7700 90012'];
+const BAD = ['0191 498 0000', '12345', '+1 202 555 0143', 'call me', '077009001', '0770090012345', '+44 7700 90012'];
 
 test('every normal way of writing a UK mobile is saved in one international form', async (t) => {
   const w = world(); network(t);
@@ -35,7 +35,7 @@ test('an invite normalises the number, and a bad one is refused before any link 
   const inv = [...(await w.storage.list({ prefix: 'invite:' })).values()];
   assert.equal(inv.length, 1);
   assert.equal(inv[0].phone, '+447700900123');
-  const bad = await asAdmin(w, 'POST', '/invite', { name: 'X', phone: '0191 496 0000', env: 'sandbox' });
+  const bad = await asAdmin(w, 'POST', '/invite', { name: 'X', phone: '0191 498 0000', env: 'sandbox' });
   assert.notEqual(bad.status, 200);
   assert.equal((await w.storage.list({ prefix: 'invite:' })).size, 1, 'no second invite was made');
 });
