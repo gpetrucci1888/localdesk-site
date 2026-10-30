@@ -106,7 +106,7 @@ export class Vault {
       if (request.method === 'DELETE') { await s.delete('totp'); return Response.json({ ok: true }); }
     }
     if (url.pathname === '/reset') {
-      if (body.value !== undefined && (await s.get('resetSeen')) !== body.value) { await s.put('resetSeen', body.value); if ((await s.get('resetInit')) !== undefined) await s.delete('totp'); await s.put('resetInit', true); }
+      if (body.value !== undefined && (await s.get('resetSeen')) !== body.value) { await s.put('resetSeen', body.value); await s.delete('totp'); }
       return Response.json({ ok: true });
     }
     if (url.pathname === '/check') { // is this visitor locked out?
@@ -138,6 +138,8 @@ export class Vault {
       return Response.json({ data });
     }
     if (url.pathname === '/epoch') { if (request.method === 'POST') await s.put('epoch', ((await s.get('epoch')) || 0) + 1); return Response.json({ n: (await s.get('epoch')) || 0 }); }
+    if (url.pathname === '/cache') return Response.json((await s.get(`cache:${body.key}`)) || null);
+    if (url.pathname === '/cache/set') { await s.put(`cache:${body.key}`, { at: Date.now(), data: body.data }); return Response.json({ ok: true }); }
     if (url.pathname === '/hc') { if (request.method === 'POST') await s.put('hc', body); return Response.json((await s.get('hc')) || null); }
     if (url.pathname === '/ok') { await s.delete(`lock2:${body.who}`); return Response.json({ ok: true }); }
     return new Response('?', { status: 404 });
@@ -190,6 +192,13 @@ const money = (n) => '£' + (Number(n) || 0).toLocaleString('en-GB', { minimumFr
 const day = (ts) => new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' });
 async function stripe(env, path) {
   if (!env.STRIPE_KEY) return { off: true };
+  const v = vaultOf(env), ck = `sc:${path}`, hit = await vget(v, '/cache', { method: 'POST', body: JSON.stringify({ key: ck }) });
+  if (hit && Date.now() - hit.at < 300000) return hit.data;
+  const fresh = await stripeFetch(env, path);
+  if (!fresh.error) await vpost(v, '/cache/set', { key: ck, data: fresh });
+  return fresh;
+}
+async function stripeFetch(env, path) {
   try {
     const r = await fetch(`https://api.stripe.com/v1${path}`, { headers: { Authorization: `Bearer ${env.STRIPE_KEY}` } });
     const d = await r.json();
@@ -288,6 +297,13 @@ ${btn('/books/new', 'Add a new client')}
 }
 // The demo is a practice company marked "demo" in Books. Its app link is built here for the owner only.
 async function demoLink(env, clients) {
+  const v = vaultOf(env), hit = await vpost(v, '/cache', { key: 'demolink' });
+  if (hit && Date.now() - hit.at < 600000) return hit.data;
+  const link = await findDemo(env, clients);
+  await vpost(v, '/cache/set', { key: 'demolink', data: link });
+  return link;
+}
+async function findDemo(env, clients) {
   for (const c of clients) {
     const r = await books(env, `/client/${encodeURIComponent(c.realmId)}`).then(x => x.ok ? x.json() : null).catch(() => null);
     if (r && r.demo && r.appUrl) return r.appUrl;
@@ -435,10 +451,10 @@ export default {
     const respond = (res, opts) => secure(res, opts);
     if (url.pathname === '/font.woff') return fontResponse();
     if (!env.OWNER_PASSWORD) return respond(html(bare('Not set up', '<h1>Not switched on yet</h1><p class="lead">HQ stays closed until you set your passphrase in Cloudflare. The setup guide has the steps.</p>'), 503));
-    await vpost(vault, '/reset', { value: String(env.RESET_TOTP || '') });
+    if (env.RESET_TOTP !== undefined) await vpost(vault, '/reset', { value: String(env.RESET_TOTP) });
     if (url.pathname === '/login') return respond(request.method === 'POST' ? await handleLogin(request, env) : html(loginPage()));
-    const rec = await vget(vault, '/totp');
-    const epoch = (await vget(vault, '/epoch')).n;
+    const [rec, ep] = await Promise.all([vget(vault, '/totp'), vget(vault, '/epoch')]);
+    const epoch = ep.n;
     const authed = await validSession(env, rec, epoch, request.headers.get('Cookie'));
     if (url.pathname === '/logout' && request.method === 'POST') return respond(redirect('/login', { 'Set-Cookie': cookie('', 0) }));
     if (url.pathname === '/logout-all' && request.method === 'POST' && authed) { await vpost(vault, '/epoch', {}); return respond(redirect('/login', { 'Set-Cookie': cookie('', 0) })); }
