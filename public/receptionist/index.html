@@ -225,6 +225,8 @@ body{--accent:var(--yellow)}
 .tbl tbody th{font-weight:700}
 @media(max-width:700px){.tbl,.tbl tbody,.tbl tr,.tbl th,.tbl td{display:block}.tbl thead{position:absolute;left:-9999px}.tbl tr{border-bottom:1px solid var(--line);padding:8px 0}.tbl tbody tr:last-child{border:0}.tbl td{border:0;padding:6px 18px;display:grid;gap:2px}.tbl td::before{content:attr(data-h);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:700}.tbl tbody th{border:0;padding:12px 18px 4px;font-size:1.05rem}.tbl td.us{margin:4px 12px;border-radius:10px;padding:8px 12px}}
 .mbar{border-top:0;border-radius:0}
+.est{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);background:var(--paper);border:1px solid var(--line);padding:3px 10px;border-radius:99px;margin-bottom:8px}
+#o-payback::before{content:"Estimate: ";font-weight:700;opacity:.8}
 
 </style></head>
 <body class="mia">
@@ -355,8 +357,8 @@ body{--accent:var(--yellow)}
       <p class="lede">Up a ladder, under a floor, or finished for the night, and calls go unanswered. The caller doesn't leave a voicemail. They ring the next trade on Google. Localdesk makes sure someone always picks up.</p>
     </div>
     <form class="calc reveal" id="calc" aria-labelledby="calc-title" onsubmit="return false">
-      <h3 id="calc-title">What are missed calls costing you?</h3>
-      <p class="sub">Move the sliders to match your business.</p>
+      <h3 id="calc-title">Estimate: what could missed calls be costing you?</h3>
+      <p class="sub">Move the sliders to match your business. The figures below are estimates, not results.</p>
       <div class="field">
         <label for="c-calls">Calls you miss a week <output for="c-calls" id="o-calls">5</output></label>
         <input type="range" id="c-calls" min="1" max="40" step="1" value="5">
@@ -370,11 +372,11 @@ body{--accent:var(--yellow)}
         <input type="range" id="c-value" min="30" max="3000" step="10" value="300">
       </div>
       <div class="result" aria-live="polite">
-        <span class="big" id="o-loss">£1,625</span>
-        <span class="what">a month in work going to someone else</span>
+        <span class="est">Estimated</span><span class="big" id="o-loss">£1,625</span>
+        <span class="what">a month in work that could be going to someone else (an estimate)</span>
         <div class="vs"><span>Localdesk: <b>£397 a month</b></span><span id="o-payback">Pays for itself with 2 jobs a month</span></div>
       </div>
-      <p class="note">A rough estimate to help you think it through, not a promise.</p>
+      <p class="note">A rough estimate based on the numbers you entered, to help you think it through. It is not a promise or a forecast of what Localdesk will win you.</p>
     </form>
   </div>
 </section>
@@ -514,7 +516,7 @@ body{--accent:var(--yellow)}
     <div class="duo-grid">
       <article class="duo-card">
         <h3>Books</h3>
-        <p>Snap a receipt and it's filed in your own accounting software. Send invoices, chase late payers and keep your records ready for your accountant. Start with Mia now and add Books later, or the other way round. Books works with QuickBooks and FreeAgent today, and Xero is being verified.</p>
+        <p>Snap a receipt and it's filed in your own accounting software. Send invoices, chase late payers and keep your records ready for your accountant. Start with Mia now and add Books later, or the other way round. Books works with QuickBooks, FreeAgent and Xero.</p>
         <p class="duo-price"><b>£150</b> a month <small>plus £395 setup</small></p>
         <a class="btn btn-yellow" href="../books/">See how Books works</a>
       </article>
