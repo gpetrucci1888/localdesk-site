@@ -138,6 +138,7 @@ export class Vault {
       return Response.json({ data });
     }
     if (url.pathname === '/epoch') { if (request.method === 'POST') await s.put('epoch', ((await s.get('epoch')) || 0) + 1); return Response.json({ n: (await s.get('epoch')) || 0 }); }
+    if (url.pathname === '/hc') { if (request.method === 'POST') await s.put('hc', body); return Response.json((await s.get('hc')) || null); }
     if (url.pathname === '/ok') { await s.delete(`lock2:${body.who}`); return Response.json({ ok: true }); }
     return new Response('?', { status: 404 });
   }
@@ -195,9 +196,17 @@ async function stripe(env, path) {
     return r.ok ? d : { error: (d.error && d.error.message) || `Stripe ${r.status}` };
   } catch (e) { return { error: 'Could not reach Stripe' }; }
 }
+// QuickBooks limits how often it can be asked, and /health asks it for every client, so HQ keeps the last answer for 10 minutes.
+async function cachedHealth(env) {
+  const v = vaultOf(env), hit = await vget(v, '/hc');
+  if (hit && hit.at && Date.now() - hit.at < 600000) return hit.data;
+  const data = await books(env, '/health').then(r => r.ok ? r.json() : { error: true }).catch(() => ({ error: true }));
+  if (!data.error) await vpost(v, '/hc', { at: Date.now(), data });
+  return data;
+}
 async function load(env) {
   const [health, subs, charges, bl] = await Promise.all([
-    books(env, '/health').then(r => r.ok ? r.json() : { error: true }).catch(() => ({ error: true })),
+    cachedHealth(env),
     stripe(env, '/subscriptions?status=all&limit=100&expand[]=data.customer'),
     stripe(env, '/charges?limit=10'),
     vget(vaultOf(env), '/bk/list'),
