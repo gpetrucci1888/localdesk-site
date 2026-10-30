@@ -47,15 +47,30 @@ export function draftFor(l) {
   return T[l.status] || '';
 }
 
+// Which Localdesk product is a subscription? Only by IDs we can verify: a price ID listed in STRIPE_PRICES_BOOKS or
+// STRIPE_PRICES_RECEPTIONIST (comma separated), or the Stripe product's metadata localdesk_product = books | receptionist.
+// A name such as "Books" in a price nickname proves nothing, so anything else stays unclassified and is never counted.
+export const priceConfig = (env) => { const set = (v) => new Set(String(v || '').split(',').map(x => x.trim()).filter(Boolean)); return { books: set(env.STRIPE_PRICES_BOOKS), receptionist: set(env.STRIPE_PRICES_RECEPTIONIST) }; };
+export function classifyProduct(price, cfg) {
+  const p = price || {}, inBooks = cfg.books.has(p.id), inMia = cfg.receptionist.has(p.id);
+  if (inBooks !== inMia) return inBooks ? 'books' : 'receptionist';
+  if (inBooks && inMia) return null;   // listed under both: ambiguous, so unclassified
+  const meta = (p.product && typeof p.product === 'object' && p.product.metadata && p.product.metadata.localdesk_product) || (p.metadata && p.metadata.localdesk_product) || '';
+  return meta === 'books' || meta === 'receptionist' ? meta : null;
+}
+// "Paying" means: a classified Localdesk subscription that is active, costs money, AND whose latest invoice Stripe says is paid.
+// Active but latest invoice open or unknown is shown separately, never as paying. MRR is the monthly price of the paying ones only.
 export function progress(subList) {
-  const paid = subList.filter(s => s.status === 'active' && s.per > 0);
-  const trial = subList.filter(s => s.status === 'trialing');
-  const atRisk = subList.filter(s => ['past_due', 'unpaid'].includes(s.status));
-  const split = (arr, books) => arr.filter(s => Boolean(s.isBooks) === books);
-  return { paid, trial, atRisk, books: split(paid, true).length, receptionist: split(paid, false).length, mrr: paid.reduce((n, s) => n + s.per, 0), target: 20 };
+  const mine = subList.filter(s => s.product), isLive = (s) => s.status === 'active' && s.per > 0;
+  const paid = mine.filter(s => isLive(s) && s.invoicePaid === true);
+  const unconfirmed = mine.filter(s => isLive(s) && s.invoicePaid !== true);
+  const trial = mine.filter(s => s.status === 'trialing');
+  const atRisk = mine.filter(s => ['past_due', 'unpaid'].includes(s.status));
+  const unclassified = subList.filter(s => !s.product && ['active', 'trialing', 'past_due', 'unpaid'].includes(s.status));
+  return { paid, trial, atRisk, unconfirmed, unclassified, books: paid.filter(s => s.product === 'books').length, receptionist: paid.filter(s => s.product === 'receptionist').length, mrr: paid.reduce((n, x) => n + x.per, 0), target: 20 };
 }
 const bar = (label, n, target) => `<div><p><b>${esc(label)}</b><span>${n} of ${target} paying${n >= target ? ', target reached' : `, ${target - n} to go`}</span></p><div class="bar" role="progressbar" aria-label="${esc(label)}" aria-valuenow="${n}" aria-valuemin="0" aria-valuemax="${target}"><i style="width:${Math.min(100, Math.round(n / target * 100))}%"></i></div></div>`;
-export const progressCard = (pr, stripeOk) => `<div class="card"><h2>Road to ${pr.target} paying customers each</h2>${stripeOk ? `<div class="prog">${bar('Receptionist', pr.receptionist, pr.target)}${bar('Books', pr.books, pr.target)}</div><p class="mute">Only active, paid subscriptions count. ${pr.trial.length} on trial and ${pr.atRisk.length} with a failed payment are not counted.</p>` : '<p class="mute">Connect Stripe to see this. Only active, paid subscriptions count.</p>'}</div>`;
+export const progressCard = (pr, stripeOk) => `<div class="card"><h2>Road to ${pr.target} paying customers each</h2>${stripeOk ? `<div class="prog">${bar('Receptionist', pr.receptionist, pr.target)}${bar('Books', pr.books, pr.target)}</div><p class="mute">Paying means an active Localdesk subscription whose latest invoice Stripe shows as paid. Not counted: ${pr.trial.length} on trial, ${pr.atRisk.length} with a failed payment, ${pr.unconfirmed.length} active but not yet paid, ${pr.unclassified.length} not matched to Receptionist or Books.</p>${pr.unclassified.length ? `<p class="mute"><b>Not matched to a product:</b> ${pr.unclassified.map(s => `${esc(s.who)} (price ${esc(s.priceId || 'unknown')})`).join(', ')}. To count them, add that price ID to STRIPE_PRICES_BOOKS or STRIPE_PRICES_RECEPTIONIST on the HQ worker, or set the Stripe product's metadata localdesk_product.</p>` : ''}` : '<p class="mute">Connect Stripe to see this. Only paid, active Localdesk subscriptions count.</p>'}</div>`;
 
 const leadRow = (l) => item(`/leads/${esc(l.id)}`, l.name || 'Lead', `${esc(PRODUCT[l.product] || '')}${l.business ? ' · ' + esc(l.business) : ''} · ${ago(l.created)}${l.repeat > 1 ? ` · asked ${l.repeat} times` : ''}${l.next_at && l.status !== 'paying' && l.status !== 'lost' ? ` · follow up ${esc(dayStr(l.next_at))}` : ''}`, isDue(l) ? pill('bad', 'Follow up') : pill(KIND[l.status], LABEL[l.status]));
 

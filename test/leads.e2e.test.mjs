@@ -7,7 +7,7 @@ import books from '../workers/books/worker.js';
 import { world, network, ADMIN, MemStorage } from './harness.mjs';
 
 const PASS = 'correct horse battery staple';
-const sub = (id, status, nickname, amount, who) => ({ id, status, created: 1790000000, customer: { name: who, email: `${id}@example.test` }, items: { data: [{ quantity: 1, price: { unit_amount: amount, nickname, recurring: { interval: 'month' } } }] } });
+const sub = (id, status, nickname, amount, who, product = /books/i.test(nickname) ? 'books' : 'receptionist', invoice = 'paid') => ({ id, status, created: 1790000000, customer: { name: who, email: `${id}@example.test` }, latest_invoice: { status: invoice }, items: { data: [{ quantity: 1, price: { id: `price_${id}`, unit_amount: amount, nickname, product: product ? { metadata: { localdesk_product: product } } : 'prod_x', recurring: { interval: 'month' } } }] } });
 
 async function setup(t) {
   const w = world(); const { log } = network(t);
@@ -24,7 +24,7 @@ async function setup(t) {
   const ok = await call('/login', { method: 'POST', form: { password: PASS, code: await totp(key, Math.floor(Date.now() / 30000)) } });
   const cookie = (ok.headers.get('set-cookie') || '').split(';')[0];
   const fresh = async () => { for (const k of [...storage.keys()]) if (k.startsWith('cache:sc:')) await storage.delete(k); };   // HQ keeps Stripe answers for 5 minutes
-  return { w, log, subs, fresh, call: (p, o = {}) => call(p, { ...o, cookie }) };
+  return { w, log, subs, fresh, env, call: (p, o = {}) => call(p, { ...o, cookie }) };
 }
 const enquire = (w, body) => books.fetch(new Request('https://books.test/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://www.localdeskai.co.uk', 'CF-Connecting-IP': '203.0.113.5' }, body: JSON.stringify(body) }), w.booksEnv);
 const idFrom = (res) => /\/leads\/([\w-]+)/.exec(res.headers.get('location'))[1];
@@ -106,4 +106,27 @@ test('lead pages escape what visitors typed and need a login', async (t) => {
   for (const h of [list, page]) { assert.doesNotMatch(h, /<img src=x/); assert.doesNotMatch(h, /<script>x/); assert.ok(!h.includes('<b>hi</b>')); }
   const anon = await hq.fetch(new Request('https://hq.test/leads', { redirect: 'manual' }), { OWNER_PASSWORD: PASS, VAULT: { idFromName: () => 'o', get: () => ({ fetch: async () => Response.json({}) }) }, BOOKS: { fetch: async () => { throw new Error('should not be called'); } } });
   assert.equal(anon.status, 303);
+});
+
+test('subscriptions are only counted as a product by verified IDs, and only as paying once the latest invoice is paid', async (t) => {
+  const { subs, fresh, env, call } = await setup(t);
+  subs.push(
+    sub('a1', 'active', 'Books', 15000, 'Name Only Ltd', null),                 // called "Books" but nothing verifies it
+    sub('a2', 'active', 'Receptionist', 39700, 'Unpaid Roofer', 'receptionist', 'open'),   // active, latest invoice not paid
+    sub('a3', 'active', 'Growth', 39700, 'Paid Roofer', 'receptionist', 'paid'),
+    sub('a4', 'active', 'Other thing', 5000, 'Unrelated Customer', 'other'),     // some other Stripe product
+  );
+  await fresh();
+  let h = await (await call('/')).text();
+  assert.match(h, /1 of 20 paying/, 'only the verified, paid Receptionist counts'); assert.match(h, /0 of 20 paying/);
+  assert.match(h, /£397/); assert.doesNotMatch(h, /£15,0|£447|£794/, 'unknown and unpaid ones are not in the income');
+  assert.match(h, /1 active but not yet paid/); assert.match(h, /2 not matched to Receptionist or Books/);
+  assert.match(h, /Name Only Ltd \(price price_a1\)/);
+  const cust = await (await call('/customers')).text(); assert.match(cust, /2 subscriptions aren&#39;t matched to a product/);
+  // Listing the price IDs in the HQ settings makes them count; being listed under both products does not.
+  env.STRIPE_PRICES_BOOKS = 'price_a1, price_other'; env.STRIPE_PRICES_RECEPTIONIST = 'price_a2';
+  await fresh(); h = await (await call('/')).text();
+  assert.match(h, /1 of 20 paying/, 'the named Books price now counts as Books'); assert.match(h, /£547/);   // a1 £150 + a3 £397
+  env.STRIPE_PRICES_RECEPTIONIST = 'price_a2, price_a1'; await fresh();
+  assert.match(await (await call('/')).text(), /Name Only Ltd/, 'ambiguous price IDs stay unmatched');
 });

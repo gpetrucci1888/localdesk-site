@@ -34,7 +34,7 @@ function world(extra = {}, t) {
   };
   if (t) t.mock.method(globalThis, 'fetch', async (u) => {
     const path = String(u);
-    if (path.includes('/subscriptions')) return Response.json({ data: [{ id: 's1', status: 'active', created: 1790000000, customer: { name: 'Real Plumbing', email: 'p@example.test' }, items: { data: [{ quantity: 1, price: { unit_amount: 15000, nickname: 'Books monthly', recurring: { interval: 'month' } } }] } }, { id: 's2', status: 'past_due', created: 1790000000, customer: { email: 'late@example.test' }, items: { data: [{ quantity: 1, price: { unit_amount: 39700, nickname: 'Growth', recurring: { interval: 'month' } } }] } }] });
+    if (path.includes('/subscriptions')) return Response.json({ data: [{ id: 's1', status: 'active', created: 1790000000, customer: { name: 'Real Plumbing', email: 'p@example.test' }, items: { data: [{ quantity: 1, price: { id: 'price_books', unit_amount: 15000, nickname: 'Books monthly', product: { metadata: { localdesk_product: 'books' } }, recurring: { interval: 'month' } } }] }, latest_invoice: { status: 'paid' } }, { id: 's2', status: 'past_due', created: 1790000000, customer: { email: 'late@example.test' }, items: { data: [{ quantity: 1, price: { id: 'price_growth', unit_amount: 39700, nickname: 'Growth', product: { metadata: { localdesk_product: 'receptionist' } }, recurring: { interval: 'month' } } }] }, latest_invoice: { status: 'open' } }] });
     if (path.includes('/charges')) return Response.json({ data: [{ created: 1790000000, amount: 15000, paid: true, billing_details: { name: 'Real Plumbing' } }] });
     return Response.json({});
   });

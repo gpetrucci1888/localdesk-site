@@ -12,7 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
-import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS } from './leads.js';
+import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, classifyProduct } from './leads.js';
 
 const enc = new TextEncoder();
 const SESSION_SECONDS = 12 * 3600;            // this visit only
@@ -217,18 +217,19 @@ async function cachedHealth(env) {
 async function load(env) {
   const [health, subs, charges, bl] = await Promise.all([
     cachedHealth(env),
-    stripe(env, '/subscriptions?status=all&limit=100&expand[]=data.customer'),
+    stripe(env, '/subscriptions?status=all&limit=100&expand[]=data.customer&expand[]=data.items.data.price.product&expand[]=data.latest_invoice'),
     stripe(env, '/charges?limit=10'),
     vget(vaultOf(env), '/bk/list'),
   ]);
   const clients = health.clients || [];
+  const cfg = priceConfig(env);
   const subList = (subs.data || []).map(s => {
     const p = ((s.items && s.items.data && s.items.data[0]) || {}).price || {}, cust = s.customer && typeof s.customer === 'object' ? s.customer : {};
     const per = p.recurring && p.recurring.interval === 'year' ? (p.unit_amount || 0) / 1200 : (p.unit_amount || 0) / 100;
-    return { id: s.id, who: cust.name || cust.email || 'Customer', email: cust.email || '', plan: p.nickname || 'Subscription', per, status: s.status, cancelling: Boolean(s.cancel_at_period_end), since: s.created * 1000, isBooks: /books/i.test(p.nickname || '') };
+    return { id: s.id, who: cust.name || cust.email || 'Customer', email: cust.email || '', plan: p.nickname || 'Subscription', per, status: s.status, cancelling: Boolean(s.cancel_at_period_end), since: s.created * 1000, priceId: p.id || '', product: classifyProduct(p, cfg), isBooks: classifyProduct(p, cfg) === 'books', invoicePaid: s.latest_invoice && typeof s.latest_invoice === 'object' ? s.latest_invoice.status === 'paid' : null };
   });
   const failed = subList.filter(s => ['past_due', 'unpaid'].includes(s.status));
-  const pr = progress(subList), live = pr.paid;   // paying means an active paid subscription: trials and failed payments are not counted
+  const pr = progress(subList), live = pr.paid;   // paying = classified, active, costs money, latest invoice paid. Trials, failed and unmatched ones are not counted
   const income = live.reduce((n, s) => n + s.per, 0);
   const last = bl[0], stale = !last || Date.now() - last.at > 36 * 3600000;
   return { health, clients, subs, subList, failed, live, pr, income, charges, backups: bl, stale, booksProblems: clients.filter(c => !c.ok) };
@@ -309,10 +310,11 @@ ${noStripe ? '' : progressCard(d.pr, true)}
 async function pageCustomers(env) {
   const d = await load(env);
   const booksRows = d.clients.map(c => item(`/books/client/${esc(c.realmId)}`, c.name, c.ok ? 'Connected to QuickBooks' : esc(plainProblem(c.problem)), c.ok ? pill('ok', 'Connected') : pill('bad', 'Needs you'))).join('');
-  const mia = d.subList.filter(s => !s.isBooks);
+  const mia = d.subList.filter(s => s.product === 'receptionist');
   const miaRows = mia.map(s => item('', s.who, `${esc(s.plan)} · ${money(s.per)} a month`, statusPill(s))).join('');
   return shell('Customers', `<h1>Customers</h1>
 ${d.health.error ? booksError() : ''}
+${d.pr.unclassified.length ? banner('warn', `${d.pr.unclassified.length} subscription${d.pr.unclassified.length === 1 ? ' isn\'t' : 's aren\'t'} matched to a product`, `${d.pr.unclassified.map(s => `${esc(s.who)} (price ${esc(s.priceId || 'unknown')})`).join(', ')}. They are not counted as Receptionist or Books customers. Add the price ID to STRIPE_PRICES_BOOKS or STRIPE_PRICES_RECEPTIONIST on the HQ worker, or set the Stripe product's metadata localdesk_product.`) : ''}
 <div class="cols"><div class="card"><h2>Books clients</h2>${booksRows ? `<div class="list">${booksRows}</div>` : '<p class="mute">No Books clients yet. Add your first one.</p>'}<div class="sp"></div>${btn('/books/new', 'Add a new Books client')}</div>
 <div class="card"><h2>Receptionist customers</h2>${d.subs.off ? stripeSetup() : d.subs.error ? stripeError() : miaRows ? `<div class="list">${miaRows}</div>` : '<p class="mute">No receptionist customers yet. They show here once they subscribe.</p>'}</div></div>`, '/customers');
 }
@@ -434,7 +436,7 @@ async function pageMonthly(env, realm) {
   return shell('Monthly text', `${crumb(`/books/client/${esc(realm)}`, 'Back')}<h1>Their monthly text</h1>${r ? `<div class="card"><p class="mute">This is what they get by text on the 1st of each month.</p><p style="white-space:pre-wrap;font-weight:600">${esc(r.text)}</p></div>` : banner('warn', 'Couldn\'t get it just now', 'Try again in a minute.')}`, '/books');
 }
 function pageReceptionist(d) {
-  const mia = d.subList.filter(s => !s.isBooks);
+  const mia = d.subList.filter(s => s.product === 'receptionist');
   return shell('Receptionist', `<h1>Receptionist</h1><p class="lead">Mia answers your customers' calls, takes messages and texts you a summary.</p>
 <div class="big">${bigLink(LINKS.receptionist[0].url, 'receptionist', 'Calls and Mia', 'Vapi: call recordings and Mia\'s wording', true)}${bigLink(LINKS.receptionist[1].url, 'customers', 'Numbers and texts', 'Twilio: phone numbers and messages', true)}${bigLink(LINKS.receptionist[2].url, 'home', 'Booked calls', 'Calendly: demo calls booked with you', true)}${bigLink('tel:01752741686', 'receptionist', 'Try the demo line', 'Ring it to hear Mia (01752 741686)')}</div>
 <div class="card"><h2>Receptionist customers</h2>${d.subs.off ? stripeSetup() : d.subs.error ? stripeError() : mia.length ? `<div class="list">${mia.map(s => item('/payments', s.who, `${esc(s.plan)} · ${money(s.per)} a month`, statusPill(s))).join('')}</div>` : '<p class="mute">None yet. They appear here once they subscribe.</p>'}</div>

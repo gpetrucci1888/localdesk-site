@@ -32,10 +32,11 @@ plan = [
     'Payment Link: both prices in one checkout (subscription mode), collects name, email, phone and a billing address, card or Direct Debit if enabled on the account, no promotion codes, terms-of-service checkbox pointing at the Books terms',
     'Customer portal: customers can update their card and cancel at the END of the billing period (matches 30 days\' notice); invoices visible',
 ]
+plan.append('Product metadata localdesk_product=books, so HQ counts these subscriptions as Books. An existing product found by name needs that metadata added by hand, or its monthly price ID put in STRIPE_PRICES_BOOKS on the HQ worker.')
 print('\n'.join('- ' + p for p in plan))
 if not APPLY: print('\nDry run only. Re-run with --apply after approval.'); sys.exit(0)
 
-prod = find_product() or call('POST', '/products', {'name': 'Localdesk Books', 'statement_descriptor': 'LOCALDESK BOOKS', 'description': 'Bookkeeping on QuickBooks for trades: setup plus monthly service'})
+prod = find_product() or call('POST', '/products', {'name': 'Localdesk Books', 'statement_descriptor': 'LOCALDESK BOOKS', 'description': 'Bookkeeping on QuickBooks for trades: setup plus monthly service', 'metadata[localdesk_product]': 'books'})
 setup = call('POST', '/prices', {'product': prod['id'], 'currency': 'gbp', 'unit_amount': 39500, 'nickname': 'Books setup'})
 monthly = call('POST', '/prices', {'product': prod['id'], 'currency': 'gbp', 'unit_amount': 15000, 'recurring[interval]': 'month', 'nickname': 'Books monthly'})
 link = call('POST', '/payment_links', {
