@@ -109,3 +109,20 @@ test('the page offers no way to talk to anything but itself and the PDF reader',
   const stray = hosts.filter(h => !allowed.has(h) && !/localdeskai\.co\.uk$/.test(h));
   assert.deepEqual(stray, [], 'every address the page mentions is one the CSP allows (or our own site)');
 });
+
+test('the support number comes from the connector\'s settings: shown to real clients, never written in the page, absent from the demo', async (t) => {
+  const w = world(); network(t);
+  await demo(w);
+  const c = await seedClient(w, { realm: REALM, appKey: 'appkey-real-00001', env: 'production' });
+  const session = await seedSession(w, c.appKey);
+  const real = await (await callApp(w, 'GET', `/${c.appKey}/`, { headers: { Cookie: `bk=${session}` } })).text();
+  assert.match(real, /tel:\+447700900001/, 'a real client can ring support');
+  assert.match(real, /07700 900001/);
+  const practice = await (await callApp(w, 'GET', `/${DEMO_KEY}/`)).text();
+  assert.doesNotMatch(practice, /Text or ring Gio|07700 900001|\+447700900001/, 'the demo shows no one\'s number');
+  assert.match(practice, /practice company/);
+  const login = await (await callApp(w, 'GET', `/${c.appKey}/`)).text();
+  assert.match(login, /07700 900001/, 'the login page still offers help');
+  const { readFileSync } = await import('node:fs');
+  for (const f of ['workers/receipt-demo/page.js', 'workers/receipt-demo/worker.js', 'workers/books/worker.js']) assert.doesNotMatch(readFileSync(new URL('../' + f, import.meta.url), 'utf8'), /\b0?7467\b|447467/, `${f} has no hard-coded number`);
+});

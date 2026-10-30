@@ -58,6 +58,9 @@ export class FakeQB {
       const sql = u.searchParams.get('query'), ent = (sql.match(/from\s+(\w+)/i) || [])[1];
       let rows = this.t[ent] || [];
       for (const [, f, v] of sql.matchAll(/(\w+)\s*=\s*'([^']*)'/g)) if (rows.length && f in rows[0]) rows = rows.filter(r => String(r[f]) === v.replace(/\\'/g, "'"));
+      const start = Number((sql.match(/startposition\s+(\d+)/i) || [])[1] || 1), max = Number((sql.match(/maxresults\s+(\d+)/i) || [])[1] || 100);
+      this.queries = (this.queries || 0) + 1;
+      rows = rows.slice(start - 1, start - 1 + max); // like QuickBooks: pages of at most `max`
       return Response.json({ QueryResponse: rows.length ? { [ent]: rows } : {} });
     }
     if (path.startsWith('reports/')) return Response.json({ Rows: { Row: [] } });

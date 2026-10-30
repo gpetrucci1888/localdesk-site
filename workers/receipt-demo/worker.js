@@ -79,7 +79,18 @@ async function serve(request, env) {
     const rest = seg[2].slice(1);
 
     const brand = BRANDS[client.brand] || BRANDS.localdesk;
-    const fill = (html) => html.replaceAll('{{NAME}}', esc(client.name || 'Your business'))
+    // The support number comes from the connector (never written into the page), and the demo has none.
+    const sup = /^\+44\d{10}$/.test(client.support || '') ? client.support : '';
+    const supShow = sup ? '0' + sup.slice(3, 7) + ' ' + sup.slice(7) : '';
+    const ICON = { text: '<path d="M4 5h16v11H8l-4 4z"/>', whatsapp: '<path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/>', ring: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>' };
+    const btn = (href, icon, label, extra = '') => `<a href="${href}"${extra}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[icon]}</svg>${label}</a>`;
+    const HELP = sup
+      ? `<p style="margin:0 0 10px">Stuck, or something looks wrong? Text or ring Gio on ${supShow}.</p><div class="helpbtns">${btn('sms:' + sup, 'text', 'Text')}${btn('https://wa.me/' + sup.slice(1), 'whatsapp', 'WhatsApp', ' target="_blank" rel="noopener"')}${btn('tel:' + sup, 'ring', 'Ring')}</div>`
+      : '<p style="margin:0 0 10px">This is a practice company, so nothing here is real. To get your own, ask Localdesk.</p>';
+    const fill = (html) => html.replaceAll('{{HELP}}', HELP)
+      .replaceAll('{{HELP_LINE}}', sup ? `Need a hand? <a href="tel:${sup}">${supShow}</a>` : '')
+      .replaceAll('{{SUPPORT_ASK}}', sup ? `Ring Gio on <a href="tel:${sup}">${supShow}</a> and he'll sort it.` : "Ask Localdesk and they'll sort it.")
+      .replaceAll('{{NAME}}', esc(client.name || 'Your business'))
       .replaceAll('{{EXTRAS}}', esc(client.extras || '')).replaceAll('{{PHONE_END}}', esc(client.phoneEnd || ''))
       .replaceAll('{{VAT}}', client.vat === false ? '0' : '1').replaceAll('{{CHASE}}', client.chase ? '1' : '0')
       .replaceAll('{{HD}}', brand.hd).replaceAll('{{ACC}}', brand.acc).replaceAll('{{ACCINK}}', brand.accInk)

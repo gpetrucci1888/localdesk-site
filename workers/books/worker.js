@@ -223,7 +223,7 @@ async function route(request, env) {
         await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
         const app = `${env.APP_URL}/${client.appKey}/`;
         if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `Books: ${client.name || realmId} just connected their QuickBooks. Their app: ${app}`).catch(() => {});
-        if (client.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, client.phone, `Welcome to Books. Your app: ${app} Open it on your phone and tap "Add to Home Screen". Stuck? Text or ring Gio on 07700 900000.`).catch(() => {});
+        if (client.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, client.phone, `Welcome to Books. Your app: ${app} Open it on your phone and tap "Add to Home Screen". ${supportLine(env)}`).catch(() => {});
         return page(`Connected ✓<br><br>Your Books app:<br><a href="${app}" style="font-weight:800;word-break:break-all">${app}</a><br><br><small>Open it on your phone, then "Add to Home Screen".</small>`);
       }
 
@@ -267,7 +267,7 @@ async function route(request, env) {
         const r = await request.json();
         const which = r.env === 'sandbox' ? 'sandbox' : 'production';
         if (!creds(env, which).id) throw new Error(`No ${which} keys set up yet`);
-        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: String(r.phone || ''), brand: String(r.brand || ''), extras: String(r.extras || ''),
+        const inv = { id: randomKey(), name: String(r.name || '').slice(0, 100), phone: ukMobile(r.phone), brand: String(r.brand || ''), extras: String(r.extras || ''),
           vat: ['yes', 'no'].includes(r.vat) ? r.vat : '', chase: r.chase === 'on' ? 'on' : '', env: which, created: Date.now() };
         await store.fetch(`https://store/invites/${inv.id}`, { method: 'PUT', body: JSON.stringify(inv) });
         return Response.json({ ok: true, link: `${url.origin}/connect?invite=${inv.id}`, expires: new Date(inv.created + INVITE_DAYS * 86400000).toISOString() });
@@ -343,8 +343,21 @@ async function route(request, env) {
         const realm = (url.pathname.match(/\/(\d{5,})/) || [])[1] || '';
         await alertOwner(env, store, `err:${realm}:${what}`, `Books problem${realm ? ` for ${await clientName(store, realm)}` : ''} (${what}): ${msg.slice(0, 200)}`).catch(() => {});
       }
-      return text(`Error: ${msg}`, 500);
+      return text(`Error: ${friendly(msg)}`, 500);
     }
+}
+
+// What a customer sees. QuickBooks' own wording ("Object Not Found", "Stale object", a code number) means nothing to a plumber,
+// so it is replaced by a sentence that says what happened and whether anything was saved. The full text still goes to Gio.
+function friendly(msg) {
+  const m = /^QuickBooks (\d{3})/.exec(msg);
+  if (!m) return msg;
+  const code = Number(m[1]);
+  if (code === 401 || code === 403) return "Books can't reach your QuickBooks right now. Gio has been told. Nothing was saved";
+  if (code === 429) return 'QuickBooks is busy. Wait a minute and try again. Nothing was saved';
+  if (code >= 500) return "QuickBooks isn't answering at the moment. Try again in a few minutes. Nothing was saved";
+  if (/inactive|not found|no longer|deleted|stale/i.test(msg)) return 'That has changed in QuickBooks since you opened it. Pull down to refresh and try again. Nothing was saved';
+  return "QuickBooks wouldn't accept that. Nothing was saved. Gio has been told";
 }
 
 // Errors that mean something is broken, rather than a missing amount or a typo.
@@ -378,6 +391,15 @@ const SESSION_DAYS = 365, CODE_MINUTES = 10, CODES_PER_HOUR = 5, CODE_TRIES = 5;
 // Nothing is deleted automatically until PURGE_MODE is set to "live"; until then the weekly text only says what is due.
 const RETENTION_DAYS = 30;
 
+// The number shown to clients as "ring us" (SUPPORT_PHONE, else the owner's). The page never has it written in; the demo gets none.
+function supportLine(env) {
+  const n = supportNumber(env);
+  return n ? `Stuck? Text or ring Gio on 0${n.slice(3, 7)} ${n.slice(7)}.` : 'Stuck? Just reply to this message.';
+}
+function supportNumber(env) {
+  try { return ukMobile(env.SUPPORT_PHONE || env.OWNER_PHONE || ''); } catch { return ''; }
+}
+
 async function clientRoute(what, id, request, url, env, store, origin) {
   const appKey = request.headers.get('X-App') || '';
   if (!/^[\w-]{8,}$/.test(appKey)) return text('Not allowed', 403);
@@ -393,6 +415,7 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     if (loggedIn) await store.fetch(`https://store/seen/${realmId}`, { method: 'POST' });
     return Response.json({ realmId, name: client.name || '', brand: client.brand || '', extras: client.extras || '', loggedIn: Boolean(loggedIn),
       phoneEnd: isDemo ? '' : (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: !isDemo && Boolean(client.phone),
+      support: isDemo ? '' : supportNumber(env),
       vat: await vatRegistered(env, store, realmId, client).catch(() => true), chase: client.chase === 'on' });
   }
   if (isDemo && what.startsWith('login/')) return Response.json({ error: 'This is the demo, so there is nothing to log in to.' }, { status: 400 });
@@ -547,8 +570,9 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
   }
   if (what === 'client' && request.method === 'PUT') {
     const v = await body(), old = (await getClient(store, realmId)) || {};
-    for (const f of ['name', 'phone', 'brand', 'accountant', 'extras', 'appKey', 'vat', 'chase']) if (typeof v[f] === 'string') old[f] = v[f];
+    for (const f of ['name', 'phone', 'brand', 'accountant', 'extras', 'appKey', 'vat', 'chase', 'basis']) if (typeof v[f] === 'string') old[f] = f === 'phone' ? ukMobile(v[f]) : v[f];
     if (old.vat && !['yes', 'no'].includes(old.vat)) throw new Error('vat is "yes", "no" or ""');
+    if (old.basis && !['cash', 'accrual'].includes(old.basis)) throw new Error('basis is "cash" or "accrual"');
     if (typeof v.demo === 'boolean') {
       if (v.demo && !(await isSandboxRealm(store, realmId))) throw new Error('Demo mode is only allowed on a sandbox (practice) company');
       old.demo = v.demo;
@@ -619,8 +643,7 @@ async function fileReceipt(env, store, realmId, r) {
   const codes = registered ? (await q('select Id, Name, Active from TaxCode')).TaxCode || [] : [];
   const net = round(total - vat);
   const rate = net > 0 ? vat / net : 0;
-  const codeName = vat <= 0 ? 'No VAT' : Math.abs(rate - 0.05) < 0.01 ? '5.0% R' : '20.0% S';
-  const code = codes.find(c => c.Name === codeName);
+  const code = registered ? pickTaxCode(codes, vat <= 0 ? 'none' : Math.abs(rate - 0.05) < 0.01 ? 'reduced' : 'standard') : undefined;
 
   const purchase = {
     PaymentType: 'Cash',
@@ -677,7 +700,24 @@ function pickAccount(accounts, category) {
 
 // ---------- money in, money out, who owes ----------
 
-const query = (env, store, realmId, sql) => qb(env, store, realmId, 'GET', 'query?query=' + encodeURIComponent(sql)).then(d => d.QueryResponse || {});
+const queryOnce = (env, store, realmId, sql) => qb(env, store, realmId, 'GET', 'query?query=' + encodeURIComponent(sql)).then(d => d.QueryResponse || {});
+// QuickBooks answers at most 1000 rows at a time. A query ending "maxresults 1000" means "all of them", so keep asking for the next
+// page until a short page comes back (capped at 10,000 rows so a runaway company can't loop forever). Other limits ("maxresults 10")
+// are deliberate "latest few" lists and are left alone.
+const PAGE = 1000, MAX_PAGES = 10;
+async function query(env, store, realmId, sql) {
+  const first = await queryOnce(env, store, realmId, sql);
+  if (!/\bmaxresults 1000\s*$/i.test(sql)) return first;
+  const key = Object.keys(first).find(k => Array.isArray(first[k]));
+  if (!key) return first;
+  const all = [...first[key]];
+  for (let page = 1, last = all.length; last === PAGE && page < MAX_PAGES; page++) {
+    const next = await queryOnce(env, store, realmId, sql.replace(/\bmaxresults 1000\s*$/i, `startposition ${page * PAGE + 1} maxresults ${PAGE}`));
+    last = (next[key] || []).length;
+    all.push(...(next[key] || []));
+  }
+  return { ...first, [key]: all };
+}
 
 // Rough tax guide: about a quarter of profit (basic-rate income tax plus Class 4 NI). Shown as a guide only.
 const TAX_POT = 0.25;
@@ -686,7 +726,7 @@ async function summary(env, store, realmId, month) {
   const m = /^\d{4}-\d{2}$/.test(month || '') ? month : new Date().toISOString().slice(0, 7);
   const [y, mo] = m.split('-').map(Number);
   const end = new Date(Date.UTC(y, mo, 0)).toISOString().slice(0, 10);
-  const report = await qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${m}-01&end_date=${end}`);
+  const report = await qb(env, store, realmId, 'GET', await pnl(store, realmId, `reports/ProfitAndLoss?start_date=${m}-01&end_date=${end}`));
   const totals = {};
   for (const row of (report.Rows && report.Rows.Row) || []) {
     const cols = row.Summary && row.Summary.ColData;
@@ -700,7 +740,7 @@ async function summary(env, store, realmId, month) {
 }
 
 async function owed(env, store, realmId) {
-  const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail, PrivateNote from Invoice where Balance > '0' maxresults 200")).Invoice || [];
+  const list = (await query(env, store, realmId, "select Id, DocNumber, CustomerRef, TxnDate, DueDate, TotalAmt, Balance, BillEmail, PrivateNote from Invoice where Balance > '0' maxresults 1000")).Invoice || [];
   const today = Date.now();
   const cisOf = (i) => Number((String(i.PrivateNote || '').match(/CIS job\. Expected deduction £(\d+(?:\.\d+)?)/) || [])[1]) || 0;
   return list.map(i => ({
@@ -798,7 +838,7 @@ async function saleParts(env, store, realmId, r) {
   if (!item) throw new Error('No service item in QuickBooks to invoice for');
   const registered = await vatRegistered(env, store, realmId);
   const codes = registered ? (await query(env, store, realmId, 'select Id, Name from TaxCode')).TaxCode || [] : [];
-  const code = codes.find(c => c.Name === (r.vat ? '20.0% S' : 'No VAT'));
+  const code = registered ? pickTaxCode(codes, VAT_KINDS.includes(r.vatRate) ? r.vatRate : r.vat ? 'standard' : 'none') : undefined;
   const labour = round(r.labour), materials = round(r.materials);
   const cis = Boolean(r.cis) && labour > 0;
   const line = (amt, desc) => ({
@@ -1062,7 +1102,7 @@ function mtdQuarter(dateStr) {
 
 async function quarter(env, store, realmId, dateStr) {
   const q = mtdQuarter(dateStr);
-  const report = await qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${q.from}&end_date=${q.to}`);
+  const report = await qb(env, store, realmId, 'GET', await pnl(store, realmId, `reports/ProfitAndLoss?start_date=${q.from}&end_date=${q.to}`));
   const lines = [], totals = {};
   const walk = (rows, section) => {
     for (const row of rows || []) {
@@ -1124,7 +1164,7 @@ async function packLink(store, origin, realmId, p) {
 async function pack(env, store, realmId, from, to) {
   const when = `TxnDate >= '${from}' and TxnDate <= '${to}'`;
   const [pl, buys, invs, files, client, trips, cisPays] = await Promise.all([
-    qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${from}&end_date=${to}`),
+    qb(env, store, realmId, 'GET', await pnl(store, realmId, `reports/ProfitAndLoss?start_date=${from}&end_date=${to}`)),
     query(env, store, realmId, `select * from Purchase where ${when} orderby TxnDate maxresults 1000`).then(d => d.Purchase || []),
     query(env, store, realmId, `select * from Invoice where ${when} orderby TxnDate maxresults 1000`).then(d => d.Invoice || []),
     query(env, store, realmId, 'select Id, AttachableRef from Attachable maxresults 1000').then(d => d.Attachable || []),
@@ -1565,7 +1605,7 @@ async function fixExpense(env, store, realmId, id, r) {
   const registered = await vatRegistered(env, store, realmId);
   const codes = registered ? (await q('select Id, Name from TaxCode')).TaxCode || [] : [];
   const net = round(total - vat), rate = net > 0 ? vat / net : 0;
-  const code = codes.find(c => c.Name === (vat <= 0 ? 'No VAT' : Math.abs(rate - 0.05) < 0.01 ? '5.0% R' : '20.0% S'));
+  const code = registered ? pickTaxCode(codes, vat <= 0 ? 'none' : Math.abs(rate - 0.05) < 0.01 ? 'reduced' : 'standard') : undefined;
   if (code) d.TaxCodeRef = { value: code.Id }; else delete d.TaxCodeRef;
   line.Amount = code ? net : total;
   const saved = (await qb(env, store, realmId, 'POST', 'purchase', {
@@ -1702,7 +1742,7 @@ async function customerOne(env, store, realmId, id) {
 async function trend(env, store, realmId) {
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
-  const report = await qb(env, store, realmId, 'GET', `reports/ProfitAndLoss?start_date=${isoDay(start)}&end_date=${isoDay(now)}&summarize_column_by=Month`);
+  const report = await qb(env, store, realmId, 'GET', await pnl(store, realmId, `reports/ProfitAndLoss?start_date=${isoDay(start)}&end_date=${isoDay(now)}&summarize_column_by=Month`));
   const cols = ((report.Columns && report.Columns.Column) || []).slice(1);
   const months = [];
   for (let k = 0; k < 6; k++) {
@@ -1870,12 +1910,49 @@ async function monthlyRun(env) {
   if (env.OWNER_PHONE) await sendSms(env, env.OWNER_PHONE, `Books monthly check: ${report.join(' ') || 'no clients connected.'}`);
 }
 
+// Profit and loss figures are on the CASH basis (money in when it is received, money out when it is paid), which is how most
+// sole traders report and what the "Money in", profit and tax-pot figures mean. QuickBooks defaults to accruals, which counts
+// an invoice the day it is raised and overstates a tradesperson's profit. A client can be switched to accrual with
+// PUT /client/<realm> {"basis":"accrual"}.
+async function pnl(store, realmId, path) {
+  const client = (await getClient(store, realmId)) || {};
+  return `${path}&accounting_method=${client.basis === 'accrual' ? 'Accrual' : 'Cash'}`;
+}
+
+// VAT codes. QuickBooks UK names them "20.0% S", "5.0% R", "0.0% Z" and "No VAT" in a fresh company, but a real company can
+// differ in spacing or decimals, so match the shape and not the exact text. On a VAT-registered company, a code that cannot be
+// found is an error that saves nothing: leaving VAT off without saying so would put wrong figures in a VAT return.
+const VAT_KINDS = ['standard', 'reduced', 'zero', 'none'];
+const VAT_CODE = { standard: /^20(\.0+)?\s*%\s*S$/i, reduced: /^5(\.0+)?\s*%\s*R$/i, zero: /^0(\.0+)?\s*%\s*Z$/i, none: /^no\s*vat$/i };
+const VAT_LABEL = { standard: '20% standard rate', reduced: '5% reduced rate', zero: '0% zero rate', none: 'no VAT' };
+function pickTaxCode(codes, kind) {
+  const found = (codes || []).filter(c => c.Active !== false).find(c => VAT_CODE[kind].test(String(c.Name || '').trim()));
+  if (!found) throw new Error(`Your QuickBooks has no VAT code for ${VAT_LABEL[kind]}, so nothing was saved. Ask Gio to check the VAT codes`);
+  return found;
+}
+
+// UK mobile numbers as people write them ("07700 900123", "+44 7700 900123", "0044 7700 900123", "(07700) 900-123")
+// all become +447700900123. Anything that isn't a UK mobile is refused with a plain message, so a wrong number is
+// caught when it is saved and not when a login code silently fails to arrive. A blank stays blank.
+function ukMobile(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  let d = raw.replace(/[\s().-]/g, '');
+  if (/[^\d+]/.test(d)) throw new Error(`"${raw}" doesn't look like a phone number`);
+  if (d.startsWith('+')) d = d.slice(1); else if (d.startsWith('00')) d = d.slice(2);
+  else if (d.startsWith('0')) d = '44' + d.slice(1);
+  else if (/^7\d{9}$/.test(d)) d = '44' + d;
+  if (d.startsWith('4407')) d = '44' + d.slice(3); // "+44 (0)7700 …"
+  if (!/^447\d{9}$/.test(d)) throw new Error(`"${raw}" isn't a UK mobile number. It should look like 07700 900123`);
+  return '+' + d;
+}
+
 async function sendSms(env, to, body) {
   if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) throw new Error('Texts are not set up yet (Twilio keys missing)');
   const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`, {
     method: 'POST',
     headers: { Authorization: 'Basic ' + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`), 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ From: env.SMS_FROM || 'Books', To: to, Body: body.slice(0, 900) }),
+    body: new URLSearchParams({ From: env.SMS_FROM || 'Books', To: (() => { try { return ukMobile(to) || to; } catch { return to; } })(), Body: body.slice(0, 900) }),
   });
   if (!res.ok) throw new Error(`Text failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
 }

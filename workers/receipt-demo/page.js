@@ -273,8 +273,7 @@ html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
     <div class="switch" style="padding:12px 0 2px;border-top:1px solid var(--line)"><div><b>VAT registered</b><p class="note" style="margin-top:2px">Set up by Gio. Ask him if this changes.</p></div><b id="stVat">…</b></div></div>
   <div class="card"><h2>Your accountant</h2><div class="inrow"><label class="f" style="margin:0"><span style="position:absolute;left:-9999px">Accountant's email</span><input id="stAcct" type="email" inputmode="email" placeholder="accountant@example.co.uk" autocomplete="off"></label><button class="go" id="stAcctGo" style="flex:0">Save</button></div></div>
   <div class="card"><h2>Help</h2>
-    <p style="margin:0 0 10px">Stuck, or something looks wrong? Text or ring Gio on 07700 900000.</p>
-    <div class="helpbtns"><a href="sms:+447700900000"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg>Text</a><a href="https://wa.me/447700900000" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/></svg>WhatsApp</a><a href="tel:+447700900000"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Ring</a></div>
+    {{HELP}}
     <button class="link" data-tab="changes">What Books changed in QuickBooks →</button>
     <p class="note">Want to stop? Tell Gio, or disconnect Books in QuickBooks (Apps). Everything already filed stays in your QuickBooks.</p></div>
   <div class="card"><a class="rowlink" href="https://www.localdeskai.co.uk/books/privacy.html" target="_blank" rel="noopener"><span class="grow">Privacy policy</span><span class="chev">›</span></a><a class="rowlink" href="https://www.localdeskai.co.uk/books/terms.html" target="_blank" rel="noopener"><span class="grow">Terms</span><span class="chev">›</span></a></div>
@@ -1161,7 +1160,7 @@ body{background:var(--hd);min-height:100vh;display:flex;flex-direction:column}
     <div class="row"><span style="color:var(--muted)">No text?</span><button id="again" disabled>Send again</button></div>
   </div>
   <p class="err" id="err1"></p>
-  <p class="help">You'll stay logged in on this phone.<br>Need a hand? <a href="tel:07700900000">07700 900000</a></p>
+  <p class="help">You'll stay logged in on this phone.<br>{{HELP_LINE}}</p>
   <p class="by">Books by Localdesk</p>
 </div></div>
 <script>
@@ -1190,4 +1189,4 @@ function listen(){if(!('OTPCredential' in window))return;navigator.credentials.g
 // A client with no phone number saved can't log in yet.
 export const NO_LOGIN = HEAD + String.raw`<style>body{background:var(--hd);min-height:100vh;display:flex;flex-direction:column}.hero{color:#fff;text-align:center;padding:72px 24px 40px}.hero .logo{width:104px;height:104px}.sheet{background:var(--bg);border-radius:28px 28px 0 0;flex:1;padding:28px 20px}.sheet .in{max-width:420px;margin:0 auto}</style>
 <div class="hero">{{LOGO}}<p class="biz" style="margin-top:18px">{{NAME}}</p><h1>Books</h1></div>
-<div class="sheet"><div class="in"><h2 style="margin:0 0 8px">Nearly ready</h2><p style="margin:0;color:var(--muted)">Your app isn't switched on yet. Ring Gio on <a href="tel:07700900000">07700 900000</a> and he'll sort it.</p><p class="by">Books by Localdesk</p></div></div></body></html>`;
+<div class="sheet"><div class="in"><h2 style="margin:0 0 8px">Nearly ready</h2><p style="margin:0;color:var(--muted)">Your app isn't switched on yet. {{SUPPORT_ASK}}</p><p class="by">Books by Localdesk</p></div></div></body></html>`;
