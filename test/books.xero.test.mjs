@@ -164,3 +164,13 @@ test('two separate Worker instances refreshing at the same moment cause only one
   assert.equal(ta.access_token, tb.access_token); assert.equal((await w.storage.get(`tokens:${XE_REALM}`)).refresh_token, 'xe-refresh-1');
   assert.equal(await w.storage.get(`reflock:${XE_REALM}`), undefined, 'the lease is released');
 });
+
+test('the admin test brings back its own archived TEST bank account instead of failing on a name clash', async (t) => {
+  const w = world(); const { xe } = network(t); await xeroClient(w);
+  xe.accounts = xe.accounts.filter(a => a.Type !== 'BANK');
+  xe.accounts.push({ AccountID: 'acc-old', Code: '091', Name: 'TEST Books bank (delete me)', Type: 'BANK', Status: 'ARCHIVED' });
+  const r = await (await asAdmin(w, 'POST', `/selftest/${XE_REALM}`)).json();
+  assert.equal(r.ok, true, JSON.stringify(r.steps.filter(s => !s.ok)));
+  assert.match(r.steps.find(s => /bank account/.test(s.name)).note, /brought back/);
+  assert.equal(xe.accounts.find(a => a.AccountID === 'acc-old').Status, 'ARCHIVED', 'archived again at the end');
+});

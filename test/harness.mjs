@@ -170,7 +170,9 @@ export class FakeXero {
     if (m && method === 'DELETE') { this.disconnected = m[1]; return new Response(null, { status: 200 }); }
     if (this.fail429 > 0) { this.fail429--; return new Response('{}', { status: 429, headers: { 'Retry-After': '0' } }); }
     if (path === '/Organisation') return ok({ Organisations: [this.org] });
-    if (path === '/Accounts') return ok({ Accounts: this.accounts });
+    if (path === '/Accounts' && method === 'GET') { const w = decodeURIComponent(u.searchParams.get('where') || ''); return ok({ Accounts: this.accounts.filter(x => (!/Type=="BANK"/.test(w) || x.Type === 'BANK') && (!/Status=="ACTIVE"/.test(w) || x.Status !== 'ARCHIVED')) }); }
+    if (path === '/Accounts' && method === 'PUT') { const x = { ...body, AccountID: this.id('acc'), Status: 'ACTIVE' }; this.accounts.push(x); return ok({ Accounts: [x] }); }
+    m = path.match(/^\/Accounts\/([^/]+)$/); if (m && method === 'POST') { const x = this.accounts.find(y => y.AccountID === m[1]); if (x) Object.assign(x, body); return ok({ Accounts: [x] }); }
     if (path === '/Contacts' && method === 'GET') { const w = u.searchParams.get('where') || '', n = (/Name=="(.*)"/.exec(w) || [])[1]; return ok({ Contacts: this.contacts.filter(c => !n || c.Name === n) }); }
     if (path === '/Contacts' && method === 'PUT') { const c = { ...body, ContactID: this.id('contact'), ContactStatus: 'ACTIVE' }; this.contacts.push(c); return ok({ Contacts: [c] }); }
     m = path.match(/^\/Contacts\/(.+)$/);

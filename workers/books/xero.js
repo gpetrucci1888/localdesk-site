@@ -299,17 +299,19 @@ export function createXero(D) { // D: { ACCOUNT_NAMES, getClient, logChange, mar
   async function selftest(env, store, realmId) {
     const steps = [], step = async (name, fn) => { try { const note = await fn(); steps.push({ name, ok: true, note: note || '' }); return true; } catch (e) { steps.push({ name, ok: false, note: String(e.message).slice(0, 160) }); return false; } };
     const made = { expense: null, invoice: null, bank: null };
-    const TEST = 'TEST Books connection (delete me)';
+    const TEST = 'TEST Books connection (delete me)', TESTBANK = 'TEST Books bank (delete me)';
     try {
       await step('Connected to Xero', async () => { const s = await status(env, store, realmId); if (!s.connected) throw new Error(s.problem); return s.sandbox ? 'demo company' : 'live'; });
       await step('Reads expense accounts', async () => { const c = await categories(env, store, realmId); if (!c.length) throw new Error('none found'); return `${c.length} found`; });
       await step('Reads figures and who owes you', async () => { await summary(env, store, realmId, null, 0.25); await recent(env, store, realmId); await noReceipt(env, store, realmId); return 'ok'; });
       await step('Has a bank account for receipts (test connections only add one)', async () => {
-        const banks = ((await call(env, store, realmId, 'GET', '/Accounts?where=' + encodeURIComponent('Type=="BANK"'))).Accounts || []).filter(b => b.Status !== 'ARCHIVED');
-        if (banks.length) return 'found';
+        const banks = ((await call(env, store, realmId, 'GET', '/Accounts?where=' + encodeURIComponent('Type=="BANK"'))).Accounts || []);
+        if (banks.some(b => b.Status !== 'ARCHIVED')) return 'found';
         const t = await saved(store, realmId);
         if (!t || t.env === 'production') throw new Error('no bank account: the customer needs one in Xero');
-        const b = ((await call(env, store, realmId, 'PUT', '/Accounts', { Code: '091', Name: 'TEST Books bank (delete me)', Type: 'BANK', BankAccountNumber: '12345678' })).Accounts || [])[0];
+        const old = banks.find(b => b.Name === TESTBANK);   // our own archived one from an earlier run: bring it back instead of creating a clash
+        if (old) { await call(env, store, realmId, 'POST', `/Accounts/${old.AccountID}`, { AccountID: old.AccountID, Status: 'ACTIVE' }); made.bank = old.AccountID; return 'brought back the test one'; }
+        const b = ((await call(env, store, realmId, 'PUT', '/Accounts', { Code: '091', Name: TESTBANK, Type: 'BANK', BankAccountNumber: '12345678' })).Accounts || [])[0];
         if (!b) throw new Error('could not add a test bank account'); made.bank = b.AccountID; return 'added a test one';
       });
       await step('Files a test receipt', async () => {
