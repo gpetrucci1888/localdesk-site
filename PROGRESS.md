@@ -1,8 +1,10 @@
 # Localdesk: progress summary (25 Oct 2026)
 
+> **PUBLIC REPO.** Do not put personal data (names or numbers of prospects, partners or clients), prospect pricing, keys, tokens, app/demo keys, private links or bank details in this file. They go in `Localdesk/00 Private/` (not in git). `test/repo-hygiene.test.mjs` fails the build on phone numbers and key patterns.
+
 ## Business basics
 - **Localdesk** ("Local Desk AI Consultancy"), sole trader **Giovanni (Gio) Petrucci**, Saltash, Cornwall. **Not VAT registered.**
-- Email **hello@localdeskai.co.uk** (forwards to Gmail via Cloudflare). Mobile +447700900000.
+- Email **hello@localdeskai.co.uk** (forwards to Gmail via Cloudflare). Mobile: in the private notes.
 - Offer: AI receptionist for local trades. Answers missed calls 24/7, takes the details and texts a summary to the business.
 
 ## Key decisions
@@ -34,19 +36,19 @@
 ## Phone and call system
 - **Twilio:** approved. Number **+44 1752 741686** (Plymouth, **voice only, no SMS**). Compliance registration: "United Kingdom: Local – localdeskAI" (business).
 - **Vapi:**
-  - Number imported ("Local test line"), assigned to **Mia Localdesk** (`3d96293a-41d2-4c42-8edd-7d4039e58f76`), running the demo prompt (plays any business's receptionist).
+  - Number imported ("Local test line"), assigned to **Mia Localdesk** (`3d96293a…`), running the demo prompt (plays any business's receptionist).
   - Public key `5f4a7101-…` is on the website.
   - Server URL = the Worker, with header `x-vapi-secret`.
   - Fallback should be Gio's mobile.
   - Credit topped up.
-- **Cloudflare Worker** `localdesk-call-summaray.gpetrucci93.workers.dev`:
-  - Variables: VAPI_SECRET, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, CLIENTS (DemoLine version: sender "DemoLine", texts +447700900000, no text-back), SMS_SENDER=Localdesk.
+- **Cloudflare Worker** `localdesk-call-summaray (URL in the private notes)`:
+  - Variables: VAPI_SECRET, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, CLIENTS (DemoLine version: sender "DemoLine", texts Gio's mobile, no text-back), SMS_SENDER=Localdesk.
   - **Tested:** summary texts and missed-call texts arrive. ✅
   - Summary **emails not set up** (needs a Resend account).
 - **Voice issues found:** sounded too AI, stuttered or switched language, interrupted, hung up, promised "today". Fixes were given (English-only voice model `eleven_flash_v2`, stability 0.5, latency 2; wait 0.8s + smart endpointing; end-call off; no-promises prompt). **Check they're all published.**
 
 ## Stripe (live account)
-- Activated: sole trader. Payouts weekly on Mondays. Radar Standard. Descriptor "LOCAL DESK AI".
+- Activated: sole trader. Payouts weekly on Mondays (bank details in the private notes). Radar Standard. Descriptor "LOCAL DESK AI".
 - Products: **Localdesk £397/mo**, Starter £199/mo, Growth £397/mo, Lead Machine £997/mo, Setup fee £497 one-off.
 - **Payment link (Localdesk, 7-day trial):** https://buy.stripe.com/4gMdR1gUdenVfzeg3T8IU00
 - **Still to do:**
@@ -63,8 +65,8 @@
 - Calendly: event renamed "Localdesk demo", 15 minutes, link still `/30min`. **Don't change the link ending**, or the website buttons break.
 
 ## Files and tools
-- **Lead tracker (private page):** <private link removed>
-- **Onboarding templates (doc):** <private link removed>. It still has `[£199 / £397]` placeholders; use £397.
+- **Lead tracker (private page):** (private artifact; link in the private notes)
+- **Onboarding templates (doc):** (private artifact; link in the private notes). It still has `[£199 / £397]` placeholders; use £397.
 - **Launch folder:**
   - Localdesk-roofer-calls.xlsx (call log, summary, script, Q&A, where to find roofers; £397 only; includes the demo line)
   - client-receptionist-template.md, client-onboarding.md, outreach.md, meta-ads.md, sunday-launch-checklist.md, automation-later.md, george-vapi-script.md
@@ -76,7 +78,7 @@
 2. Final pricing: one plan or three tiers?
 3. Business address for the website and terms.
 4. Is the Vapi voice good enough now?
-5. Payout account: see private notes.
+5. Which bank account to use for payouts.
 6. Onboarding form (Tally) on the website: later?
 
 ## Exact next steps
@@ -95,7 +97,7 @@
 
 **Vapi assistants:**
 - `3d96293a…` **Mia Localdesk**: live demo line 01752 741686. Still has OLD pricing text ("no per-call charges", "free website"): fix when switching over.
-- `4cb990af-876c-4157-a987-09db3b85f284` **TEST - Mia booking**: new version being tested. Books quote visits via Google Calendar tools (availability `31df3174…`, create event `312b31ab…`; credential `google.calendar.oauth2-authorization` = Gio's Google account, books into his primary calendar). Changes: shorter greeting with AI + recording notice, one-line wrap-up, no lead capture or selling, background sound off (Vapi default "office"), warmer voice Lily `pFZP5JQG7iQjIQuC4Bku` stability 0.4, "Tamar"→"Taymar" and "Localdesk"→"Local Desk" voice replacements, Tamar keyterms, numbers read back in groups, updated pricing facts. **When Gio is happy: copy model/voice/transcriber/firstMessage/backgroundSound onto Mia and delete the test.**
+- `4cb990af…` **TEST - Mia booking**: new version being tested. Books quote visits via Google Calendar tools (availability `31df3174…`, create event `312b31ab…`; credential `google.calendar.oauth2-authorization` = Gio's Google account, books into his primary calendar). Changes: shorter greeting with AI + recording notice, one-line wrap-up, no lead capture or selling, background sound off (Vapi default "office"), warmer voice Lily `pFZP5JQG7iQjIQuC4Bku` stability 0.4, "Tamar"→"Taymar" and "Localdesk"→"Local Desk" voice replacements, Tamar keyterms, numbers read back in groups, updated pricing facts. **When Gio is happy: copy model/voice/transcriber/firstMessage/backgroundSound onto Mia and delete the test.**
 - `190ccf95…` **PRACTICE - Random Prospect**: practice partner (Steve/Mike/Jason/Kev/Dave). Ring Gio with POST /call only when he says "ring me".
 - `734343a2…` **Template (Copy)**: client template (Deepgram nova-3, eleven_turbo_v2). No server URL yet: add the call-summary server + secret when building first client.
 
@@ -103,9 +105,9 @@
 
 **Live site:** local SEO (Cornwall/Plymouth), sitemap + robots, social preview image, 404 page, /example (Carrick Ridge Roofing demo site, noindex). Web Analytics on (44 views since 24 Oct, mostly bots/US).
 
-**Call sheet:** <private link removed> (source in scratchpad call-sheet.html, not in repo).
+**Call sheet:** (private artifact; link in the private notes) (source in scratchpad call-sheet.html, not in repo).
 
-**Gio's routine:** 3 calls a day at 5:00–6:00pm, Saturday 9–12 backup. Call list: private sales notes. Top up Vapi credit.
+**Gio's routine:** 3 calls a day at 5:00–6:00pm, Saturday 9–12 backup. First three targets are in the private lead tracker. Top up Vapi credit.
 
 ## Client template (28 Oct)
 - `ops/client-prompt.txt` is the client receptionist prompt; `ops/new_client.py <client.json>` creates/updates a client's Vapi assistant (see `ops/example-client.json`).
@@ -120,9 +122,8 @@
 - Answer him and ask before changing anything. Don't ring him until he says.
 
 ## State at end of 28 Oct
-- Call sheet (one for every call, flow style): <private link removed> . Opener "Alright {name}, it's Gio from Localdesk, over in Saltash." Buttons: Rang earlier, Pitch, How much, Robot ("AI employee I've trained"), Send info, Bad time, Not interested, Voicemail.
-- Lead tracker: in the private sales notes.
-- (personal note removed)
+- Call sheet (one for every call, flow style): (private artifact; link in the private notes) . Opener "Alright {name}, it's Gio from Localdesk, over in Saltash." Buttons: Rang earlier, Pitch, How much, Robot ("AI employee I've trained"), Send info, Bad time, Not interested, Voicemail.
+- Call tracker and prospect list: kept in the private lead tracker (see Localdesk/00 Private), not in this repo.
 - Google Calendar connector is connected. Google Business Profile "LocalDesk Ai Consultancy" exists (verified). Calendly asks business/trade/phone; hours 9-8 weekdays, Sat 9-5. Stripe link asks Business name.
 - Facebook token not done (logins blocked); retry from phone browser. TPSCheck not signed up yet. FreeAgent: just connect Stripe inside FreeAgent.
 - Mia: more human ("mm, right, okay") live. West Country voice: Gio to pick from ElevenLabs voice library.
@@ -136,26 +137,26 @@
 
 ## QuickBooks connector (29 Oct)
 - Intuit developer account (Gio's), workspace "Localdesk", app "Localdesk Books" (development keys). UK sandbox: "Sandbox Company GB".
-- Worker `books` (code in workers/books): /connect?k=ADMIN_KEY -> Intuit Allow -> /callback saves tokens in Durable Object; /companies and /qb/<realmId>/<path> need header X-Key = ADMIN_KEY. Secrets set: QB_CLIENT_ID, QB_CLIENT_SECRET, ADMIN_KEY; QB_ENV=sandbox. Redirect URI on Intuit app: https://books.gpetrucci93.workers.dev/callback
+- Worker `books` (code in workers/books): /connect?invite=<id> (made by POST /invite, sandbox or production) -> Intuit Allow -> /callback saves tokens in Durable Object; /companies and /qb/<realmId>/<path> need header X-Key = ADMIN_KEY. Secrets set: QB_CLIENT_ID, QB_CLIENT_SECRET, ADMIN_KEY; Redirect URI on the Intuit app: the books Worker's /callback
 - Deploy updates with keep_bindings ["secret_text"] so secrets survive.
-- Gio allowed *.gpetrucci93.workers.dev and localdeskai.co.uk in the cloud environment (works from next session). Env secret for host books.gpetrucci93.workers.dev header X-Key should be set.
+- Gio allowed the Workers hosts and localdeskai.co.uk in the cloud environment.
 - Not yet done: click the connect link for the sandbox company, then test /companies and a query.
 - Receipt demo worker `receipt-demo` (workers/receipt-demo): snap/upload photos or PDFs, Workers AI reads them. Link key is a Worker secret (KEY).
 - 29 Oct: joined up. Receipt page "send to QuickBooks" -> receipt-demo worker (service binding BOOKS, secrets KEY/BOOKS_KEY, REALM=sandbox realm) -> books /file/<realm>: finds/creates supplier, skips duplicates (same supplier+date+total), picks expense account by category, sets UK VAT code (20% S / 5% R / No VAT), pays from first bank account, attaches photo. Tested live in Sandbox Company GB (expenses 183, 184, 185).
-- 29 Oct: receipt-demo is now the "Books" phone app (installable, tabs Overview/Receipts/Owed/Invoice) at receipt-demo.gpetrucci93.workers.dev/<KEY>/. Connector endpoints added: summary, owed, remind, invoice, recent. Tax pot = 25% of profit (rough guide). Test invoices "Mrs Smith (test)", "Mr Jones (test)" in sandbox. Next ideas: monthly text (cron + Twilio), bank sorting, voice notes, CIS, MTD pack, production keys for real client.
+- 29 Oct: receipt-demo is now the "Books" phone app (installable, tabs Overview/Receipts/Owed/Invoice) at the receipt-demo Worker's address, /<appKey>/. Connector endpoints added: summary, owed, remind, invoice, recent. Tax pot = 25% of profit (rough guide). Test invoices "Mrs Smith (test)", "Mr Jones (test)" in sandbox. Next ideas: monthly text (cron + Twilio), bank sorting, voice notes, CIS, MTD pack, production keys for real client.
 - 29 Oct (later): added Tidy up (Uncategorised expenses with AI-suggested category, one tap to move), Say it (typed/spoken expense -> parse -> file), CIS invoices (labour/materials lines, 20% of labour deduction shown), MTD quarter card + CSV for accountant, monthly text + owner check report (cron 08:00 UTC on the 1st; needs TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN secrets on the books worker; OWNER_PHONE set; sandbox client phone = Gio). Bank feed "For review" is NOT available via QuickBooks API.
 - 29 Oct (completion pass): connector supports many clients. POST /invite {name, phone, env} -> one-off connect link (14 days); on connect the client gets their own app link (APP_URL/<appKey>/) and Gio gets a text. Production keys go in QB_PROD_CLIENT_ID / QB_PROD_CLIENT_SECRET; each connection remembers sandbox/production. /disconnect page, POST /revoke/<realm>. App worker resolves any app key via BOOKS /app/<key>; demo KEY still works; "demo-practice" also points at the sandbox.
 - Drafted public/books/privacy.html and terms.html (NOT pushed: Gio must approve screenshots first), plus Intuit approval answers and a client service agreement (Localdesk/10 Bookkeeping).
 - Gio added a finance plugin in claude.ai Customize to help with bookkeeping (loads in new sessions). Use it alongside the books connector for monthly checks.
-- 29 Oct: Books app now auto-files receipts (asks only if total/supplier/date/VAT look wrong), Undo for 8s (POST /undo, only app-filed expenses), big Snap/Add buttons on Overview, Paid button on Owed (cash/bank/card -> Payment), client's business name at top + 'Books by Localdesk' footer. Demo name: JCM Group (the plumber prospect; first called JMC Plumbing by mistake). Terms page wording updated (still not published).
-- 29 Oct: Books app branded per client (client record "brand"; JCM Group logo/icon (brand key "jcm", navy #0A1B33 + blue #1F8BFF, mark rebuilt from jcmplumbing.co.uk) live on demo). Added profit per job (Receipts "Which job?" + Jobs tab), accountant pack (Send to accountant -> mailto with pack link; public /pack/<id> page + CSV + receipts; quarterly text on the 8th after quarter end), quotes as a paid EXTRA (client "extras": "quotes"; price not decided). Demo has quotes on.
-- JCM GROUP SETUP CHECKLIST (in QuickBooks, at the 30-min setup): connect bank feed; switch on QuickBooks Payments (card "Pay now" link on invoices, marks invoices paid automatically); automatic invoice reminders; mileage tracking; invoice logo/design; save accountant email in the app; set brand "jcm" on the invite.
-- JCM Group price: in the private sales notes. Default extra price for others: £25.
+- 29 Oct: Books app now auto-files receipts (asks only if total/supplier/date/VAT look wrong), Undo for 8s (POST /undo, only app-filed expenses), big Snap/Add buttons on Overview, Paid button on Owed (cash/bank/card -> Payment), client's business name at top + 'Books by Localdesk' footer. Demo name: set per client. Terms page wording updated (still not published).
+- 29 Oct: Books app branded per client (client record "brand"; client logo/icon (brand key "jcm", navy + blue) live on demo). Added profit per job (Receipts "Which job?" + Jobs tab), accountant pack (Send to accountant -> mailto with pack link; public /pack/<id> page + CSV + receipts; quarterly text on the 8th after quarter end), quotes as a paid EXTRA (client "extras": "quotes"; price not decided). Demo has quotes on.
+- FIRST-CLIENT SETUP CHECKLIST: details are in the private notes (Localdesk/00 Private).
 - GIO RULE (standing): everything client-facing must look like a proper, fully operational business. Formal layout, Localdesk branding (logo, charcoal #1F2328 + yellow #F5B800, Archivo headings), contact details, numbered clauses for contracts, no casual styling, no "draft" notes on anything sent out. Master agreement = Localdesk/10 Bookkeeping/Localdesk Books Service Agreement.pdf (built from HTML).
 - 29 Oct (branch claude/sweet-dirac-j65b1h, DEPLOYED to books + receipt-demo 18:31 UTC; not merged to main yet): "top notch" pass. Per-client VAT setting (vat yes/no on invite or PUT /client; not registered = no VAT reclaimed on receipts or added to invoices; blank = go by QuickBooks). Change log of everything Books does + Undo (app: Home > Help > "What Books changed"). Texts to Gio when QuickBooks/texts/receipt reading break (max one per problem per 12h). New daily cron 0 7 * * *: keeps connections fresh, auto-chases (client switch "Chase late payers for me": invoices at 7/14/28 days late, quotes at 3/7 days, by QuickBooks email), Monday weekly check text to Gio; GET /health. Mileage log (45p/25p, in accountant pack). CIS taken off: Paid on a CIS invoice records received + CIS into "CIS deductions suffered" account, total on Home and in pack. MTD readiness line on the accountant card. Offline: app opens with no signal (service worker), receipts wait on the phone and send when back online. Welcome text on connect, goodbye text on revoke, Getting started + Help card. Tested locally against a fake QuickBooks (33 checks); still to test in the sandbox (needs the demo app link). Daily cron 0 7 * * * added to books schedules.
 - 29 Oct: app redesign (same branch, deployed): Owed screen as invoice cards with late/not-due bar and a "Mark as paid" bottom sheet (bank/card/cash, CIS split shown), avatars with initials, status pills, on/off switch, bottom sheets instead of browser pop-ups, loading placeholders, icons on Help and the change log. Any other session deploying Books must merge this branch first or it will wipe these features.
-- 29 Oct: tested live in the sandbox via the demo link (<demo key>): mileage add/delete, filing + Undo, CIS invoice paid (£500 bank + £100 into "CIS deductions suffered", account created OK), Undo payment, chase switch, accountant pack with CIS, MTD readiness. All worked, no page errors. Left in sandbox: invoice 204 "CIS Contractor (test)" paid with £100 CIS (so the demo shows the CIS card).
+- 29 Oct: tested live in the sandbox via the demo link (<demo key: private notes>): mileage add/delete, filing + Undo, CIS invoice paid (£500 bank + £100 into "CIS deductions suffered", account created OK), Undo payment, chase switch, accountant pack with CIS, MTD readiness. All worked, no page errors. Left in sandbox: invoice 204 "CIS Contractor (test)" paid with £100 CIS (so the demo shows the CIS card).
 - 29 Oct (later, deployed): "proper app" pass. Instant open (last figures cached on the phone, refreshed live). Settings (cog, top right): QuickBooks connection, notifications, chasing, VAT status, accountant email, help, privacy/terms, log out of this phone. All expenses (Receipts > See all): search, period chips, category filter, receipt flags. Tap an expense: receipt photo, details, "Change it" (one-line expenses; undoable). Owed tab: Owed / Paid / Customers. Tap an invoice: lines and totals, "Send it" by WhatsApp/text/copy link; the link is a customer page with the invoice and its PDF (books /d/<id>, 400 days). Tap a quote to send it too. Customers: what they owe and have paid, call/WhatsApp/text/email, their invoices and quotes. Home: 6-month money in/out chart (tap a month). Pull down to refresh, swipe an invoice right to mark it paid, screen transitions. Notifications (Web Push): books secret VAPID_PRIVATE_JWK + plain VAPID_PUBLIC (private key kept only in Cloudflare and in this session's scratchpad); hourly cron 0 * * * * pushes "X paid £Y" for new payments not marked in the app; 7am push with late invoices / to sort. iPhone needs the app added to the Home Screen first. Notifications not yet tested on a real phone.
-- 30 Oct: DEMO PACK = Localdesk/10 Bookkeeping/Localdesk Books Demo Pack.pdf (internal pages 1-5: links, prices, what's live vs not, prep, ask-him-first questions incl. QuickBooks Online vs Desktop, 9-step walkthrough, FAQ, trial plan, if-he-says-yes, still-to-do; page 6 = client leave-behind for JCM Group, print on its own). Old Demo Guide removed. Agreement stays separate (Localdesk Books Service Agreement.pdf).
-- 30 Oct TRIAL RULES: give JCM Group the open demo link only (<demo key>, practice company); login test links text the code to Gio's phone. A few days, "have a play and tell me what you'd change"; made-up names, own email only, no chase switch. Real-QuickBooks trial impossible until Intuit approves prod keys.
+- 30 Oct: DEMO PACK = Localdesk/10 Bookkeeping/Localdesk Books Demo Pack.pdf (internal pages 1-5: links, prices, what's live vs not, prep, ask-him-first questions incl. QuickBooks Online vs Desktop, 9-step walkthrough, FAQ, trial plan, if-he-says-yes, still-to-do; page 6 = client leave-behind, print on its own). Old Demo Guide removed. Agreement stays separate (Localdesk Books Service Agreement.pdf).
+- 30 Oct TRIAL RULES: private (Localdesk/00 Private). Summary: trials use the open demo link only; a real-QuickBooks trial is impossible until Intuit approves production keys.
 - 30 Oct: privacy page + Intuit Approval Answers updated for change log, mileage, logins, push details, share/pack links. Still to do: Intuit Compliance, AML, agreement check, e-sign account, decide on tidying demo data. Not proven: iPhone code autofill (typing works), push on real phone, laptop drag-drop with a real file, sandbox email delivery.
+- 30 Oct: Phase 1 work is on the LOCAL branch `phase1-security-privacy` (not pushed on purpose: public repo, merge before ANY Books worker deploy). Tests: `node --test test/*.test.mjs`, plus the browser check in `test/browser/`. Outstanding live steps and decisions are in the private notes.
