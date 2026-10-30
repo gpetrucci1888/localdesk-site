@@ -1,0 +1,1 @@
+Diagnostic only: checks whether a branch identical to main builds in Cloudflare previews. Safe to delete.
