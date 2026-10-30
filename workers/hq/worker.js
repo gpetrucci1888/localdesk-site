@@ -12,7 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
-import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, classifyProduct } from './leads.js';
+import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
 
 const enc = new TextEncoder();
 const SESSION_SECONDS = 12 * 3600;            // this visit only
@@ -224,9 +224,8 @@ async function load(env) {
   const clients = health.clients || [];
   const cfg = priceConfig(env);
   const subList = (subs.data || []).map(s => {
-    const p = ((s.items && s.items.data && s.items.data[0]) || {}).price || {}, cust = s.customer && typeof s.customer === 'object' ? s.customer : {};
-    const per = p.recurring && p.recurring.interval === 'year' ? (p.unit_amount || 0) / 1200 : (p.unit_amount || 0) / 100;
-    return { id: s.id, who: cust.name || cust.email || 'Customer', email: cust.email || '', plan: p.nickname || 'Subscription', per, status: s.status, cancelling: Boolean(s.cancel_at_period_end), since: s.created * 1000, priceId: p.id || '', product: classifyProduct(p, cfg), isBooks: classifyProduct(p, cfg) === 'books', invoicePaid: s.latest_invoice && typeof s.latest_invoice === 'object' ? s.latest_invoice.status === 'paid' : null };
+    const cust = s.customer && typeof s.customer === 'object' ? s.customer : {}, f = subscriptionFacts(s, cfg);
+    return { id: s.id, who: cust.name || cust.email || 'Customer', email: cust.email || '', plan: f.plan, per: f.per, status: s.status, cancelling: Boolean(s.cancel_at_period_end), since: s.created * 1000, priceId: f.priceId, product: f.product, isBooks: f.product === 'books', invoicePaid: s.latest_invoice && typeof s.latest_invoice === 'object' ? s.latest_invoice.status === 'paid' : null };
   });
   const failed = subList.filter(s => ['past_due', 'unpaid'].includes(s.status));
   const pr = progress(subList), live = pr.paid;   // paying = classified, active, costs money, latest invoice paid. Trials, failed and unmatched ones are not counted

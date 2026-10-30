@@ -58,6 +58,19 @@ export function classifyProduct(price, cfg) {
   const meta = (p.product && typeof p.product === 'object' && p.product.metadata && p.product.metadata.localdesk_product) || (p.metadata && p.metadata.localdesk_product) || '';
   return meta === 'books' || meta === 'receptionist' ? meta : null;
 }
+// What a Stripe subscription is, from ALL its recurring items (a one-off setup price is ignored). The product is known only when
+// every recurring item is the same verified product and priced in pounds; mixed, unverified or odd-interval items stay unclassified.
+export function subscriptionFacts(s, cfg) {
+  const items = ((s.items && s.items.data) || []).filter(i => i && i.price && i.price.recurring);
+  const monthly = (price, qty) => {
+    const r = price.recurring, n = Number(r.interval_count) || 1, amt = (Number(price.unit_amount) || 0) * (Number(qty) || 1) / 100;
+    return r.interval === 'month' ? amt / n : r.interval === 'year' ? amt / (12 * n) : NaN;
+  };
+  const per = items.reduce((t, i) => t + monthly(i.price, i.quantity), 0);
+  const kinds = new Set(items.map(i => (i.price.currency && i.price.currency !== 'gbp') ? null : classifyProduct(i.price, cfg)));
+  const product = items.length && kinds.size === 1 && !kinds.has(null) ? [...kinds][0] : null;
+  return { per: Number.isFinite(per) ? per : 0, product: Number.isFinite(per) ? product : null, priceId: items.map(i => i.price.id).filter(Boolean).join(' + '), plan: items.map(i => i.price.nickname).filter(Boolean).join(' + ') || 'Subscription' };
+}
 // "Paying" means: a classified Localdesk subscription that is active, costs money, AND whose latest invoice Stripe says is paid.
 // Active but latest invoice open or unknown is shown separately, never as paying. MRR is the monthly price of the paying ones only.
 export function progress(subList) {
