@@ -47,6 +47,8 @@
 //   POST /mileoff/<realmId>/<id> (X-Key) deletes a trip
 //   GET  /cis/<realmId>         (X-Key) CIS taken off their pay this tax year (they claim it back)
 //   GET  /health                (X-Key) the daily check: every client's connection, anything stuck
+//   GET  /admin                 Gio's admin page (asks for the admin key, then uses the routes above)
+//   GET  /client/<realmId>      (X-Key) one client's settings and their app link
 //   GET  /expenses/<realmId>    (X-Key) ?from&to&q&cat every expense in a period, searchable, with receipt flags
 //   GET  /expense/<realmId>/<id> (X-Key) one expense; POST /fix/<realmId>/<id> {date, supplier, total, vat, category} edits it
 //   GET  /receipt/<realmId>/<id> (X-Key) the receipt photo on an expense
@@ -86,6 +88,8 @@
 // QB_PROD_CLIENT_ID, QB_PROD_CLIENT_SECRET (production keys, for real clients), ADMIN_KEY,
 // APP_URL (where the phone app lives). Each saved connection remembers which keys it used.
 // Tokens, invites and clients live in the Store Durable Object.
+
+import { ADMIN_PAGE } from './admin.js';
 
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
@@ -172,6 +176,10 @@ export default {
           return new Response(pdf.body, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${link.type}-${link.id}.pdf"` } });
         }
         return new Response(await docPage(env, store, link, `${url.origin}/d/${dl[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+      }
+
+      if (url.pathname === '/admin' && request.method === 'GET') {
+        return new Response(ADMIN_PAGE, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer' } });
       }
 
       // The app, for one client: X-App (their app key) plus X-Session (from logging in with a texted code).
@@ -428,6 +436,10 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
   if (what === 'pack' && post) {
     const p = packPeriod((await body()).period);
     return Response.json({ ...p, url: await packLink(store, origin, realmId, p), accountant: ((await getClient(store, realmId)) || {}).accountant || '' });
+  }
+  if (what === 'client' && request.method === 'GET') {
+    const c = (await getClient(store, realmId)) || {};
+    return Response.json({ ...c, appUrl: c.appKey ? `${env.APP_URL}/${c.appKey}/` : '' });
   }
   if (what === 'client' && request.method === 'PUT') {
     const v = await body(), old = (await getClient(store, realmId)) || {};
