@@ -2237,6 +2237,16 @@ export class Store {
   constructor(state) { this.storage = state.storage; }
   async fetch(request) {
     const url = new URL(request.url);
+    const rl = url.pathname.match(/^\/reflock\/(\d+)$/);   // a short lease so only one request at a time refreshes a single-use refresh token
+    if (rl) {
+      const key = `reflock:${rl[1]}`, cur = await this.storage.get(key);
+      if (request.method === 'POST') {
+        if (cur && cur.until > Date.now()) return Response.json({ ok: false });
+        const id = crypto.randomUUID(); await this.storage.put(key, { id, until: Date.now() + 20000 });
+        return Response.json({ ok: true, id });
+      }
+      if (request.method === 'DELETE') { if (cur && cur.id === url.searchParams.get('id')) await this.storage.delete(key); return Response.json({ ok: true }); }
+    }
     if (url.pathname === '/state') {
       // Several people may be connecting at once, so each state is kept under its own key.
       if (request.method === 'PUT') { const st = JSON.parse(await request.text()); await this.storage.put(`state:${st.value}`, { ...st, at: Date.now() }); return text('ok'); }

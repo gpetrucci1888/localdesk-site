@@ -76,10 +76,30 @@ export function createXero(D) { // D: { ACCOUNT_NAMES, getClient, logChange, mar
     refreshing.set(key, p);
     return p;
   }
+  // The refresh token is single use, and separate Worker instances can run at once, so a short lease kept in the Durable Object
+  // lets one of them refresh while the others wait and then pick up the new token it saved.
+  async function lease(store, realmId) {
+    for (let i = 0; i < 30; i++) {
+      const r = await (await store.fetch(`https://store/reflock/${realmId}`, { method: 'POST' })).json();
+      if (r.ok) return r.id;
+      await new Promise(res => setTimeout(res, 250));
+    }
+    return null;
+  }
   async function tokenOnce(env, store, realmId, force) {
-    const t = await saved(store, realmId);
-    if (!t) throw new Error(`${SOFTWARE} organisation ${realmId} isn't connected`);
-    if (!force && t.expires_at - Date.now() > 60_000) return t;
+    const t0 = await saved(store, realmId);
+    if (!t0) throw new Error(`${SOFTWARE} organisation ${realmId} isn't connected`);
+    if (!force && t0.expires_at - Date.now() > 60_000) return t0;
+    const id = await lease(store, realmId);
+    try {
+      const t = await saved(store, realmId);   // someone else may have refreshed while we waited
+      if (!t) throw new Error(`${SOFTWARE} organisation ${realmId} isn't connected`);
+      if (t.expires_at - Date.now() > 60_000 && (!force || t.access_token !== t0.access_token)) return t;
+      if (!id) throw new Error('Xero is busy refreshing this connection, try again in a moment');
+      return await refreshNow(env, store, realmId, t);
+    } finally { if (id) await store.fetch(`https://store/reflock/${realmId}?id=${id}`, { method: 'DELETE' }).catch(() => {}); }
+  }
+  async function refreshNow(env, store, realmId, t) {
     let fresh;
     try { fresh = await tokenRequest(env, { grant_type: 'refresh_token', refresh_token: t.refresh_token }); } catch (err) {
       if (/invalid_grant|invalid_token|unauthor/i.test(String(err.message))) {

@@ -11,6 +11,9 @@ Read this first in a new session, then `CLAUDE.md` and `PROGRESS.md`. Secrets an
 - **Customer app `workers/receipt-demo`**, **owner dashboard `workers/hq`** (HQ new-client form has a platform choice: QuickBooks, FreeAgent, Xero).
 - Tests: `node --test test/*.test.mjs` (138 pass) and `node test/browser/site.check.cjs`, `hq.check.cjs`, `admin.check.cjs`, `agree.check.cjs` (Playwright; Chromium is preinstalled).
 
+## Independent review (ChatGPT)
+`docs/AI-COLLAB.md` explains the GitHub channel. PR #2 carries all pending work and the first review request (`docs/reviews/2026-10-30-release-readiness.md`). The automatic review comment is built but OFF until Gio adds an OpenAI API key (repo secret `OPENAI_API_KEY`) and variable `OPENAI_REVIEW_MODEL`. Also done: Xero refresh now takes a short lease in the Durable Object (`/reflock/<realm>`) so two Worker instances cannot both use a single-use refresh token; tested.
+
 ## Not yet deployed (branch `handoff-and-parity`, if merged)
 - Health check now checks every connected business in parallel (admin client list was slow).
 - FreeAgent missing-receipt flags (`noReceipt`) for the monthly check, with a test. After deploying, call the admin route `/noreceipt/<realm>` on the sandbox FreeAgent client to confirm against the real service, then the Books page table ("What works where") can add FreeAgent to the missing-receipt row.

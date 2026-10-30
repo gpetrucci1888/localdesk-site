@@ -10,6 +10,8 @@ Localdesk: Giovanni (Gio) Petrucci, sole trader, Saltash, Cornwall. Sells to loc
 
 Current state, prices and decisions: `PROGRESS.md`. It is long, so grep for the section you need rather than reading it all.
 
+**New session? Read `docs/HANDOFF.md` first (state, open items, what is undeployed). Claude is the technical lead; ChatGPT is the independent reviewer via GitHub: see `docs/AI-COLLAB.md` (the automatic review needs an OpenAI API key and is not on yet).**
+
 ## Rules (from Gio)
 - **Never deploy, publish, push to `main`, spend money or change production config** (Cloudflare, Vapi, Twilio, Stripe, Intuit, DNS) without Gio's explicit approval in the current conversation. Show a preview first.
 - **Before deploying a Worker, merge the approved branch with the latest `origin/main`** so no other session's work is lost. Other Claude sessions work on this repo too.

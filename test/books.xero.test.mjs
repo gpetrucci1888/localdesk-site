@@ -148,3 +148,19 @@ test('the admin connection test files, finds, undoes and cleans up its own Xero 
   assert.ok(xe.tx.every(b => b.Status === 'DELETED')); assert.ok(xe.invoices.every(i => i.Status === 'VOIDED')); assert.ok(xe.contacts.every(c => c.ContactStatus === 'ARCHIVED'));
   const read = await (await asAdmin(w, 'GET', `/precheck/${XE_REALM}`)).json(); assert.ok(read.categories && Array.isArray(read.problems));
 });
+
+test('two separate Worker instances refreshing at the same moment cause only one Xero refresh (single-use refresh token)', async (t) => {
+  const { Store } = await import('../workers/books/worker.js');
+  const { createXero } = await import('../workers/books/xero.js');
+  const w = world(); const { xe } = network(t);
+  let queue = Promise.resolve();   // a Durable Object handles one request at a time on its storage, so the test store does too
+  const store = { fetch: (u, init) => { const r = queue.then(() => new Store({ storage: w.storage }).fetch(new Request(u, init))); queue = r.catch(() => {}); return r; } };
+  await w.storage.put(`tokens:${XE_REALM}`, { platform: 'xero', env: 'sandbox', access_token: 'old', refresh_token: 'xe-refresh-0', expires_at: Date.now() - 1000, xero_tenant: TENANT });
+  const D = { ACCOUNT_NAMES: {}, getClient: async () => null, logChange: async () => {}, markUndone: async () => {}, alertOwner: async () => {}, clientName: async () => 'x', ukToday: () => '2026-10-30', money: String };
+  const env = { XERO_CLIENT_ID: 'id', XERO_CLIENT_SECRET: 's' };
+  const a = createXero(D), b = createXero(D);   // each has its own in-memory state, like two isolates
+  const [ta, tb] = await Promise.all([a.token(env, store, XE_REALM), b.token(env, store, XE_REALM)]);
+  assert.equal(xe.refreshes, 1, 'exactly one refresh happened');
+  assert.equal(ta.access_token, tb.access_token); assert.equal((await w.storage.get(`tokens:${XE_REALM}`)).refresh_token, 'xe-refresh-1');
+  assert.equal(await w.storage.get(`reflock:${XE_REALM}`), undefined, 'the lease is released');
+});
