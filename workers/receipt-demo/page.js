@@ -234,6 +234,13 @@ html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
 
 <section id="tab-home">
   <div class="card wait" id="waitCard" hidden><h2>Waiting for signal</h2><p style="margin:0" id="waitText"></p><button class="link" id="waitGo">Send them now →</button></div>
+  <div class="card wait" id="installCard" hidden><h2>Put Books on your home screen</h2>
+    <div id="installIos" hidden><ol class="steps">
+      <li>Tap the <b>Share</b> button <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" aria-label="Share"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v7h14v-7"/></svg> at the bottom (or top) of the screen.</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+      <li>Open Books from the new icon. You'll stay logged in, and notifications work from there.</li></ol></div>
+    <div id="installAndroid" hidden><p style="margin:0 0 12px">One tap and it opens like any other app, with notifications.</p><button class="go" id="installGo" style="width:100%">Install Books</button></div>
+    <button class="link" id="installLater">Not now</button></div>
   <div class="card" id="startCard" hidden><h2>Getting started</h2><ol class="steps">
     <li>Add Books to your home screen (Share, then "Add to Home Screen").</li>
     <li>Snap your next receipt. Books reads it and files it in QuickBooks.</li>
@@ -1055,6 +1062,19 @@ $('logout').addEventListener('click',async function(){
 // ---- notifications ----
 var standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 var iPhone=/iPhone|iPad|iPod/.test(navigator.userAgent);
+// ---- install prompt: iPhone gets the steps, Android gets a button. Hidden once installed, or for a week after "Not now". ----
+var installEvt=null;
+function installSnoozed(){try{return Date.now()-Number(localStorage.getItem('books-install-later')||0)<7*86400000}catch(e){return false}}
+function showInstall(){
+  if(standalone||installSnoozed())return;
+  if(iPhone){$('installIos').hidden=false;$('installCard').hidden=false}
+  else if(installEvt){$('installAndroid').hidden=false;$('installCard').hidden=false}
+}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();installEvt=e;showInstall()});
+window.addEventListener('appinstalled',function(){$('installCard').hidden=true});
+$('installGo').addEventListener('click',async function(){if(!installEvt)return;installEvt.prompt();var c=await installEvt.userChoice;installEvt=null;if(c&&c.outcome==='accepted')$('installCard').hidden=true});
+$('installLater').addEventListener('click',function(){$('installCard').hidden=true;try{localStorage.setItem('books-install-later',String(Date.now()))}catch(e){}});
+showInstall();
 function b64key(s){var p='='.repeat((4-s.length%4)%4),r=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(r,function(c){return c.charCodeAt(0)})}
 async function pushReg(){if(!('serviceWorker' in navigator)||!('PushManager' in window))return null;return navigator.serviceWorker.ready}
 async function pushState(){
