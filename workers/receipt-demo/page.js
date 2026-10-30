@@ -242,11 +242,6 @@ html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
       <li>Open Books from the new icon. You'll stay logged in, and notifications work from there.</li></ol></div>
     <div id="installAndroid" hidden><p style="margin:0 0 12px">One tap and it opens like any other app, with notifications.</p><button class="go" id="installGo" style="width:100%">Install Books</button></div>
     <button class="link" id="installLater">Not now</button></div>
-  <div class="card" id="startCard" hidden><h2>Getting started</h2><ol class="steps">
-    <li id="startStep1">Add Books to your home screen (Share, then "Add to Home Screen").</li>
-    <li>Snap your next receipt. Books reads it and files it in QuickBooks.</li>
-    <li>Add your accountant's email in Settings (the cog, top right).</li></ol>
-    <button class="link" id="startDone">Got it, hide this</button></div>
   <div class="snaps"><label class="snap" for="file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Snap a receipt</label><label class="snap alt" for="pick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Photos or PDFs</label></div>
   <div class="card"><h2>Profit so far</h2><p class="big" id="profit">…</p>
     <div class="grid2" style="margin-top:12px"><div class="stat"><span>Money in</span><b id="in">…</b></div><div class="stat"><span>Money out</span><b id="out">…</b></div></div>
@@ -257,6 +252,11 @@ html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
   <div class="card todo" id="todo" hidden><h2>To do</h2><ul id="todoList"></ul></div>
   <div class="card" id="cisCard" hidden><h2>CIS taken off this tax year</h2><p class="big" id="cisTotal">…</p><p class="note">Contractors paid this to HMRC for you. It comes off your tax bill (or comes back to you) through your tax return.</p></div>
   <div class="card"><h2>Owed to you</h2><p class="big" id="owedTotal">…</p><p class="note" id="owedCount"></p><button class="link" data-tab="owed">See who owes you →</button></div>
+  <div class="card" id="startCard" hidden><h2>Getting started</h2><ol class="steps">
+    <li id="startStep1">Add Books to your home screen (Share, then "Add to Home Screen").</li>
+    <li>Snap your next receipt. Books reads it and files it in QuickBooks.</li>
+    <li>Add your accountant's email in Settings (the cog, top right).</li></ol>
+    <button class="link" id="startDone">Got it, hide this</button></div>
   <div class="card" id="acctCard"><h2>For your accountant</h2><p class="sub" id="qDates"></p>
     <div class="grid2" style="margin-top:10px"><div class="stat"><span>Income</span><b id="qIn">…</b></div><div class="stat"><span>Expenses</span><b id="qOut">…</b></div></div>
     <p class="note" id="qDue"></p>
