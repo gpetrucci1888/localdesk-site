@@ -187,8 +187,46 @@ section.enter{animation:enter .18s ease}
 .contact svg{width:22px;height:22px}
 .inv{touch-action:pan-y;transition:transform .15s}
 li.q{flex-wrap:wrap}li.q>.btns{width:100%;padding-left:56px}li.q>.btns button{flex:1}.sendrow select{font:inherit;font-size:15px;padding:10px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);min-width:0}
+
+/* ---- laptop and desktop: sidebar, wider grid, centred pop-ups (phone layout untouched) ---- */
+@media (min-width:1024px){
+html.app body{padding-left:248px}
+html.app nav,html.app nav.five{top:0;bottom:0;right:auto;width:248px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;background:var(--hd);border-top:0;border-right:1px solid #ffffff14}
+html.app nav .navbrand{display:flex;align-items:center;gap:12px;padding:4px 10px 26px;color:#fff}
+html.app nav .navbrand .logo{width:46px;height:46px}
+html.app nav .navbrand b{display:block;font-size:15px;line-height:1.2}
+html.app nav .navbrand small{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffffff8c;margin-top:2px}
+html.app nav button{display:flex;align-items:center;gap:12px;justify-items:start;font-size:15px;font-weight:600;color:#ffffffb3;padding:10px 12px;border-radius:10px;text-align:left}
+html.app nav button:hover{background:#ffffff0f;color:#fff}
+html.app nav svg{width:22px;height:22px;padding:0;border-radius:0}
+html.app nav button[aria-current="page"]{background:#ffffff17;color:#fff}
+html.app nav button[aria-current="page"] svg{background:none;color:var(--acc)}
+html.app nav .navfoot{margin-top:auto;padding:12px;font-size:12px;color:#ffffff73}
+html.app .top{background:transparent;color:var(--ink);border-radius:0;padding:34px 40px 6px}
+html.app .top .in{max-width:1120px;margin:0}
+html.app .top .logo,html.app .top .biz{display:none}
+html.app .top h1{font-size:30px}
+html.app .top .sub{color:var(--muted)}
+html.app .hbtn{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+html.app main{max-width:1120px;margin:0;padding:18px 40px 56px;gap:18px}
+html.app #tab-home{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+html.app #tab-home>#waitCard,html.app #tab-home>#startCard,html.app #tab-home>.snaps{grid-column:1/-1}
+html.app #tab-home>.snaps{grid-template-columns:2fr 1fr}
+html.app .snap{min-height:96px;flex-direction:row;gap:12px}
+html.app section:not(#tab-home){max-width:860px}
+html.app li{padding:13px 4px}
+html.app li.tap:hover,html.app [data-tab]:is(li):hover,html.app [data-act]:hover{background:var(--bg);border-radius:10px}
+html.app .by{text-align:left}
+html.app .scrim{align-items:center;padding:24px 24px 24px 272px}
+html.app .sheet{border-radius:20px;max-width:560px;max-height:86vh}
+html.app .toast{left:272px;right:24px;bottom:24px;max-width:560px}
+html.app .drop{position:fixed;inset:0 0 0 248px;z-index:30;background:color-mix(in srgb,var(--acc) 14%,transparent);border:3px dashed var(--acc);place-items:center;font-size:22px;font-weight:800;color:var(--ink);pointer-events:none}
+}
+html:not(.app) .navbrand,html:not(.app) .navfoot,.drop{display:none}
+@media (max-width:1023px){.navbrand,.navfoot{display:none}}
+@media (min-width:1024px){html.app .drop.on{display:grid}}
 </style></head><body>
-<header class="top"><div class="in"><button class="hbtn" id="back" hidden aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></button>{{LOGO}}<div class="t"><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div>
+<header class="top"><script>document.documentElement.classList.add('app')</script><div class="in"><button class="hbtn" id="back" hidden aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg></button>{{LOGO}}<div class="t"><p class="biz">{{NAME}}</p><h1 id="title">This month</h1><p class="sub" id="subtitle"></p></div>
 <button class="hbtn" data-tab="settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
 <div class="ptr" id="ptr" aria-hidden="true">↻</div>
 <main>
@@ -323,6 +361,23 @@ li.q{flex-wrap:wrap}li.q>.btns{width:100%;padding-left:56px}li.q>.btns button{fl
 </nav>
 
 <script>
+// Laptop: logo and name at the top of the sidebar, wording for a mouse, and drop receipts anywhere.
+(function(){
+  var nav=document.querySelector('nav'),lg=document.querySelector('.top .logo');
+  nav.insertAdjacentHTML('afterbegin','<div class="navbrand">'+(lg?lg.outerHTML:'')+'<div><b>'+document.querySelector('.biz').textContent+'</b><small>Books</small></div></div>');
+  nav.insertAdjacentHTML('beforeend','<div class="navfoot">Books by Localdesk</div>');
+  var wide=window.matchMedia('(min-width:1024px)');
+  function words(){document.querySelectorAll('label.snap').forEach(function(l){if(!l.classList.contains('alt')){var t=[].filter.call(l.childNodes,function(n){return n.nodeType===3&&n.textContent.trim()})[0];if(t)t.textContent=wide.matches?'Upload receipts':'Snap a receipt'}})}
+  words();if(wide.addEventListener)wide.addEventListener('change',words);
+  document.body.insertAdjacentHTML('beforeend','<div class="drop" id="drop">Drop receipts to file them</div>');
+  var n=0;
+  window.addEventListener('dragenter',function(e){if(e.dataTransfer&&[].indexOf.call(e.dataTransfer.types,'Files')>=0){n++;document.getElementById('drop').classList.add('on')}});
+  window.addEventListener('dragleave',function(){if(--n<=0){n=0;document.getElementById('drop').classList.remove('on')}});
+  window.addEventListener('dragover',function(e){e.preventDefault()});
+  window.addEventListener('drop',function(e){e.preventDefault();n=0;document.getElementById('drop').classList.remove('on');
+    var f=[].filter.call(e.dataTransfer.files||[],function(x){return /^image\/|pdf$/.test(x.type)||/\.pdf$/i.test(x.name)});
+    if(f.length)addFiles({target:{files:f,set value(v){}}})});
+})();
 var CATS=["Materials","Tools and equipment","Fuel","Vehicle","Subcontractors","Phone and internet","Office","Food and drink","Other"];
 var BASE=location.pathname.replace(/\/$/,'');
 var $=function(id){return document.getElementById(id)};
@@ -862,7 +917,7 @@ document.addEventListener('click',async function(e){
       (made&&made.out>0?'<div class="split"><div><span>Costs on their jobs (12 months)</span><b>'+money(made.out)+'</b></div><div><span>What you made</span><b class="'+(made.profit<0?'neg':'pos')+'">'+money(made.profit)+'</b></div></div>':'')+
       contactBtns(c.phone,c.email)+
       (c.invoices.length?'<h2 style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 4px">Invoices</h2><ul>'+c.invoices.map(function(i){return '<li class="tap" data-invdoc="'+esc(i.id)+'"><div class="grow"><b>'+(i.number?'Invoice '+esc(i.number):'Invoice')+'</b><small>'+esc(ukDate(i.date))+'</small></div><div class="ends"><span class="amt" style="font-size:16px">'+money(i.total)+'</span>'+(i.balance>0?'<span class="pill bad">'+money(i.balance)+' to pay</span>':'<span class="pill ok">Paid</span>')+'</div></li>'}).join('')+'</ul>':'')+
-      (c.quotes.length?'<h2 style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px">Quotes</h2><ul>'+c.quotes.map(function(q){return '<li><div class="grow"><b>'+(q.number?'Quote '+esc(q.number):'Quote')+'</b><small>'+esc(ukDate(q.date))+'</small></div><div class="ends"><span class="amt" style="font-size:16px">'+money(q.total)+'</span><span class="pill">'+esc({Pending:'Waiting',Accepted:'Won',Closed:'Invoiced',Rejected:'Lost'}[q.status]||q.status)+'</span></div></li>'}).join('')+'</ul>':'')+
+      (QUOTES&&c.quotes.length?'<h2 style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px">Quotes</h2><ul>'+c.quotes.map(function(q){return '<li><div class="grow"><b>'+(q.number?'Quote '+esc(q.number):'Quote')+'</b><small>'+esc(ukDate(q.date))+'</small></div><div class="ends"><span class="amt" style="font-size:16px">'+money(q.total)+'</span><span class="pill">'+esc({Pending:'Waiting',Accepted:'Won',Closed:'Invoiced',Rejected:'Lost'}[q.status]||q.status)+'</span></div></li>'}).join('')+'</ul>':'')+
       '<button class="cancel" data-close>Close</button>';
   }catch(err){sh.el.innerHTML='<div class="grab"></div><p class="err">'+esc(err.message)+'</p><button class="cancel" data-close>Close</button>'}
 });
