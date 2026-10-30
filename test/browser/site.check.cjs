@@ -13,7 +13,7 @@ const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascrip
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f)); }).listen(0, () => ok({ s, port: s.address().port })); });
   const base = `http://localhost:${srv.port}`; const results = []; const ck = (n, ok, x = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${n} ${x}`); };
   const browser = await chromium.launch();
-  const pages = ['/', '/books/', '/privacy.html', '/terms.html', '/books/privacy.html', '/books/terms.html'];
+  const pages = ['/', '/receptionist/', '/books/', '/privacy.html', '/terms.html', '/books/privacy.html', '/books/terms.html'];
   for (const [name, vp] of [['phone', { width: 390, height: 844 }], ['desktop', { width: 1280, height: 860 }]]) {
     const ctx = await browser.newContext({ viewport: vp }); 
     await ctx.route('https://books.localdeskai.co.uk/enquiry', async (route) => { const r = route.request();
@@ -34,7 +34,7 @@ const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascrip
         if (r.status() !== 200) bad.push(h); else if (url.hash && url.hash.length > 1 && /html/.test(url.pathname + 'html')) { /* anchors on other pages checked below */ }
       }
       ck(`${name} ${p}: every link works`, bad.length === 0, bad.join(' '));
-      if (p === '/' || p === '/books/') {
+      if (p === '/' || p === '/books/' || p === '/receptionist/') {
         const sel = '#enquiry'; await page.locator(sel).scrollIntoViewIfNeeded();
         await page.click(sel + ' button'); await page.waitForTimeout(200);
         ck(`${name} ${p}: empty form asks for name and phone`, /name and a phone/.test(await page.textContent(sel + ' .msg')));
