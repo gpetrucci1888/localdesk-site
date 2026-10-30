@@ -32,7 +32,7 @@ def deploy_hq(dry=False):
     if dry: print('hq bindings',[(b['name'],b['type']) for b in binds]); return
     r=json.loads(subprocess.run(cmd,capture_output=True,text=True).stdout); print('hq','success' if r.get('success') else r.get('errors'))
 which=sys.argv[1]; dry=len(sys.argv)>2 and sys.argv[2]=='dry'
-if which=='books': deploy('books',[('worker.js',f'{R}/books/worker.js'),('admin.js',f'{R}/books/admin.js')],dry=dry)
+if which=='books': deploy('books',[('worker.js',f'{R}/books/worker.js'),('admin.js',f'{R}/books/admin.js'),('freeagent.js',f'{R}/books/freeagent.js')],dry=dry)
 if which=='app': deploy('receipt-demo',[(f,f'{R}/receipt-demo/{f}') for f in ['worker.js','page.js','brands.js','icons.js']],dry=dry)
 
 if which=='hq': deploy_hq(dry=dry)
