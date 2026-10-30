@@ -235,3 +235,30 @@ test('an unexpected failure shows a friendly page, not a stack trace', async (t)
   const r = await call(w, '/books/client/111', { cookie });
   assert.ok(r.status < 600); const body = await r.text(); assert.ok(!body.includes('secret internal detail')); assert.match(body, /Localdesk/);
 });
+
+test('"keep me logged in" is the default: three months, and ticking it off gives a 12 hour session', async (t) => {
+  const w = world({}, t);
+  const first = await call(w, '/login', { method: 'POST', form: { password: PASS } }); const key = setupKey(await first.text());
+  assert.match(await (await call(w, '/login')).text(), /name="remember" value="1" checked/, 'the box is ticked by default');
+  const remembered = await call(w, '/login', { method: 'POST', form: { password: PASS, remember: '1', code: await totp(key, Math.floor(Date.now() / 30000)) } });
+  assert.match(remembered.headers.get('set-cookie'), /Max-Age=7776000/);
+  const c = sessionCookie(remembered);
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 80 * 86400 * 1000 });
+  assert.equal((await call(w, '/', { cookie: c })).status, 200, 'still in after 80 days');
+  t.mock.timers.setTime(Date.now() + 20 * 86400 * 1000);
+  assert.equal((await call(w, '/', { cookie: c })).status, 303, 'but not after 3 months');
+});
+
+test('"log out every device" ends every session at once, including ones that were remembered', async (t) => {
+  const w = world({}, t); const a = await enrol(w, t);
+  assert.equal((await call(w, '/', { cookie: a.cookie })).status, 200);
+  assert.equal((await call(w, '/logout-all', { method: 'POST' })).status, 303, 'cannot be used without a login');
+  assert.equal((await call(w, '/', { cookie: a.cookie })).status, 200, 'and did nothing');
+  const out = await call(w, '/logout-all', { method: 'POST', cookie: a.cookie });
+  assert.equal(out.status, 303); assert.match(out.headers.get('set-cookie'), /Max-Age=0/);
+  assert.equal((await call(w, '/', { cookie: a.cookie })).status, 303, 'the old session is dead');
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 31000 });
+  const again = await call(w, '/login', { method: 'POST', form: { password: PASS, code: await totp(a.key, Math.floor(Date.now() / 30000)) }, ip: '192.0.2.77' });
+  assert.equal(again.status, 303, 'logging back in still works');
+  assert.equal((await call(w, '/', { cookie: sessionCookie(again) })).status, 200);
+});

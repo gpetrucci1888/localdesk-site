@@ -14,7 +14,8 @@ import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, ICON } from './ui.js';
 
 const enc = new TextEncoder();
-const SESSION_SECONDS = 12 * 3600;
+const SESSION_SECONDS = 12 * 3600;            // this visit only
+const REMEMBER_SECONDS = 90 * 24 * 3600;      // "remember this device" (the default): about 3 months
 
 // ---------- small helpers ----------
 const hex = (buf) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -61,17 +62,17 @@ async function codeStep(secret, code) {
 }
 
 // ---------- sessions ----------
-async function sessionKey(env, vault) {
-  return enc.encode(await sha256(`${env.OWNER_PASSWORD}|${(vault && vault.secret) || 'none'}|hq-session`));
+async function sessionKey(env, vault, epoch = 0) {
+  return enc.encode(await sha256(`${env.OWNER_PASSWORD}|${(vault && vault.secret) || 'none'}|${epoch}|hq-session`));
 }
-async function makeSession(env, vault) {
-  const exp = Math.floor(Date.now() / 1000) + SESSION_SECONDS, nonce = hex(crypto.getRandomValues(new Uint8Array(12)));
-  return `${exp}.${nonce}.${hex(await hmac(await sessionKey(env, vault), `${exp}.${nonce}`))}`;
+async function makeSession(env, vault, epoch, seconds) {
+  const exp = Math.floor(Date.now() / 1000) + seconds, nonce = hex(crypto.getRandomValues(new Uint8Array(12)));
+  return `${exp}.${nonce}.${hex(await hmac(await sessionKey(env, vault, epoch), `${exp}.${nonce}`))}`;
 }
-async function validSession(env, vault, cookie) {
+async function validSession(env, vault, epoch, cookie) {
   const m = /(?:^|;\s*)hq=(\d+)\.([0-9a-f]+)\.([0-9a-f]+)/.exec(cookie || '');
   if (!m || !vault || !vault.active || Number(m[1]) < Date.now() / 1000) return false;
-  return same(m[3], hex(await hmac(await sessionKey(env, vault), `${m[1]}.${m[2]}`)));
+  return same(m[3], hex(await hmac(await sessionKey(env, vault, epoch), `${m[1]}.${m[2]}`)));
 }
 const cookie = (value, maxAge) => `hq=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`;
 
@@ -136,6 +137,7 @@ export class Vault {
       let data = ''; for (let i = 0; i < m.parts; i++) data += await s.get(`bk:${body.date}:${i}`);
       return Response.json({ data });
     }
+    if (url.pathname === '/epoch') { if (request.method === 'POST') await s.put('epoch', ((await s.get('epoch')) || 0) + 1); return Response.json({ n: (await s.get('epoch')) || 0 }); }
     if (url.pathname === '/ok') { await s.delete(`lock2:${body.who}`); return Response.json({ ok: true }); }
     return new Response('?', { status: 404 });
   }
@@ -153,7 +155,8 @@ ${enrol ? `<ol class="steps" style="margin-top:16px"><li>Open your authenticator
 <form method="post" action="/login" autocomplete="off">
 <label for="pw">Your passphrase</label><input id="pw" type="password" name="password" autocomplete="current-password" required autofocus>
 <label for="cd">6-digit code from your phone app${enrol ? '' : '<small>Leave blank only the very first time.</small>'}</label><input id="cd" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"${enrol ? ' required' : ''}>
-<div class="sp"></div><button class="btn block" style="margin-top:14px">Log in</button></form>`);
+<label style="display:flex;align-items:center;gap:12px;font-weight:600;margin-top:16px"><input type="checkbox" name="remember" value="1" checked style="width:26px;height:26px;min-height:0;flex:none">Keep me logged in on this device for 3 months</label>
+<button class="btn block" style="margin-top:14px">Log in</button></form>`);
 const WRONG = 'That didn\'t work. Check your passphrase, and that the 6-digit code is the current one (it changes every 30 seconds).';
 
 async function handleLogin(request, env) {
@@ -174,7 +177,8 @@ async function handleLogin(request, env) {
   rec = { ...rec, active: true, lastStep: step };
   await vget(vault, '/totp', { method: 'PUT', body: JSON.stringify(rec) });
   await vpost(vault, '/ok', { who });
-  return redirect('/', { 'Set-Cookie': cookie(await makeSession(env, rec), SESSION_SECONDS) });
+  const seconds = form.get('remember') ? REMEMBER_SECONDS : SESSION_SECONDS;
+  return redirect('/', { 'Set-Cookie': cookie(await makeSession(env, rec, (await vget(vault, '/epoch')).n, seconds), seconds) });
 }
 
 // ---------- data ----------
@@ -380,7 +384,8 @@ const pageSettings = () => shell('Settings', `<h1>Settings</h1>
 <div class="card"><h2>Your accounts</h2><div class="list">${LINKS.accounts.map(l => item(l.url, l.name, esc(l.note), '', true)).join('')}</div></div>
 <div class="card"><h2>Where your passwords and keys are kept</h2><p class="mute">You never need to type these here. This only tells you where each one lives.</p><div class="list">${REGISTER.map(r => `<div class="item" style="align-items:flex-start"><span class="body"><b>${esc(r.name)}</b><small>Kept in: ${esc(r.where)}</small><small>What it does: ${esc(r.use)}</small><small>If you lose it: ${esc(r.recover)}</small></span></div>`).join('')}</div></div>
 <div class="card"><h2>Your HQ login</h2><details><summary>I've lost my phone</summary><p>In Cloudflare, open <b>Workers &amp; Pages</b>, then <b>hq</b>, then <b>Settings</b>, then <b>Variables and Secrets</b>. Change the variable <code>RESET_TOTP</code> to any new word. Then log in again and set up the app on your new phone.</p></details><details><summary>I want a new passphrase</summary><p>In the same place in Cloudflare, edit <code>OWNER_PASSWORD</code> and save. Every phone and computer is logged out and you log in with the new one.</p></details></div>
-<form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/settings');
+<div class="card"><h2>Lost or lent a device?</h2><p class="mute">HQ remembers your phone and computer for 3 months so you don't log in every time. If a device is lost, log every device out at once. You then log back in with your passphrase and code.</p><form method="post" action="/logout-all"><button class="btn block danger">Log out every device</button></form></div>
+<form method="post" action="/logout"><button class="btn block line">Log out of this device</button></form>`, '/settings');
 const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
 
 // ---------- help ----------
@@ -424,8 +429,10 @@ export default {
     await vpost(vault, '/reset', { value: String(env.RESET_TOTP || '') });
     if (url.pathname === '/login') return respond(request.method === 'POST' ? await handleLogin(request, env) : html(loginPage()));
     const rec = await vget(vault, '/totp');
-    const authed = await validSession(env, rec, request.headers.get('Cookie'));
+    const epoch = (await vget(vault, '/epoch')).n;
+    const authed = await validSession(env, rec, epoch, request.headers.get('Cookie'));
     if (url.pathname === '/logout' && request.method === 'POST') return respond(redirect('/login', { 'Set-Cookie': cookie('', 0) }));
+    if (url.pathname === '/logout-all' && request.method === 'POST' && authed) { await vpost(vault, '/epoch', {}); return respond(redirect('/login', { 'Set-Cookie': cookie('', 0) })); }
     if (!authed) return respond(redirect('/login'));
     try {
       const p = url.pathname;
