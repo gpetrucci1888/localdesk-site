@@ -148,7 +148,7 @@ test('housekeeping clears out old invites (name and phone), codes, sessions, ale
   await s.put('alert:x:old', now - 9 * DAY); await s.put('alert:x:new', now - 3600_000);
   const res = await w.store.fetch('https://store/housekeeping', { method: 'POST' });
   const out = await res.json();
-  assert.deepEqual(out, { invites: 1, states: 1, codes: 2, sessions: 1, alerts: 1 });
+  assert.deepEqual(out, { invites: 1, states: 1, codes: 2, sessions: 1, alerts: 1, enquiries: 0 });
   assert.equal(await s.get('invite:old'), undefined); assert.ok(await s.get('invite:fresh'));
   assert.ok(await s.get('code:live')); assert.ok(await s.get('state:fresh'));
   assert.equal(keysWith(w, 'alert:x:old').length, 0); assert.equal(keysWith(w, 'alert:x:new').length, 1);
