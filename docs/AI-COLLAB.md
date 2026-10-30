@@ -12,6 +12,8 @@
 | Automatic review comment on a PR | Built (`.github/workflows/gpt-review.yml`, `ops/gpt_review.mjs`, 4 tests). It is OFF until the owner adds an OpenAI API key and model name. See "Turning it on". It has never been run against the real API. |
 | Automatic ChatGPT replies to review questions in files or issues | Not available. Only the PR-label route can be automated. |
 
+Tested so far: labelling PR #2 `gpt-review` started the workflow, which ran and finished successfully through the safe skip path (no key set). NOT tested: a real call to the OpenAI API and the posted comment.
+
 Do not describe the review as automated until the "Turning it on" test has passed.
 
 ## How Claude asks for a review
