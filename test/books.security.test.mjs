@@ -115,3 +115,17 @@ test('the csv from a pack link is not cached and cannot be sniffed', async (t) =
   assert.match(res.headers.get('cache-control'), /no-store/);
   assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
 });
+
+test('the admin page carries a nonce script policy that lets it call its own server, and no other site', async (t) => {
+  const w = world(); network(t);
+  const res = await callBooks(w, 'GET', '/admin');
+  assert.equal(res.status, 200);
+  const csp = res.headers.get('content-security-policy'), html = await res.text();
+  const nonce = (csp.match(/script-src 'nonce-([^']+)'/) || [])[1];
+  assert.ok(nonce && html.includes(`<script nonce="${nonce}">`));
+  assert.match(csp, /connect-src 'self'/);
+  assert.doesNotMatch(csp, /\*|https?:/);
+  assert.equal(res.headers.get('x-csp-connect'), null);
+  assert.equal(res.headers.get('x-frame-options'), 'DENY');
+  assert.ok(!/localStorage/.test(html), 'the admin key is not kept beyond the tab');
+});

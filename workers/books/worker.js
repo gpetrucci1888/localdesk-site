@@ -50,6 +50,8 @@
 //   POST /mileoff/<realmId>/<id> (X-Key) deletes a trip
 //   GET  /cis/<realmId>         (X-Key) CIS taken off their pay this tax year (they claim it back)
 //   GET  /health                (X-Key) the daily check: every client's connection, anything stuck
+//   GET  /admin                 Gio's admin page (asks for the admin key, then uses the routes above)
+//   GET  /client/<realmId>      (X-Key) one client's settings and their app link
 //   GET  /expenses/<realmId>    (X-Key) ?from&to&q&cat every expense in a period, searchable, with receipt flags
 //   GET  /expense/<realmId>/<id> (X-Key) one expense; POST /fix/<realmId>/<id> {date, supplier, total, vat, category} edits it
 //   GET  /receipt/<realmId>/<id> (X-Key) the receipt photo on an expense
@@ -94,6 +96,8 @@
 // needs no login, and is rate-limited (DEMO_LIMITS). The app worker forwards the visitor's address as X-Client-IP.
 // Tokens, invites and clients live in the Store Durable Object.
 
+import { ADMIN_PAGE } from './admin.js';
+
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const SCOPE = 'com.intuit.quickbooks.accounting';
@@ -123,12 +127,14 @@ function secure(res) {
   const h = new Headers(res.headers);
   const nonce = h.get('X-CSP-Nonce');
   h.delete('X-CSP-Nonce');
+  const connect = h.get('X-CSP-Connect') === 'self'; // only the admin page talks back to this server
+  h.delete('X-CSP-Connect');
   h.set('X-Content-Type-Options', 'nosniff');
   h.set('Referrer-Policy', 'no-referrer');
   h.set('Strict-Transport-Security', 'max-age=31536000');
   const type = h.get('Content-Type') || '';
   if (/text\/html/.test(type)) {
-    h.set('Content-Security-Policy', `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src ${nonce ? `'nonce-${nonce}'` : "'none'"}; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`);
+    h.set('Content-Security-Policy', `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; script-src ${nonce ? `'nonce-${nonce}'` : "'none'"}; ${connect ? "connect-src 'self'; " : ''}frame-ancestors 'none'; base-uri 'none'; form-action 'none'`);
     h.set('X-Frame-Options', 'DENY');
     h.set('Cache-Control', 'no-store');
   } else if (!h.has('Cache-Control') && /json|text\/plain|csv/.test(type)) {
@@ -253,6 +259,11 @@ async function route(request, env) {
           return new Response(pdf.body, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${link.type}-${link.id}.pdf"` } });
         }
         return new Response(await docPage(env, store, link, `${url.origin}/d/${dl[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+      }
+
+      if (url.pathname === '/admin' && request.method === 'GET') {
+        const nonce = randomKey();
+        return new Response(ADMIN_PAGE.replace('<script>', `<script nonce="${nonce}">`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex', 'X-CSP-Nonce': nonce, 'X-CSP-Connect': 'self' } });
       }
 
       // The app, for one client: X-App (their app key) plus X-Session (from logging in with a texted code).
@@ -579,6 +590,10 @@ async function handle(what, realmId, id, request, url, env, store, origin) {
   if (what === 'pack' && post) {
     const p = packPeriod((await body()).period);
     return Response.json({ ...p, url: await packLink(store, origin, realmId, p), accountant: ((await getClient(store, realmId)) || {}).accountant || '' });
+  }
+  if (what === 'client' && request.method === 'GET') {
+    const c = (await getClient(store, realmId)) || {};
+    return Response.json({ ...c, appUrl: c.appKey ? `${env.APP_URL}/${c.appKey}/` : '' });
   }
   if (what === 'client' && request.method === 'PUT') {
     const v = await body(), old = (await getClient(store, realmId)) || {};

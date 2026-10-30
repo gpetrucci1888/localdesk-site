@@ -230,6 +230,8 @@ self.addEventListener('notificationclick', e => {
   }));
 });`;
 
+// "+447700900123" -> { tel: "+447700900123", show: "07700 900123" }
+
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function json(obj, status = 200) {
