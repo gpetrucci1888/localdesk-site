@@ -142,6 +142,21 @@ export class Vault {
       }
       return Response.json({ ok: true });
     }
+    // Daily Books backups kept here (a different worker and storage from Books itself): last 30, in 1 MB pieces.
+    if (url.pathname === '/bk/put') {
+      const parts = Math.max(1, Math.ceil(body.data.length / 1000000));
+      for (let i = 0; i < parts; i++) await s.put(`bk:${body.date}:${i}`, body.data.slice(i * 1000000, (i + 1) * 1000000));
+      await s.put(`bkmeta:${body.date}`, { parts, size: body.data.length, at: Date.now() });
+      const dates = [...(await s.list({ prefix: 'bkmeta:' })).keys()].map(k => k.slice(7)).sort();
+      for (const d of dates.slice(0, -30)) { const m = await s.get(`bkmeta:${d}`); for (let i = 0; i < m.parts; i++) await s.delete(`bk:${d}:${i}`); await s.delete(`bkmeta:${d}`); }
+      return Response.json({ ok: true });
+    }
+    if (url.pathname === '/bk/list') return Response.json([...(await s.list({ prefix: 'bkmeta:' })).entries()].map(([k, v]) => ({ date: k.slice(7), size: v.size, at: v.at })).sort((a, b) => b.date.localeCompare(a.date)));
+    if (url.pathname === '/bk/get') {
+      const m = await s.get(`bkmeta:${body.date}`); if (!m) return Response.json({ data: null });
+      let data = ''; for (let i = 0; i < m.parts; i++) data += await s.get(`bk:${body.date}:${i}`);
+      return Response.json({ data });
+    }
     if (url.pathname === '/ok') { await s.delete(`fail:${body.who}`); return Response.json({ ok: true }); }
     return new Response('?', { status: 404 });
   }
@@ -215,6 +230,8 @@ const stripeNote = (x) => x.off ? '<p class="mute">Stripe is not connected yet. 
 async function pageOverview(env) {
   const { health, subs, charges } = await overview(env);
   const clients = health.clients || [];
+  const bl = await vget(vaultOf(env), '/bk/list'), stale = !bl[0] || Date.now() - bl[0].at > 36 * 3600000;
+  const backupLine = stale ? '<div class="card"><p class="bad">No recent Books backup. Open Backups.</p></div>' : '';
   const bad = clients.filter(c => !c.ok), late = clients.reduce((n, c) => n + (c.late || 0), 0);
   const active = (subs.data || []).filter(s => s.status === 'active').length, pastDue = (subs.data || []).filter(s => ['past_due', 'unpaid'].includes(s.status));
   return shell('Overview', `<h1>Overview</h1>
@@ -226,6 +243,7 @@ async function pageOverview(env) {
 <div class="card stat"><b class="${pastDue.length ? 'bad' : ''}">${subs.data ? pastDue.length : '–'}</b><span>Failed or overdue payments</span></div>
 <div class="card stat"><b>${late}</b><span>Late invoices across Books clients</span></div></div>
 ${health.error ? `<div class="card"><p class="bad">${esc(health.error)}</p></div>` : ''}
+${backupLine}
 ${bad.length ? `<div class="card"><h2>Needs attention</h2><table><tr><th>Client</th><th>Problem</th></tr>${bad.map(c => `<tr><td>${esc(c.name)}</td><td class="bad">${esc(c.problem || 'Not working')}</td></tr>`).join('')}</table></div>` : ''}
 ${pastDue.length ? `<div class="card"><h2>Payments to chase</h2><table><tr><th>Customer</th><th>Status</th></tr>${pastDue.map(s => `<tr><td>${esc((s.customer && (s.customer.name || s.customer.email)) || s.customer)}</td><td class="bad">${esc(s.status)}</td></tr>`).join('')}</table></div>` : ''}
 <div class="card"><h2>Recent payments</h2>${stripeNote(charges)}${charges.data ? `<table><tr><th>When</th><th>Who</th><th>Amount</th><th></th></tr>${charges.data.map(c => `<tr><td>${esc(new Date(c.created * 1000).toLocaleDateString('en-GB'))}</td><td>${esc((c.billing_details && (c.billing_details.name || c.billing_details.email)) || '')}</td><td>${money(c.amount / 100)}</td><td class="${c.paid ? 'ok' : 'bad'}">${c.paid ? 'paid' : esc(c.failure_message || 'failed')}</td></tr>`).join('')}</table>` : ''}</div>`, '/');
@@ -274,13 +292,13 @@ const pageDocs = (name) => {
   return shell(doc ? doc.title : 'Docs', doc ? `<div class="card">${md(doc.body)}</div><p><a href="/docs">All documents</a></p>` : `<h1>Operating instructions</h1><div class="card links">${DOCS.map(d => `<a href="/docs/${esc(d.id)}">${esc(d.title)}<small>${esc(d.about)}</small></a>`).join('')}</div>`, '/docs');
 };
 async function pageBackups(env) {
-  let rows = '';
-  if (env.BACKUPS) {
-    const list = (await env.BACKUPS.list({ prefix: 'books/' })).objects.map(o => o.key).sort().reverse();
-    rows = `<table><tr><th>Backup</th></tr>${list.map(k => `<tr><td>${esc(k)}</td></tr>`).join('') || '<tr><td class="mute">None yet</td></tr>'}</table>`;
-  } else rows = '<p class="mute">No backup bucket is connected yet (see Docs: Backups and restore). You can still download a backup now.</p>';
-  return shell('Backups', `<h1>Backups</h1><div class="card"><h2>Download a Books backup now</h2><p>Everything Books holds that cannot be recreated (clients, mileage, change log, app links). Connection tokens are never included: after a restore each client reconnects.</p><form method="post" action="/backups/download"><button class="go" style="width:auto">Download backup file</button></form></div>
-<div class="card"><h2>Stored daily backups (last 30)</h2>${rows}</div>`, '/backups');
+  const list = await vget(vaultOf(env), '/bk/list');
+  const last = list[0], hours = last ? (Date.now() - last.at) / 3600000 : null;
+  const status = !last ? '<p class="bad">No backup yet. The first one is made at 06:30 each morning.</p>' : hours > 36 ? `<p class="bad">The last backup is ${Math.floor(hours)} hours old. Something is wrong: open Docs, Backups and restore.</p>` : `<p class="ok">Last backup: ${esc(last.date)} (${Math.max(1, Math.round(last.size / 1024))} KB). Kept for 30 days.</p>`;
+  const r2 = env.BACKUPS ? (await env.BACKUPS.list({ prefix: 'books/' })).objects.length : null;
+  return shell('Backups', `<h1>Backups</h1><div class="card"><h2>Daily Books backups</h2>${status}
+<table><tr><th>Day</th><th>Size</th><th></th></tr>${list.map(b => `<tr><td>${esc(b.date)}</td><td>${Math.max(1, Math.round(b.size / 1024))} KB</td><td><form method="post" action="/backups/download"><input type="hidden" name="date" value="${esc(b.date)}"><button class="go" style="width:auto;padding:6px 12px">Download</button></form></td></tr>`).join('') || '<tr><td colspan="3" class="mute">None yet</td></tr>'}</table></div>
+<div class="card"><h2>Take one now</h2><p>Everything Books holds that cannot be recreated (clients, mileage, change log, app links). Connection tokens are never included: after a restore each client reconnects.</p><form method="post" action="/backups/download"><button class="go" style="width:auto">Download a fresh backup file</button></form>${r2 != null ? `<p class="mute">Also stored in the backup bucket: ${r2} files.</p>` : ''}</div>`, '/backups');
 }
 
 // ---------- Books admin, behind the HQ session ----------
@@ -302,8 +320,17 @@ async function booksProxy(request, env, url) {
   return new Response(res.body, { status: res.status, headers: { 'Content-Type': res.headers.get('Content-Type') || 'application/json' } });
 }
 
+// ---------- daily backup of Books into the Vault ----------
+export async function backupDaily(env) {
+  const res = await books(env, '/backup');
+  if (!res.ok) throw new Error(`Books backup answered ${res.status}`);
+  const data = await res.text(); JSON.parse(data); // never keep something that is not a backup
+  await vpost(vaultOf(env), '/bk/put', { date: new Date().toISOString().slice(0, 10), data });
+}
+
 // ---------- routes ----------
 export default {
+  async scheduled(event, env, ctx) { ctx.waitUntil(backupDaily(env)); },
   async fetch(request, env) {
     const url = new URL(request.url), vault = vaultOf(env);
     const respond = (res, opts) => secure(res, opts);
@@ -319,8 +346,11 @@ export default {
     if (!authed) return respond(url.pathname.startsWith('/ba/') ? new Response('Log in again', { status: 401 }) : redirect('/login'));
     if (url.pathname.startsWith('/ba/')) return respond(await booksProxy(request, env, url));
     if (request.method === 'POST' && url.pathname === '/backups/download') {
-      const res = await books(env, '/backup');
-      return respond(new Response(res.body, { status: res.status, headers: { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="books-backup-${new Date().toISOString().slice(0, 10)}.json"` } }));
+      const date = String((await request.formData().catch(() => new FormData())).get('date') || '');
+      let body, name = new Date().toISOString().slice(0, 10), status = 200;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) { const got = await vpost(vault, '/bk/get', { date }); if (got.data == null) return respond(new Response('No such backup', { status: 404 })); body = got.data; name = date; }
+      else { const res = await books(env, '/backup'); body = res.body; status = res.status; }
+      return respond(new Response(body, { status, headers: { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="books-backup-${name}.json"` } }));
     }
     if (request.method !== 'GET') return respond(new Response('Not found', { status: 404 }));
     if (url.pathname === '/books-admin') { const r = await booksAdmin(env); const csp = r.headers.get('X-Hq-Csp'); r.headers.delete('X-Hq-Csp'); return respond(r, csp ? { csp } : {}); }

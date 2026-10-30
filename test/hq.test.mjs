@@ -1,7 +1,7 @@
 // Owner HQ: login (passphrase + authenticator), lockout, sessions, pages, the Books admin proxy. Fake Books, Stripe and storage.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import hq, { Vault, totp } from '../workers/hq/worker.js';
+import hq, { Vault, totp, backupDaily } from '../workers/hq/worker.js';
 import { MemStorage } from './harness.mjs';
 
 const PASS = 'correct horse battery staple', ADMIN = 'books-admin-key-for-tests', STRIPE = 'rk_test_hq_readonly';
@@ -153,15 +153,35 @@ test('Books admin is served inside HQ with the key added server side; only the a
   assert.equal((await call(w, '/ba/health')).status, 401, 'no session, no admin');
 });
 
-test('the backup page lists stored backups and downloads a fresh Books backup', async (t) => {
-  const r2 = { list: async () => ({ objects: [{ key: 'books/2026-10-29.json' }, { key: 'books/2026-10-30.json' }] }) };
-  const w = world({ BACKUPS: r2 }, t); const { cookie } = await enrol(w, t);
+test('the daily job stores a Books backup in HQ, keeps 30, shows it, and lets the owner download any day', async (t) => {
+  const w = world({}, t); const { cookie } = await enrol(w, t);
+  assert.match(await (await call(w, '/backups', { cookie })).text(), /No backup yet/);
+  assert.match(await (await call(w, '/', { cookie })).text(), /No recent Books backup/);
+  await backupDaily(w.env);
   const page = await (await call(w, '/backups', { cookie })).text();
-  assert.match(page, /books\/2026-10-30\.json/);
-  const dl = await call(w, '/backups/download', { method: 'POST', cookie });
-  assert.equal(dl.status, 200); assert.match(dl.headers.get('content-disposition'), /books-backup-/);
+  assert.match(page, /Last backup: 20\d\d-\d\d-\d\d/);
+  assert.ok(!(await (await call(w, '/', { cookie })).text()).includes('No recent Books backup'));
+  const day = new Date().toISOString().slice(0, 10);
+  const dl = await call(w, '/backups/download', { method: 'POST', cookie, form: { date: day } });
+  assert.equal(dl.status, 200); assert.match(dl.headers.get('content-disposition'), new RegExp(`books-backup-${day}`));
   assert.equal((await dl.json()).version, 1);
+  assert.equal((await call(w, '/backups/download', { method: 'POST', cookie, form: { date: '1999-01-01' } })).status, 404);
+  const fresh = await call(w, '/backups/download', { method: 'POST', cookie }); assert.equal((await fresh.json()).version, 1);
   assert.equal((await call(w, '/backups/download', { method: 'POST' })).status, 303, 'login needed');
+});
+
+test('a backup that is not a backup is never kept, and 30 days are kept in large pieces too', async (t) => {
+  const w = world({}, t);
+  w.env.BOOKS.fetch = async () => new Response('<html>oops</html>');
+  await assert.rejects(() => backupDaily(w.env));
+  assert.equal((await w.storage.list({ prefix: 'bkmeta:' })).size, 0);
+  const big = JSON.stringify({ version: 1, entries: { x: 'y'.repeat(2500000) } });
+  w.env.BOOKS.fetch = async () => new Response(big);
+  const stub = w.env.VAULT.get();
+  for (let d = 1; d <= 33; d++) await (await stub.fetch('https://vault/bk/put', { method: 'POST', body: JSON.stringify({ date: `2026-09-${String(d).padStart(2, '0')}`, data: big }) })).json();
+  assert.equal((await w.storage.list({ prefix: 'bkmeta:' })).size, 30);
+  const got = await (await stub.fetch('https://vault/bk/get', { method: 'POST', body: JSON.stringify({ date: '2026-09-33' }) })).json();
+  assert.equal(got.data, big, 'a 2.5 MB backup comes back exactly');
 });
 
 test('losing the authenticator: changing RESET_TOTP clears it so the owner can enrol again', async (t) => {
