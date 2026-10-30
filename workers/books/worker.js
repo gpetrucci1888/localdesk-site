@@ -312,6 +312,16 @@ async function route(request, env) {
 
       if (url.pathname === '/companies') return store.fetch('https://store/tokens');
 
+      // Sales pipeline (HQ uses these). Leads hold a name and phone number, so they are admin-only and never logged.
+      if (url.pathname === '/leads' && request.method === 'GET') return store.fetch('https://store/leads');
+      if (url.pathname === '/leads' && request.method === 'POST') return Response.json(await addLead(store, await request.json()));
+      const ldm = url.pathname.match(/^\/leads\/([\w-]+)$/);
+      if (ldm) {
+        if (request.method === 'GET') return store.fetch(`https://store/lead/${ldm[1]}`);
+        if (request.method === 'PUT') return Response.json(await updateLead(store, ldm[1], await request.json()));
+        if (request.method === 'DELETE') return store.fetch(`https://store/lead/${ldm[1]}`, { method: 'DELETE' });
+      }
+
       if (url.pathname === '/invite' && request.method === 'POST') {
         const r = await request.json();
         const which = r.env === 'sandbox' ? 'sandbox' : 'production';
@@ -1531,7 +1541,7 @@ async function tripsFor(store, realmId, from, to) {
 // ---------- daily check, chasing and the weekly report ----------
 
 const DAILY_CRON = '0 7 * * *';
-const BACKUP_KEYS = /^(client|appkey|trips|log|push|chased|pack|doc|seen|paycheck|invite):/;
+const BACKUP_KEYS = /^(client|appkey|trips|log|push|chased|pack|doc|seen|paycheck|invite|lead):/;
 const BACKUP_DAYS = 30;
 
 // Writes today's backup to the BACKUPS bucket (if one is bound) and keeps the last 30. Returns how many records, or -1 if no bucket.
@@ -2092,6 +2102,49 @@ function pickTaxCode(codes, kind) {
 
 const ENQUIRY_ORIGINS = ['https://www.localdeskai.co.uk', 'https://localdeskai.co.uk'];
 const ENQUIRY_PRODUCTS = { receptionist: 'Receptionist', books: 'Books', unsure: 'Not sure yet' };
+// ---------- sales pipeline: leads (website enquiries and ones added by hand) ----------
+// new -> contacted -> demo -> trial -> onboarding -> paying, or lost from anywhere. Nothing here ever contacts anyone.
+const LEAD_STAGES = ['new', 'contacted', 'demo', 'trial', 'onboarding', 'paying'];
+const NEXT_DAYS = { contacted: 3, demo: 2, trial: 3, onboarding: 2 };   // when to look at a lead again after it moves
+function leadMove(from, to) {
+  if (from === to) return true;
+  if (to === 'lost') return true;
+  if (from === 'lost') return to === 'new' || to === 'contacted';
+  if (!LEAD_STAGES.includes(to)) return false;
+  const a = LEAD_STAGES.indexOf(from), b = LEAD_STAGES.indexOf(to);
+  if (to === 'paying') return from === 'onboarding';      // paying only after onboarding, and Stripe is what proves it
+  return b > a || b === a - 1;                            // forward any distance, back one step
+}
+async function updateLead(store, id, patch) {
+  const res = await store.fetch(`https://store/lead/${id}`);
+  if (!res.ok) throw new Error('No such lead');
+  const lead = await res.json(), now = Date.now(), clean = (v, n) => String(v == null ? '' : v).replace(/\r/g, '').trim().slice(0, n);
+  if (patch.status !== undefined && patch.status !== lead.status) {
+    if (!LEAD_STAGES.includes(patch.status) && patch.status !== 'lost') throw new Error('Unknown status');
+    if (!leadMove(lead.status, patch.status)) throw new Error(`A lead can't go from ${lead.status} to ${patch.status}`);
+    lead.history.push({ at: now, from: lead.status, to: patch.status }); lead.status = patch.status;
+    lead.next_at = NEXT_DAYS[patch.status] ? new Date(now + NEXT_DAYS[patch.status] * 86400000).toISOString().slice(0, 10) : '';
+    if (patch.status === 'contacted') lead.last_contacted = now;
+  }
+  if (patch.notes !== undefined) lead.notes = clean(patch.notes, 3000);
+  if (patch.draft !== undefined) lead.draft = clean(patch.draft, 1200);
+  if (patch.next_at !== undefined) { if (patch.next_at && !/^\d{4}-\d{2}-\d{2}$/.test(patch.next_at)) throw new Error('Follow-up date must look like 2026-11-05'); lead.next_at = patch.next_at; }
+  if (patch.checklist && typeof patch.checklist === 'object') for (const [k, v] of Object.entries(patch.checklist)) if (/^[a-z_]{2,30}$/.test(k) && Object.keys(lead.checklist).length < 25) lead.checklist[k] = Boolean(v);
+  for (const f of ['name', 'business']) if (patch[f] !== undefined) lead[f] = clean(patch[f], 100);
+  if (patch.phone !== undefined) { const ph = clean(patch.phone, 40); if (ph.replace(/\D/g, '').length < 10) throw new Error('That phone number looks too short'); lead.phone = ph; lead.phoneKey = ph.replace(/\D/g, '').slice(-10); }
+  if (patch.product !== undefined && ENQUIRY_PRODUCTS[patch.product]) lead.product = patch.product;
+  lead.updated = now;
+  await store.fetch(`https://store/lead/${id}`, { method: 'PUT', body: JSON.stringify(lead) });
+  return lead;
+}
+async function addLead(store, b) {
+  const clean = (v, n) => String(v || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, n);
+  const name = clean(b.name, 80), phone = clean(b.phone, 40);
+  if (name.length < 2) throw new Error('Put in their name');
+  if (phone.replace(/\D/g, '').length < 10) throw new Error('Put in a phone number');
+  return (await store.fetch('https://store/enquiry', { method: 'POST', body: JSON.stringify({ name, phone, business: clean(b.business, 100), product: ENQUIRY_PRODUCTS[b.product] ? b.product : 'unsure', message: clean(b.message, 600), source: clean(b.source, 20) || 'manual', at: Date.now() }) })).json();
+}
+
 async function enquiry(request, env, store) {
   const origin = request.headers.get('Origin') || '';
   const cors = { 'Access-Control-Allow-Origin': ENQUIRY_ORIGINS.includes(origin) ? origin : ENQUIRY_ORIGINS[0], 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Vary': 'Origin' };
@@ -2420,8 +2473,26 @@ export class Store {
       return Response.json({ written, skipped });
     }
     if (url.pathname === '/enquiry' && request.method === 'POST') {
-      await this.storage.put(`enquiry:${Date.now()}:${crypto.randomUUID().slice(0, 6)}`, JSON.parse(await request.text()));
-      return Response.json({ ok: true });
+      // Every enquiry becomes a lead in the sales pipeline. The same person asking again within a week is added to their lead.
+      const e = JSON.parse(await request.text()), key = String(e.phone || '').replace(/\D/g, '').slice(-10);
+      const dup = [...(await this.storage.list({ prefix: 'lead:' })).values()].find(l => l.phoneKey === key && l.status !== 'lost' && l.status !== 'paying' && e.at - l.created < 7 * 86400000);
+      if (dup) {
+        if (e.message) dup.messages.push({ at: e.at, text: e.message });
+        dup.updated = e.at; dup.repeat = (dup.repeat || 1) + 1; await this.storage.put(`lead:${dup.id}`, dup);
+        return Response.json({ ok: true, id: dup.id, merged: true });
+      }
+      const id = `${e.at.toString(36)}${crypto.randomUUID().slice(0, 4)}`;
+      const lead = { id, name: e.name, phone: e.phone, phoneKey: key, business: e.business || '', product: e.product, status: 'new', source: e.source || 'website', created: e.at, updated: e.at,
+        messages: e.message ? [{ at: e.at, text: e.message }] : [], notes: '', next_at: new Date(e.at).toISOString().slice(0, 10), draft: '', checklist: {}, history: [{ at: e.at, from: null, to: 'new' }], repeat: 1 };
+      await this.storage.put(`lead:${id}`, lead);
+      return Response.json({ ok: true, id });
+    }
+    if (url.pathname === '/leads' && request.method === 'GET') return Response.json([...(await this.storage.list({ prefix: 'lead:' })).values()].sort((a, b) => b.updated - a.updated));
+    const ld = url.pathname.match(/^\/lead\/([\w-]+)$/);
+    if (ld) {
+      if (request.method === 'GET') { const l = await this.storage.get(`lead:${ld[1]}`); return l ? Response.json(l) : new Response('Not found', { status: 404 }); }
+      if (request.method === 'PUT') { await this.storage.put(`lead:${ld[1]}`, JSON.parse(await request.text())); return Response.json({ ok: true }); }
+      if (request.method === 'DELETE') { await this.storage.delete(`lead:${ld[1]}`); return Response.json({ ok: true }); }
     }
     if (url.pathname === '/housekeeping' && request.method === 'POST') {
       // Old invites (they hold a name and phone), login codes, sessions and counters that nobody needs any more.
@@ -2433,6 +2504,7 @@ export class Store {
         sessions: await dropWhere(this.storage, 'session:', v => now - v.created > SESSION_DAYS * 86400000),
         alerts: await dropWhere(this.storage, 'alert:', v => now - v > 7 * 86400000),
         enquiries: await dropWhere(this.storage, 'enquiry:', v => now - v.at > 90 * 86400000),
+        lostLeads: await dropWhere(this.storage, 'lead:', v => v.status === 'lost' && now - v.updated > 90 * 86400000),
       });
     }
     const c = url.pathname.match(/^\/clients\/(\d+)$/);

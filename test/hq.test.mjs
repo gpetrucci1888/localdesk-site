@@ -137,7 +137,7 @@ test('every page opens, in plain English, with data from Books and Stripe, and n
     assert.match(body, /class="tabs"/); assert.match(body, /Home/);
   }
   const home = await (await call(w, '/', { cookie })).text();
-  assert.match(home, /£547|£546/, 'monthly income from Stripe'); assert.match(home, /payment failed/i); assert.match(home, /Books lost its link to their QuickBooks/);
+  assert.match(home, /£150/, 'monthly income counts only the active paid subscription'); assert.doesNotMatch(home, /£547|£546/, 'a failed payment is not counted as income'); assert.match(home, /1 of 20 paying/); assert.match(home, /0 of 20 paying/); assert.match(home, /payment failed/i); assert.match(home, /Books lost its link to their QuickBooks/);
   const pay = await (await call(w, '/payments', { cookie })).text();
   assert.match(pay, /Payment failed/); assert.match(pay, /Paying/); const words = pay.replace(/<style>[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' '); assert.ok(!/past_due|\bactive\b/.test(words), 'no raw Stripe words: ' + words.slice(Math.max(0, words.search(/past_due|\bactive\b/) - 60), words.search(/past_due|\bactive\b/) + 40));
   const cust = await (await call(w, '/customers', { cookie })).text();

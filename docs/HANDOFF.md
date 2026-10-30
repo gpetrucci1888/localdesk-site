@@ -14,6 +14,9 @@ Read this first in a new session, then `CLAUDE.md` and `PROGRESS.md`. Secrets an
 ## Independent review (ChatGPT)
 `docs/AI-COLLAB.md` explains the GitHub channel. PR #2 carries all pending work and the first review request (`docs/reviews/2026-10-30-release-readiness.md`). The automatic review comment is built but OFF until Gio adds an OpenAI API key (repo secret `OPENAI_API_KEY`) and variable `OPENAI_REVIEW_MODEL`. Also done: Xero refresh now takes a short lease in the Durable Object (`/reflock/<realm>`) so two Worker instances cannot both use a single-use refresh token; tested.
 
+## Sales pipeline (GitHub issue #1, branch `lead-pipeline`, PR #3, NOT deployed)
+Website enquiries now become leads in the Books connector's Durable Object (`lead:` keys; admin routes `/leads`), shown in HQ under **Leads** (`workers/hq/leads.js`). Pipeline new, contacted, demo, trial, onboarding, paying, lost, with follow-up dates, editable draft messages (never sent automatically: buttons open the owner's own Messages/WhatsApp), per-product onboarding checklists, delete on request, lost leads purged after 90 days, leads in backups. HQ money figures now count only ACTIVE paid Stripe subscriptions (trials and failed payments excluded) and show progress to 20 paying customers per product. Deploy needs both workers: `ops/deploy_workers.py books` and `hq` (hq now has `leads.js`).
+
 ## Not yet deployed (branch `handoff-and-parity`, if merged)
 - Health check now checks every connected business in parallel (admin client list was slow).
 - FreeAgent missing-receipt flags (`noReceipt`) for the monthly check, with a test. After deploying, call the admin route `/noreceipt/<realm>` on the sandbox FreeAgent client to confirm against the real service, then the Books page table ("What works where") can add FreeAgent to the missing-receipt row.

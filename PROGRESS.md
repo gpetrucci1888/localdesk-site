@@ -165,3 +165,4 @@
 
 ## 30 Oct 2026 (end of session): FreeAgent, Xero, website redesign
 - FreeAgent and Xero added as platforms behind one table in `workers/books/worker.js`; website redesigned (home, Receptionist, Books, shared `public/ui.css`) and published at commit 4c2f85b. Full state, undeployed work, open items and what a new session loses: see `docs/HANDOFF.md` (branch `handoff-and-parity` until merged).
+- 30 Oct 2026 (late): sales pipeline built for GitHub issue #1 on branch `lead-pipeline` (website enquiry becomes an HQ lead; pipeline stages; drafts never auto-sent; onboarding checklists; paying-only MRR and progress to 20 per product). Tested with fictional data, not deployed. See `docs/HANDOFF.md`.

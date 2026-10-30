@@ -9,6 +9,7 @@ const I = (d) => `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" st
 export const ICON = {
   home: I('<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>'),
   customers: I('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.7a3.5 3.5 0 0 1 0 6.6M18 14.8c2 .6 3.1 2.3 3.5 5.2"/>'),
+  leads: I('<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'),
   payments: I('<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>'),
   books: I('<path d="M5 3.5h12.5a1.5 1.5 0 0 1 1.5 1.5v14.5H6.5A2.5 2.5 0 0 0 4 22V5a1.5 1.5 0 0 1 1-1.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H19M9 8h6M9 11.5h6"/>'),
   receptionist: I('<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="13" width="4" height="7" rx="1.8"/><rect x="17.5" y="13" width="4" height="7" rx="1.8"/><path d="M19.5 20c0 1.7-1.8 2-4 2h-2"/>'),
@@ -69,14 +70,17 @@ details{border-top:1px solid var(--line);padding:12px 0}details:first-of-type{bo
  .side a,.side button.lo{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;color:#ffffffc8;text-decoration:none;font-weight:700;font:inherit;font-weight:700;background:none;border:0;cursor:pointer;width:100%;text-align:left}
  .side a:hover,.side button.lo:hover{background:#ffffff14;color:#fff}.side a.on{background:var(--yellow);color:var(--charcoal)}.side .grow{flex:1}.side form{margin:0}
  .page{padding:36px 40px 56px;max-width:1120px;margin:0 auto;gap:22px}.cols{grid-template-columns:1fr 1fr;align-items:start}.qa{grid-template-columns:1fr 1fr}.tiles{grid-template-columns:repeat(3,1fr)}.tile.wide{grid-column:auto}.big{grid-template-columns:repeat(3,1fr)}.row2{grid-template-columns:1fr 1fr}}
+textarea{font:inherit;font-size:1.05rem;width:100%;padding:12px 14px;border:2px solid var(--line);border-radius:14px;background:#fff;color:var(--charcoal);resize:vertical}textarea:focus{outline:none;border-color:var(--charcoal)}
+.bar{height:12px;background:#E3E6E9;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--yellow);border-radius:99px}.prog{display:grid;gap:18px}.prog p{margin:0 0 8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.prog span{color:var(--mute)}
+.cl{display:grid;gap:12px}label.ck{display:flex;gap:12px;align-items:flex-start;font-weight:600;margin:0}label.ck input{width:24px;min-height:24px;height:24px;margin-top:2px;flex:none}
 </style>`;
 
 const NAV = [
-  ['/', 'Home', 'home'], ['/customers', 'Customers', 'customers'], ['/payments', 'Payments', 'payments'], ['/books', 'Books', 'books'],
+  ['/', 'Home', 'home'], ['/customers', 'Customers', 'customers'], ['/leads', 'Leads', 'leads'], ['/payments', 'Payments', 'payments'], ['/books', 'Books', 'books'],
   ['/receptionist', 'Receptionist', 'receptionist'], ['/backups', 'Backups', 'backups'], ['/settings', 'Settings', 'settings'], ['/docs', 'Help', 'help'],
 ];
 const TABS = [['/', 'Home', 'home'], ['/customers', 'Customers', 'customers'], ['/payments', 'Payments', 'payments'], ['/books', 'Books', 'books'], ['/more', 'More', 'more']];
-const MORE = ['/receptionist', '/backups', '/settings', '/docs', '/more'];
+const MORE = ['/leads', '/receptionist', '/backups', '/settings', '/docs', '/more'];
 
 const FAVICON = `<link rel="icon" href="${ICON_PNG}"><link rel="apple-touch-icon" href="${ICON_PNG}">`;
 const head = (title) => `<!doctype html><html lang="en-GB"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex"><meta name="theme-color" content="#1F2328"><title>${esc(title)} · Localdesk HQ</title>${FAVICON}${STYLE}`;

@@ -12,6 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
+import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS } from './leads.js';
 
 const enc = new TextEncoder();
 const SESSION_SECONDS = 12 * 3600;            // this visit only
@@ -227,10 +228,10 @@ async function load(env) {
     return { id: s.id, who: cust.name || cust.email || 'Customer', email: cust.email || '', plan: p.nickname || 'Subscription', per, status: s.status, cancelling: Boolean(s.cancel_at_period_end), since: s.created * 1000, isBooks: /books/i.test(p.nickname || '') };
   });
   const failed = subList.filter(s => ['past_due', 'unpaid'].includes(s.status));
-  const live = subList.filter(s => ['active', 'past_due', 'trialing'].includes(s.status));
+  const pr = progress(subList), live = pr.paid;   // paying means an active paid subscription: trials and failed payments are not counted
   const income = live.reduce((n, s) => n + s.per, 0);
   const last = bl[0], stale = !last || Date.now() - last.at > 36 * 3600000;
-  return { health, clients, subs, subList, failed, live, income, charges, backups: bl, stale, booksProblems: clients.filter(c => !c.ok) };
+  return { health, clients, subs, subList, failed, live, pr, income, charges, backups: bl, stale, booksProblems: clients.filter(c => !c.ok) };
 }
 const STATUS = { active: ['ok', 'Paying'], trialing: ['ok', 'On trial'], past_due: ['bad', 'Payment failed'], unpaid: ['bad', 'Payment failed'], canceled: ['mute', 'Cancelled'], incomplete: ['warn', 'Not finished'], incomplete_expired: ['mute', 'Expired'], paused: ['warn', 'Paused'] };
 const statusPill = (s) => { const [k, t] = s.cancelling && s.status === 'active' ? ['warn', 'Cancelling'] : STATUS[s.status] || ['mute', s.status]; return pill(k, t); };
@@ -246,11 +247,47 @@ const stripeError = () => banner('warn', 'Couldn\'t get your Stripe figures just
 const booksError = () => banner('warn', 'Couldn\'t reach Books just now', 'This usually fixes itself. Try again in a minute. If it keeps happening, open Help and choose "If something goes wrong".', btn('/books', 'Try again', 'line'));
 const dueGreeting = () => { const h = Number(new Date().toLocaleString('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Europe/London' })); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
 
+// ---------- leads (the sales pipeline lives in the Books connector; HQ only shows and edits it) ----------
+const getLeads = (env) => books(env, '/leads').then(async r => { const j = r.ok ? await r.json() : null; return Array.isArray(j) ? j : null; }).catch(() => null);
+const getLead = (env, id) => books(env, `/leads/${encodeURIComponent(id)}`).then(r => r.ok ? r.json() : null).catch(() => null);
+const putLead = (env, id, patch) => books(env, `/leads/${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
+const LEAD_FLASH = { saved: ['ok', 'Saved.'], added: ['ok', 'Lead added. Nothing was sent to them.'], deleted: ['ok', 'Deleted.'] };
+const leadFlash = (url) => { const f = LEAD_FLASH[url.searchParams.get('done')]; return f ? banner(f[0], f[1]) : ''; };
+const leadsDown = () => shell('Leads', `<h1>Leads</h1>${booksError()}`, '/leads');
+async function pageLeadsList(env, url) {
+  const [leads, d] = await Promise.all([getLeads(env), load(env)]);
+  return leads ? pageLeads(leads, d.pr, !d.subs.off && !d.subs.error, leadFlash(url)) : leadsDown();
+}
+async function leadSave(request, env, id) {
+  const f = await request.formData(), v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)])), patch = {};
+  const cur = await getLead(env, id);
+  if (!cur) return html(shell('Lead', banner('warn', 'No such lead', '', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404);
+  if (v.status) patch.status = v.status;
+  for (const k of ['draft', 'notes', 'next_at']) if (v[k] !== undefined) patch[k] = v[k];
+  if (v.checklist_form) patch.checklist = Object.fromEntries((CHECKLISTS[cur.product] || CHECKLISTS.unsure).map(([k]) => [k, v[`ck_${k}`] === '1']));
+  const res = await putLead(env, id, patch);
+  if (!res.ok) { const msg = String(await res.text().catch(() => '')).replace(/^Error: /, '') || 'That didn\'t work.'; return html(pageLead(cur, { flash: banner('bad', msg) }), 400); }
+  return redirect(`/leads/${encodeURIComponent(id)}?done=saved`);
+}
+async function leadCreate(request, env) {
+  const f = await request.formData(), v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)]));
+  const res = await books(env, '/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: v.name, phone: v.phone, business: v.business, product: v.product, source: v.source, message: v.message }) });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok || !out.id) return html(newLeadForm(String(out.error || await res.text().catch(() => '') || 'That didn\'t work.').replace(/^Error: /, ''), v), 400);
+  return redirect(`/leads/${encodeURIComponent(out.id)}?done=added`);
+}
+
 // ---------- pages ----------
 async function pageHome(env) {
   const d = await load(env);
   const todos = [];
   for (const c of d.booksProblems) todos.push(banner('bad', `${esc(c.name)}: ${plainProblem(c.problem)}`, esc(FIX), btn(`/books/client/${esc(c.realmId)}`, 'Open their page', 'dark')));
+  const leadsNow = await getLeads(env);
+  if (leadsNow) {
+    const fresh = leadsNow.filter(l => l.status === 'new'), due = leadsNow.filter(l => l.status !== 'new' && isDue(l));
+    if (fresh.length) todos.push(banner('warn', `${fresh.length} new enquir${fresh.length === 1 ? 'y' : 'ies'}`, fresh.slice(0, 3).map(l => esc(l.name)).join(', ') + (fresh.length > 3 ? '...' : '') + '. Nobody has been contacted automatically.', btn('/leads', 'Open Leads', 'dark')));
+    if (due.length) todos.push(banner('warn', `${due.length} follow-up${due.length === 1 ? '' : 's'} due`, due.slice(0, 3).map(l => esc(l.name)).join(', ') + '.', btn('/leads', 'Open Leads', 'dark')));
+  }
   for (const s of d.failed) todos.push(banner('bad', `${esc(s.who)}'s payment failed`, 'Their card was declined. Stripe tries again automatically and emails them. If it is still unpaid after 14 days, get in touch.', btn('/payments', 'See payments', 'dark')));
   if (d.stale) todos.push(banner('warn', 'No recent backup of your Books data', 'A backup is made every morning. Take one now, and if this still shows tomorrow, open Help.', `<form method="post" action="/backups/download" style="margin-top:12px"><button class="btn dark">Download a backup now</button></form>`));
   const noStripe = d.subs.off || d.subs.error;
@@ -264,8 +301,9 @@ async function pageHome(env) {
 <section class="section">${todos.length ? `<h2>${todos.length === 1 ? '1 thing needs' : `${todos.length} things need`} you</h2>${todos.join('')}` : banner('ok', 'All good', 'Nothing needs you right now.')}</section>
 ${d.health.error ? booksError() : ''}
 <div class="tiles">${tile(noStripe ? '–' : money(d.income), noStripe ? 'monthly income (connect Stripe)' : 'coming in each month', false, true)}${tile(noStripe ? '–' : d.live.length, 'paying customers')}${tile(d.health.error ? '–' : d.clients.length, 'Books clients', true)}</div>
-<section class="section"><h2>Quick actions</h2><div class="qa">${btn('/books/new', 'Add a Books client')}${btn('/books', 'See my Books clients', 'dark')}</div></section>
-<section class="section"><h2>Everything</h2><div class="big">${bigLink('/books', 'books', 'Books', 'Your bookkeeping clients')}${bigLink('/receptionist', 'receptionist', 'Receptionist', 'Mia, calls and texts')}${bigLink('/customers', 'customers', 'Customers', 'Everyone you look after')}${bigLink('/payments', 'payments', 'Payments', 'Money in, failed payments')}${bigLink('/backups', 'backups', 'Backups', 'Your data, kept safe')}${bigLink('/settings', 'settings', 'Settings', 'Accounts and security')}</div></section>
+${noStripe ? '' : progressCard(d.pr, true)}
+<section class="section"><h2>Quick actions</h2><div class="qa">${btn('/leads', 'See my leads')}${btn('/books/new', 'Add a Books client', 'dark')}</div></section>
+<section class="section"><h2>Everything</h2><div class="big">${bigLink('/leads', 'leads', 'Leads', 'Enquiries and follow-ups')}${bigLink('/books', 'books', 'Books', 'Your bookkeeping clients')}${bigLink('/receptionist', 'receptionist', 'Receptionist', 'Mia, calls and texts')}${bigLink('/customers', 'customers', 'Customers', 'Everyone you look after')}${bigLink('/payments', 'payments', 'Payments', 'Money in, failed payments')}${bigLink('/backups', 'backups', 'Backups', 'Your data, kept safe')}${bigLink('/settings', 'settings', 'Settings', 'Accounts and security')}</div></section>
 <div class="card"><h2>${doneAll ? 'Set-up' : 'Getting set up'}</h2>${setup.join('')}</div>`, '/');
 }
 async function pageCustomers(env) {
@@ -419,7 +457,7 @@ const pageSettings = () => shell('Settings', `<h1>Settings</h1>
 <div class="card"><h2>Your HQ login</h2><details><summary>I've lost my phone</summary><p>In Cloudflare, open <b>Workers &amp; Pages</b>, then <b>hq</b>, then <b>Settings</b>, then <b>Variables and Secrets</b>. Change the variable <code>RESET_TOTP</code> to any new word. Then log in again and set up the app on your new phone.</p></details><details><summary>I want a new passphrase</summary><p>In the same place in Cloudflare, edit <code>OWNER_PASSWORD</code> and save. Every phone and computer is logged out and you log in with the new one.</p></details></div>
 <div class="card"><h2>Lost or lent a device?</h2><p class="mute">HQ remembers your phone and computer for 3 months so you don't log in every time. If a device is lost, log every device out at once. You then log back in with your passphrase and code.</p><form method="post" action="/logout-all"><button class="btn block danger">Log out every device</button></form></div>
 <form method="post" action="/logout"><button class="btn block line">Log out of this device</button></form>`, '/settings');
-const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
+const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/leads', 'Leads', 'Enquiries and follow-ups', 'leads'], ['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
 
 // ---------- help ----------
 function md(src) {
@@ -478,6 +516,15 @@ export default {
           return respond(new Response(body, { status, headers: { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="books-backup-${name}.json"` } }));
         }
         if (p === '/books/new') return respond(await createClient(request, env));
+        if (p === '/leads/new') return respond(await leadCreate(request, env));
+        const lm = p.match(/^\/leads\/([\w-]+)\/(save|delete)$/);
+        if (lm && lm[2] === 'save') return respond(await leadSave(request, env, lm[1]));
+        if (lm) {
+          const f = await request.formData().catch(() => new FormData());
+          if (String(f.get('confirm') || '') !== 'yes') return respond(redirect(`/leads/${encodeURIComponent(lm[1])}`));
+          const r = await books(env, `/leads/${encodeURIComponent(lm[1])}`, { method: 'DELETE' });
+          return respond(r.ok ? redirect('/leads?done=deleted') : friendlyError());
+        }
         const m = p.match(/^\/books\/client\/(\d+)\/(save|do\/(logout|end))$/);
         if (m) return respond(m[2] === 'save' ? await saveClient(request, env, m[1]) : await doConfirmed(env, m[1], m[3]));
         return respond(html(shell('Not found', banner('warn', 'Nothing here', '', btn('/', 'Back to Home', 'dark'))), 404));
@@ -485,13 +532,15 @@ export default {
       if (request.method !== 'GET') return respond(new Response('Not found', { status: 404 }));
       if (p === '/help') return respond(redirect('/docs'));
       let m;
-      if (p === '/books/new') return respond(html(newClientForm()));
+      if (p === '/books/new') return respond(html(newClientForm('', { name: (url.searchParams.get('name') || '').slice(0, 100), phone: (url.searchParams.get('phone') || '').slice(0, 40) })));
+      if (p === '/leads/new') return respond(html(newLeadForm()));
+      if ((m = p.match(/^\/leads\/([\w-]+)$/))) { const l = await getLead(env, m[1]); return respond(l ? html(pageLead(l, { template: url.searchParams.get('template') === '1', flash: leadFlash(url) })) : html(shell('Lead', banner('warn', 'No such lead', 'It may have been deleted.', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404)); }
       if ((m = p.match(/^\/books\/client\/(\d+)$/))) return respond(await pageClient(env, m[1], url));
       if ((m = p.match(/^\/books\/client\/(\d+)\/check$/))) return respond(html(await pageCheck(env, m[1])));
       if ((m = p.match(/^\/books\/client\/(\d+)\/monthly$/))) return respond(html(await pageMonthly(env, m[1])));
       if ((m = p.match(/^\/books\/client\/(\d+)\/confirm\/(logout|end)$/))) return respond(html(pageConfirm(m[1], m[2])));
       if ((m = p.match(/^\/docs(?:\/([\w-]+))?$/))) { const pg = pageDocs(m[1]); return respond(pg ? html(pg) : html(shell('Not found', banner('warn', 'No such guide', '', btn('/docs', 'All guides', 'dark')), '/docs'), 404)); }
-      const pages = { '/': () => pageHome(env), '/customers': () => pageCustomers(env), '/payments': () => pagePayments(env), '/books': () => pageBooks(env, flashOf(url)), '/receptionist': async () => pageReceptionist(await load(env)), '/backups': async () => pageBackups(await load(env)), '/settings': pageSettings, '/more': pageMore };
+      const pages = { '/': () => pageHome(env), '/leads': () => pageLeadsList(env, url), '/customers': () => pageCustomers(env), '/payments': () => pagePayments(env), '/books': () => pageBooks(env, flashOf(url)), '/receptionist': async () => pageReceptionist(await load(env)), '/backups': async () => pageBackups(await load(env)), '/settings': pageSettings, '/more': pageMore };
       if (pages[p]) return respond(html(await pages[p]()));
       return respond(html(shell('Not found', banner('warn', 'Nothing here', 'That page doesn\'t exist.', btn('/', 'Back to Home', 'dark')), ''), 404));
     } catch (e) { return respond(friendlyError()); }
