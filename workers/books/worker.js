@@ -147,7 +147,7 @@ export default {
         await store.fetch(`https://store/invites/${encodeURIComponent(st.invite)}`, { method: 'DELETE' });
         const app = `${env.APP_URL}/${client.appKey}/`;
         if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `Books: ${client.name || realmId} just connected their QuickBooks. Their app: ${app}`).catch(() => {});
-        if (client.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, client.phone, `Welcome to Books. Your app: ${app} Open it on your phone and tap "Add to Home Screen". Stuck? Text or ring Gio on 07700 900000.`).catch(() => {});
+        if (client.phone && env.TWILIO_ACCOUNT_SID) await sendSms(env, client.phone, `Welcome to Books. Your app: ${app} Open it on your phone and tap "Add to Home Screen". Stuck? Text or ring Gio${env.OWNER_PHONE ? ` on 0${env.OWNER_PHONE.slice(3, 7)} ${env.OWNER_PHONE.slice(7)}` : ''}.`).catch(() => {});
         return page(`Connected ✓<br><br>Your Books app:<br><a href="${app}" style="font-weight:800;word-break:break-all">${app}</a><br><br><small>Open it on your phone, then "Add to Home Screen".</small>`);
       }
 
@@ -308,7 +308,7 @@ async function clientRoute(what, id, request, url, env, store, origin) {
     if (loggedIn) await store.fetch(`https://store/seen/${realmId}`, { method: 'POST' });
     return Response.json({ realmId, name: client.name || '', brand: client.brand || '', extras: client.extras || '', loggedIn: Boolean(loggedIn),
       phoneEnd: (client.phone || '').replace(/\D/g, '').slice(-3), canLogin: Boolean(client.phone),
-      vat: await vatRegistered(env, store, realmId, client).catch(() => true), chase: client.chase === 'on' });
+      vat: await vatRegistered(env, store, realmId, client).catch(() => true), chase: client.chase === 'on', support: env.SUPPORT_PHONE || env.OWNER_PHONE || '' });
   }
   if (what === 'login/send' && request.method === 'POST') {
     if (!client.phone) throw new Error('No phone number saved. Ask Gio to add it');

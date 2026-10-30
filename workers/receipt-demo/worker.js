@@ -51,9 +51,12 @@ export default {
     const rest = seg[2].slice(1);
 
     const brand = BRANDS[client.brand] || BRANDS.localdesk;
+    // Gio's number for help links comes from the connector's settings, so it isn't in this public code.
+    const support = supportPhone(client.support);
     const fill = (html) => html.replaceAll('{{NAME}}', esc(client.name || 'Your business'))
       .replaceAll('{{EXTRAS}}', esc(client.extras || '')).replaceAll('{{PHONE_END}}', esc(client.phoneEnd || ''))
-      .replaceAll('{{VAT}}', client.vat === false ? '0' : '1').replaceAll('{{CHASE}}', client.chase ? '1' : '0')
+      .replaceAll('{{VAT}}', client.vat === false ? '0' : '1')
+      .replaceAll('{{SUPPORT}}', esc(support.show)).replaceAll('{{SUPPORT_TEL}}', esc(support.tel)).replaceAll('{{SUPPORT_WA}}', esc(support.tel.replace('+', ''))).replaceAll('{{CHASE}}', client.chase ? '1' : '0')
       .replaceAll('{{HD}}', brand.hd).replaceAll('{{ACC}}', brand.acc).replaceAll('{{ACCINK}}', brand.accInk)
       .replace('{{LOGO}}', brand.logo ? `<img class="logo" src="data:image/png;base64,${brand.logo}" alt="">` : '');
     const html = (body) => new Response(body, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
@@ -179,6 +182,12 @@ self.addEventListener('notificationclick', e => {
     return self.clients.openWindow(url);
   }));
 });`;
+
+// "+447700900123" -> { tel: "+447700900123", show: "07700 900123" }
+function supportPhone(n) {
+  const tel = /^\+44\d{10}$/.test(n || '') ? n : '';
+  return { tel, show: tel ? `0${tel.slice(3, 7)} ${tel.slice(7)}` : 'Gio' };
+}
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
