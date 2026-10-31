@@ -24,6 +24,13 @@ export const CHECKLISTS = {
 const listFor = (l) => CHECKLISTS[l.product] || CHECKLISTS.unsure;
 
 export const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+// Zoom demos booked for today or tomorrow (London time). Leads marked lost, paying or do-not-call are left out.
+export const zoomsSoon = (leads, now = Date.now()) => {
+  const day = (t) => new Date(t).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }), t0 = day(now), t1 = day(now + 86400000);
+  return (leads || []).filter(l => l.meeting_at && !l.dnc && !['lost', 'paying'].includes(l.status) && [t0, t1].includes(String(l.meeting_at).slice(0, 10)))
+    .map(l => ({ lead: l, when: String(l.meeting_at).slice(0, 10) === t0 ? 'today' : 'tomorrow', time: String(l.meeting_at).slice(11, 16) }))
+    .sort((x, y) => String(x.lead.meeting_at).localeCompare(String(y.lead.meeting_at)));
+};
 export const isDue = (l) => Boolean(l.next_at) && l.next_at <= today() && l.status !== 'paying' && l.status !== 'lost';
 const first = (n) => String(n || '').trim().split(/\s+/)[0] || 'there';
 const intl = (p) => { const d = String(p || '').replace(/\D/g, ''); return d.startsWith('00') ? d.slice(2) : d.startsWith('44') ? d : d.startsWith('0') ? '44' + d.slice(1) : d; };

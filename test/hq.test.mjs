@@ -476,3 +476,14 @@ test('Stripe check page: login needed, shows the four prices and what to fix, ne
   assert.match(page, /TEST mode/); assert.match(page, /Amount is £140, it should be £150/); assert.match(page, /STRIPE_WEBHOOK_SECRET/); assert.match(page, /STRIPE_PRICE_BOOKS_SETUP/); assert.match(page, /Fix the red items/);
   assert.ok(!page.includes('HQSECRETKEY')); assert.match(await (await call(w, '/more', { cookie })).text(), /Stripe check/);
 });
+
+test('Home shows Zoom demos booked for today and tomorrow, and leaves out lost, paying and do-not-call leads', async () => {
+  const { zoomsSoon } = await import('../workers/hq/leads.js');
+  const now = Date.parse('2026-11-04T09:00:00Z'), L = (id, meeting_at, extra = {}) => ({ id, name: id, status: 'zoom', meeting_at, ...extra });
+  const out = zoomsSoon([L('a', '2026-11-04T15:30'), L('b', '2026-11-05T10:00'), L('c', '2026-11-06T10:00'), L('d', '2026-11-04T11:00', { status: 'lost' }), L('e', '2026-11-04T11:00', { dnc: true }), L('f', '2026-11-04T11:00', { status: 'paying' }), L('g', '')], now);
+  assert.deepEqual(out.map(z => [z.lead.id, z.when, z.time]), [['a', 'today', '15:30'], ['b', 'tomorrow', '10:00']]);
+  const w = world(); const orig = w.env.BOOKS.fetch; const d = new Date(), pad = (n) => String(n).padStart(2, '0'), stamp = `${d.toLocaleDateString('en-CA', { timeZone: 'Europe/London' })}T16:45`;
+  w.env.BOOKS.fetch = async (url, init = {}) => new URL(url).pathname === '/leads' && !init.method ? Response.json([{ id: 'Z1', name: 'Zoe Zoom', phone: '+447700900888', product: 'receptionist', status: 'zoom', meeting_at: stamp, checklist: {}, history: [], messages: [], created: Date.now(), updated: Date.now() }]) : orig(url, init);
+  const { cookie } = await enrol(w); const page = await (await call(w, '/', { cookie })).text();
+  assert.match(page, /1 Zoom demo today/); assert.match(page, /Zoe Zoom at 16:45/);
+});
