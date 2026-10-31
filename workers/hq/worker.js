@@ -659,7 +659,7 @@ export default {
       let m;
       if (p === '/books/new') return respond(html(newClientForm('', { name: (url.searchParams.get('name') || '').slice(0, 100), phone: (url.searchParams.get('phone') || '').slice(0, 40) })));
       if (p === '/leads/new') return respond(html(newLeadForm()));
-      if ((m = p.match(/^\/leads\/([\w-]+)$/))) { const l = await getLead(env, m[1]); const app = l && l.product === 'books' ? appFor(l, (await cachedHealth(env).catch(() => ({}))).clients) : null; return respond(l ? html(pageLead(l, { template: url.searchParams.get('template') === '1', flash: leadFlash(url), app, problem: app && !app.ok ? plainProblem(app.problem) : '' })) : html(shell('Lead', banner('warn', 'No such lead', 'It may have been deleted.', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404)); }
+      if ((m = p.match(/^\/leads\/([\w-]+)$/))) { const l = await getLead(env, m[1]); const app = l && l.product === 'books' ? appFor(l, (await cachedHealth(env).catch(() => ({}))).clients) : null; return respond(l ? html(pageLead(l, { template: url.searchParams.get('template') === '1', flash: leadFlash(url), app, problem: app && !app.ok ? plainProblem(app.problem) : '', demoUrl: /^https:\/\/[^\s"'<>]+$/.test(env.BOOKS_DEMO_URL || '') ? env.BOOKS_DEMO_URL : '' })) : html(shell('Lead', banner('warn', 'No such lead', 'It may have been deleted.', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404)); }
       if ((m = p.match(/^\/books\/client\/(\d+)$/))) return respond(await pageClient(env, m[1], url));
       if ((m = p.match(/^\/books\/client\/(\d+)\/check$/))) return respond(html(await pageCheck(env, m[1])));
       if ((m = p.match(/^\/books\/client\/(\d+)\/monthly$/))) return respond(html(await pageMonthly(env, m[1])));

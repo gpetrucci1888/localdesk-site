@@ -588,3 +588,15 @@ test('trials ending within two days are listed for a decision call, founding or 
   const rows = trialsEnding([L('soon'), L('founding', { checklist: { founding: true }, subscription: { status: 'trialing', trial_end: secs(0.5) } }), L('later', { subscription: { status: 'trialing', trial_end: secs(5) } }), L('over', { subscription: { status: 'active', trial_end: secs(-1) } }), L('cancelled', { subscription: { status: 'cancelled', trial_end: secs(1) } }), L('lost', { status: 'lost' }), L('books', { product: 'books' }), L('nosub', { subscription: undefined })], now);
   assert.deepEqual(rows.map(r => r.lead.id), ['founding', 'soon']);
 });
+
+test('a Books lead shows a Text-the-demo button only when the demo link is set, and never for a lost lead or an unsafe link', async () => {
+  const { pageLead } = await import('../workers/hq/leads.js');
+  const L = (o = {}) => ({ id: 'lbk1', name: 'Pat Plumber', phone: '07700 900123', product: 'books', status: 'interested', source: 'phone call', created: Date.now(), messages: [], ...o });
+  const url = 'https://demo.example.workers.dev/abc123/';
+  let h = pageLead(L(), { demoUrl: url });
+  assert.match(h, /Books demo for them to try/); assert.match(h, /Text the demo link/); assert.match(h, /sms:\+447700900123/); assert.ok(h.includes(encodeURIComponent(url)), 'the link is in the text');
+  assert.match(h, /only send it if they agreed/, 'a cold-called lead gets the consent reminder');
+  h = pageLead(L(), {}); assert.match(h, /demo link not set up/); assert.doesNotMatch(h, /Text the demo link/);
+  h = pageLead(L({ status: 'lost' }), { demoUrl: url }); assert.doesNotMatch(h, /Text the demo link/);
+  h = pageLead(L({ product: 'receptionist' }), { demoUrl: url }); assert.doesNotMatch(h, /Text the demo link/);
+});
