@@ -504,3 +504,32 @@ test('cold-call edge cases in HQ: a blocked number says so, an existing number o
   res = await call(w, '/leads/new', { method: 'POST', form: { name: 'Eve', phone: '07700 900555', product: 'receptionist', source: 'phone call' }, cookie }); assert.equal(res.status, 303); assert.equal(res.headers.get('location'), '/leads/E1?done=exists');
   page = await (await call(w, '/leads/E1?done=exists', { cookie })).text(); assert.match(page, /already in HQ/);
 });
+
+test('content workflow end to end: write, edit, approve, plan, mark scheduled, mark posted, with the founding guard on your own posts and a Home reminder (HQ never posts anything)', async (t) => {
+  const w = world(); let places = 2; const orig = w.env.BOOKS.fetch;
+  w.env.BOOKS.fetch = async (url, init = {}) => new URL(url).pathname === '/founding' ? Response.json({ places: 5, used: places, ids: [] }) : orig(url, init);
+  const posted = []; t.mock.method(globalThis, 'fetch', async (u) => { posted.push(String(u)); return Response.json({}); });
+  const { cookie } = await enrol(w); const post = (path, form) => call(w, path, { method: 'POST', form, cookie });
+  const page = async () => (await call(w, '/content', { cookie })).text();
+  const idOf = async (title) => new RegExp(`id="(x[a-z0-9]+)"[^]*?<h2[^>]*>${title}<`).exec(await page())[1];
+  // write
+  assert.equal((await post('/content/new', { title: 'x', text: 'short' })).status, 400, 'too short is refused');
+  assert.equal((await post('/content/new', { title: 'Roofers tip', text: 'Check your gutters before the winter storms arrive.', platform: 'facebook', planned: '2026-02-30x' })).status, 400, 'bad date refused');
+  assert.equal((await post('/content/new', { title: 'Roofers tip', text: 'Check your gutters before the winter storms arrive.', platform: 'facebook' })).status, 303);
+  const a = await idOf('Roofers tip'); assert.match(await page(), /Your post/); assert.match(await page(), /Draft \(/);
+  // edit, approve, plan
+  assert.equal((await post(`/content/${a}/save`, { text: 'Check your gutters and flashings before the winter storms arrive.' })).status, 303);
+  assert.equal((await post(`/content/${a}/approved`)).status, 303);
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+  assert.equal((await post(`/content/${a}/plan`, { platform: 'both', planned: 'tomorrow' })).status, 400); assert.equal((await post(`/content/${a}/plan`, { platform: 'both', planned: today })).status, 303);
+  let home = await (await call(w, '/', { cookie })).text(); assert.match(home, /1 post to put out today/); assert.match(home, /Roofers tip/);
+  assert.equal((await post(`/content/${a}/scheduled`)).status, 303); assert.equal((await post(`/content/${a}/posted`)).status, 303);
+  home = await (await call(w, '/', { cookie })).text(); assert.ok(!/post to put out today/.test(home), 'once posted the reminder goes');
+  assert.equal((await post(`/content/${a}/plan`, { planned: today })).status, 400, 'a posted post cannot be re-planned'); assert.equal((await post(`/content/${a}/save`, { text: 'Changed after posting, which is not allowed.' })).status, 400);
+  // founding guard applies to your own posts, and fails closed
+  places = 5; assert.equal((await post('/content/new', { title: 'Founding offer', text: 'Founding clients get free setup while places last.', platform: 'both' })).status, 303);
+  const f = await idOf('Founding offer'); const refused = await post(`/content/${f}/approved`); assert.equal(refused.status, 400); assert.match(await refused.text(), /founding places are taken/);
+  places = 3; assert.equal((await post(`/content/${f}/approved`)).status, 303);
+  assert.equal((await post(`/content/${a.replace(/^x/, 'y')}/approved`)).status, 404, 'an id that is not a route is a plain not-found, not a crash'); assert.equal((await post('/content/x0nosuchpost/approved')).status, 400, 'a well-formed id that does not exist is refused');
+  assert.ok(posted.every(u => !/facebook|graph\.|business\.google|api\.twitter|linkedin/i.test(u)), 'HQ never calls Facebook, Google or any social service');
+});

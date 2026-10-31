@@ -12,7 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
-import { pageContent, seedPosts, move as movePost, edit as editPost, STATUSES } from './posts.js';
+import { pageContent, seedPosts, move as movePost, edit as editPost, add as addPost, plan as planPost, dueToday, STATUSES } from './posts.js';
 import { b64u, newChallenge, verifyRegistration, verifyAssertion, loginScript } from './passkey.js';
 import { evaluate as stripeEval, EXPECTED as STRIPE_EXPECTED } from './stripecheck.js';
 import { zoomsSoon, appFor, pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
@@ -277,7 +277,10 @@ const leadsDown = () => shell('Leads', `<h1>Leads</h1>${booksError()}`, '/leads'
 const loadPosts = async (vault) => { let p = await vpost(vault, '/posts', {}); if (!Array.isArray(p)) { p = seedPosts(); await vpost(vault, '/posts', { op: 'save', posts: p }); } return p; };
 async function contentAction(request, env, vault, id, action) {
   const posts = await loadPosts(vault); let r;
-  if (action === 'save') r = editPost(posts, id, String((await request.formData().catch(() => new FormData())).get('text') || ''));
+  const form = async () => Object.fromEntries([...(await request.formData().catch(() => new FormData())).entries()].map(([k, x]) => [k, String(x)]));
+  if (id === 'new') { r = addPost(posts, await form()); if (r.error) return html(pageContent(posts, await foundingCount(env), banner('bad', r.error)), 400); await vpost(vault, '/posts', { op: 'save', posts }); return redirect(`/content#${encodeURIComponent(r.id)}`); }
+  if (action === 'plan') r = planPost(posts, id, await form());
+  else if (action === 'save') r = editPost(posts, id, String((await request.formData().catch(() => new FormData())).get('text') || ''));
   else if (STATUSES.includes(action)) r = movePost(posts, id, action, await foundingCount(env));
   else return html(shell('Not found', banner('warn', 'Nothing here', '', btn('/content', 'Back to Content', 'dark')), '/content'), 404);
   if (r.error) return html(pageContent(posts, await foundingCount(env), banner('bad', r.error)), 400);
@@ -343,6 +346,7 @@ async function pageHome(env) {
     const zooms = zoomsSoon(leadsNow); if (zooms.length) todos.push(banner('info', `${zooms.length} Zoom demo${zooms.length === 1 ? '' : 's'} ${zooms.every(z => z.when === 'today') ? 'today' : 'today or tomorrow'}`, zooms.slice(0, 4).map(z => `${esc(z.lead.name)}${z.time ? ' at ' + esc(z.time) : ''}${z.when === 'tomorrow' ? ' (tomorrow)' : ''}`).join(', ') + '.', btn(`/leads/${esc(zooms[0].lead.id)}`, 'Open the first', 'dark')));
     if (due.length) todos.push(banner('warn', `${due.length} follow-up${due.length === 1 ? '' : 's'} due`, due.slice(0, 3).map(l => esc(l.name)).join(', ') + '.', btn('/leads', 'Open Leads', 'dark')));
   }
+  try { const due2 = dueToday(await loadPosts(vaultOf(env))); if (due2.length) todos.push(banner('warn', `${due2.length} post${due2.length === 1 ? '' : 's'} to put out today`, due2.slice(0, 3).map(x => esc(x.title)).join(', ') + '. Schedule or post them yourself, then tick them off.', btn('/content', 'Open Content', 'dark'))); } catch { /* the reminder is optional */ }
   for (const s of d.failed) todos.push(banner('bad', `${esc(s.who)}'s payment failed`, 'Their card was declined. Stripe tries again automatically and emails them. If it is still unpaid after 14 days, get in touch.', btn('/payments', 'See payments', 'dark')));
   if (d.stale) todos.push(banner('warn', 'No recent backup of your Books data', 'A backup is made every morning. Take one now, and if this still shows tomorrow, open Help.', `<form method="post" action="/backups/download" style="margin-top:12px"><button class="btn dark">Download a backup now</button></form>`));
   const noStripe = d.subs.off || d.subs.error;
@@ -595,7 +599,7 @@ export default {
     if (!authed) return respond(redirect('/login'));
     try {
       const p = url.pathname;
-      { const cm = request.method === 'POST' && p.match(/^\/content\/(p\d+)\/(\w+)$/); if (cm) return respond(await contentAction(request, env, vault, cm[1], cm[2])); }
+      { const cm = request.method === 'POST' && (p.match(/^\/content\/([px][a-z0-9]+)\/(\w+)$/) || (p === '/content/new' ? [null, 'new', 'new'] : null)); if (cm) return respond(await contentAction(request, env, vault, cm[1], cm[2])); }
       if (request.method === 'POST' && p === '/passkey/new-options') {
         const challenge = newChallenge(); await vpost(vault, '/pk', { op: 'challenge', kind: 'create', value: challenge });
         return jsonOut({ challenge, user: b64u.enc(enc.encode('owner')) });

@@ -46,10 +46,10 @@ const { chromium } = require('playwright');
     if (process.env.SHOTS) await page.screenshot({ path: `${process.env.SHOTS}/lead-${name}.png`, fullPage: true });
     ck(t('lead page: no sideways scrolling'), await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
     await page.click('button[value="contacted"]'); await page.waitForTimeout(400);
-    ck(t('moving to Contacted saves and shows it'), /Saved\./.test(await page.textContent('body')) && /Contacted/.test(await page.textContent('.ph')));
+    ck(t('moving to Contacted saves and shows it'), /Saved\./.test(await page.textContent('body')) && /contacted/i.test(await page.textContent('.ph')));
     await page.check('input[name=ck_agreement]'); await page.click('button:has-text("Save checklist")'); await page.waitForTimeout(400);
     ck(t('a checklist tick is saved'), await page.isChecked('input[name=ck_agreement]') && /1 of 10 done/.test(await page.textContent('body')));
-    await page.goto(base + '/leads/new'); await page.fill('#n', 'Manual Person'); await page.fill('#p', '07700 900777'); await page.click('.btn.block'); await page.waitForTimeout(400);
+    await page.goto(base + '/leads/new'); await page.fill('#n', 'Manual Person'); await page.fill('#p', name === 'phone' ? '07700 900777' : '07700 900776'); await page.click('.btn.block'); await page.waitForTimeout(400);
     ck(t('a lead added by hand says nothing was sent'), /Nothing was sent to them/.test(await page.textContent('body')));
     ck(t('leads pages: no CSP violations'), (await page.evaluate(() => window.__csp || [])).length === 0);
     const noScroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
@@ -58,10 +58,20 @@ const { chromium } = require('playwright');
     ck(t('navigation is visible with Home, Customers, Payments, Books (and Leads on a laptop)'), (await page.$$eval(nav, els => els.filter(e => e.offsetParent).map(e => e.textContent.trim()))).join(',').replace('Leads,','').includes('Home,Customers,Payments,Books'));
     const small = await page.$$eval(nav, els => els.filter(e => e.offsetParent).some(e => e.getBoundingClientRect().height < 44));
     ck(t('navigation buttons are big enough to tap'), !small);
-    for (const [p, text] of [['/customers', 'Books clients'], ['/payments', 'Stripe'], ['/books', 'Add a new client'], ['/receptionist', 'Mia'], ['/backups', 'Take one now'], ['/settings', 'Where your passwords'], ['/docs', 'Step-by-step'], ['/docs/start', 'Three rules'], ['/more', 'Log out of HQ'], ['/books/new', 'Make the connect link']]) {
+    for (const [p, text] of [['/customers', 'Books clients'], ['/payments', 'Stripe'], ['/books', 'Add a new client'], ['/receptionist', 'Mia'], ['/backups', 'Take one now'], ['/settings', 'Where your passwords'], ['/docs', 'Step-by-step'], ['/docs/start', 'Three rules'], ['/more', 'Log out of HQ'], ['/leads', 'Leads'], ['/content', 'Posts for Facebook'], ['/stripe-check', 'Is Stripe set up right?'], ['/passkey', 'Face ID or fingerprint login'], ['/books/new', 'Make the connect link']]) {
       await page.goto(base + p); ck(t(`page ${p} opens`), (await page.textContent('body')).includes(text));
       ck(t(`page ${p} fits the screen`), await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
     }
+    { // a cold-call lead and its Call plan, on this screen size
+      await page.goto(base + '/leads/new'); await page.fill('#n', 'Browser Trader'); await page.fill('#p', name === 'phone' ? '07700 900778' : '07700 900779'); await page.fill('#b', 'Browser Roofing'); await page.click('.btn'); await page.waitForTimeout(700);
+      ck(t('adding a lead opens it with the Call plan'), /Call plan/.test(await page.textContent('body')) && /TPS and CTPS check/.test(await page.textContent('body')));
+      ck(t('the lead page fits the screen'), await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
+      await page.selectOption('#tp', 'registered'); await page.click('text=Save call plan'); await page.waitForTimeout(500);
+      ck(t('a TPS-registered lead hides the Call button and says so'), /Do not cold call this number/.test(await page.textContent('body')) && (await page.$$eval('a.btn', els => els.filter(e => /^Call$/.test(e.textContent.trim())).length)) === 0);
+    }
+    for (const p of ['/leads', '/content', '/stripe-check']) { await page.goto(base + p);
+      const tiny = await page.$$eval('button, a.btn, select, input:not([type=hidden]):not([type=checkbox]), textarea', els => els.filter(e => e.offsetParent && e.getBoundingClientRect().height < 40).map(e => (e.textContent || e.name || e.id || e.tagName).trim().slice(0, 20)));
+      ck(t(`page ${p}: buttons and fields are big enough to tap`), tiny.length === 0, JSON.stringify(tiny)); }
     await page.goto(base + '/books'); await page.click('a.item'); await page.waitForTimeout(500);
     ck(t('tapping a client opens their page'), /Details/.test(await page.textContent('body')) && /Check their accounting setup/.test(await page.textContent('body')));
     await page.goto(base + '/books/new'); await page.fill('#n', 'Synthetic Roofing'); await page.fill('#p', '07700 900123'); await page.selectOption('#e', 'sandbox'); await page.click('.btn'); await page.waitForTimeout(900);
