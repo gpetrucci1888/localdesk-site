@@ -131,3 +131,24 @@ test('founding places: claiming twice is harmless, losing, unticking or deleting
   w.booksEnv.STORE.get = realGet;
   assert.equal((await leads(w)).find(l => l.id === d).checklist.founding, undefined, 'nothing was ticked');
 });
+
+test('cold-call pipeline: contacted, interested, Zoom booked, demo attended, follow-up, signed up; name and business can still be edited', async (t) => {
+  const w = world(); network(t); await enquire(w, good); const id = (await leads(w))[0].id;
+  for (const s of ['contacted', 'interested', 'zoom', 'demo', 'trial', 'onboarding']) assert.equal((await move(w, id, s)).status, 200, s);
+  const l = (await leads(w))[0]; assert.deepEqual(l.history.map(h => h.to), ['new', 'contacted', 'interested', 'zoom', 'demo', 'trial', 'onboarding']);
+  assert.equal((await asAdmin(w, 'PUT', `/leads/${id}`, { name: 'David Penrose', business: 'Penrose Plumbing and Heating' })).status, 200, 'renaming works');
+  const r = (await leads(w))[0]; assert.equal(r.name, 'David Penrose'); assert.equal(r.business, 'Penrose Plumbing and Heating');
+  const w2 = world(); network(t); await enquire(w2, good, '203.0.113.77'); const i2 = (await leads(w2))[0].id;
+  await move(w2, i2, 'contacted'); await move(w2, i2, 'interested'); assert.ok((await leads(w2))[0].next_at, 'interested leads get a follow-up date'); assert.equal((await move(w2, i2, 'paying')).status, 500, 'still only from onboarding');
+});
+
+test('call plan: next action, Zoom time and link, TPS result and do-not-call are saved and checked; do-not-call clears every follow-up', async (t) => {
+  const w = world(); network(t); await enquire(w, good); const id = (await leads(w))[0].id; const put = (b) => asAdmin(w, 'PUT', `/leads/${id}`, b);
+  assert.equal((await put({ next_action: 'Ring back Tuesday after 4pm', meeting_at: '2026-11-05T14:30', meeting_link: 'https://zoom.us/j/123456789' })).status, 200);
+  let l = (await leads(w))[0]; assert.equal(l.next_action, 'Ring back Tuesday after 4pm'); assert.equal(l.meeting_at, '2026-11-05T14:30'); assert.equal(l.meeting_link, 'https://zoom.us/j/123456789');
+  for (const bad of [{ meeting_link: 'http://zoom.us/j/1' }, { meeting_link: 'javascript:alert(1)' }, { meeting_link: 'https://x' }, { meeting_at: 'tomorrow' }, { tps: 'maybe' }]) assert.equal((await put(bad)).status, 500, JSON.stringify(bad));
+  assert.equal((await put({ meeting_link: '' })).status, 200, 'a link can be removed');
+  assert.equal((await put({ tps: 'registered' })).status, 200); l = (await leads(w))[0]; assert.equal(l.tps, 'registered'); assert.match(l.tps_checked, /^\d{4}-\d{2}-\d{2}$/);
+  await move(w, id, 'contacted'); assert.ok((await leads(w))[0].next_at);
+  assert.equal((await put({ dnc: true })).status, 200); l = (await leads(w))[0]; assert.equal(l.dnc, true); assert.equal(l.next_at, ''); assert.equal(l.next_action, '');
+});

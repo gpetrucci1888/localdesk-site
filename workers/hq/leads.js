@@ -2,11 +2,11 @@
 // Nothing here sends a message. Drafts are text for Gio to edit; the buttons open his own phone's apps and he presses send.
 import { shell, esc, banner, btn, pill, item, crumb, tile } from './ui.js';
 
-export const STAGES = [['new', 'New enquiry'], ['contacted', 'Contacted'], ['demo', 'Demo'], ['trial', 'Trial'], ['onboarding', 'Onboarding'], ['paying', 'Paying']];
+export const STAGES = [['new', 'New enquiry'], ['contacted', 'Called or contacted'], ['interested', 'Interested'], ['zoom', 'Zoom booked'], ['demo', 'Demo attended'], ['trial', 'Follow-up or trial'], ['onboarding', 'Signed up, onboarding'], ['paying', 'Paying']];
 export const LABEL = { ...Object.fromEntries(STAGES), lost: 'Lost' };
 const ORDER = STAGES.map(s => s[0]);
 const PRODUCT = { receptionist: 'Receptionist', books: 'Books', unsure: 'Not sure yet' };
-const KIND = { new: 'warn', contacted: 'mute', demo: 'mute', trial: 'mute', onboarding: 'mute', paying: 'ok', lost: 'mute' };
+const KIND = { new: 'warn', contacted: 'mute', interested: 'mute', zoom: 'mute', demo: 'mute', trial: 'mute', onboarding: 'mute', paying: 'ok', lost: 'mute' };
 
 // Same rules as the Books connector, so HQ only offers moves that will be accepted.
 export function moves(from) {
@@ -36,6 +36,8 @@ export function draftFor(l) {
   const T = {
     new: `Hi ${n}, it's Gio from Localdesk in Saltash. Thanks for getting in touch about ${p}. Is now a good time for a quick chat, or shall I ring you later?`,
     contacted: `Hi ${n}, Gio from Localdesk here. Just checking you got my message about ${p}. Happy to show you a 15-minute demo whenever suits you.`,
+    interested: `Hi ${n}, Gio from Localdesk. As we discussed, I'd be happy to show you ${p} in a 15 to 20 minute Zoom. Tell me a time that suits and I'll send the link.`,
+    zoom: `Hi ${n}, Gio from Localdesk. Just confirming our Zoom${l.meeting_at ? ' on ' + String(l.meeting_at).replace('T', ' at ') : ''}. ${l.meeting_link ? 'The link is ' + l.meeting_link + '. ' : ''}See you then.`,
     demo: l.product === 'books'
       ? `Hi ${n}, thanks for your time today. If you'd like to go ahead with Books, the next steps are a short agreement, then I connect it to your accounting software. No pressure, ring me with any questions.`
       : `Hi ${n}, thanks for your time today. If you'd like to try the Receptionist, there's a 7-day free trial on your own phone. I set it up first and you decide after. Shall I get started?`,
@@ -129,13 +131,21 @@ export function pageLead(l, { template = false, flash = '', app = null, problem 
   const draft = template || !l.draft ? draftFor(l) : l.draft, num = intl(l.phone);
   const forward = mv.filter(s => s !== 'lost' && ORDER.indexOf(s) > ORDER.indexOf(l.status)), back = mv.filter(s => s !== 'lost' && !forward.includes(s));
   const moveBtn = (s, cls = 'line') => `<button class="btn ${cls}" name="status" value="${s}">${s === 'lost' ? 'Mark as lost' : (back.includes(s) || l.status === 'lost' ? 'Reopen as ' : 'Move to ') + esc(LABEL[s])}</button>`;
+  const blockedCall = Boolean(l.dnc) || l.tps === 'registered', coldCalled = !(l.messages || []).length && l.source !== 'website';
   const connect = `/books/new?name=${encodeURIComponent(l.business || l.name)}&phone=${encodeURIComponent(l.phone)}`;
   return shell(l.name || 'Lead', `${crumb('/leads', 'Leads')}${flash}<div class="ph"><div><h1>${esc(l.name || 'Lead')}</h1><p class="lead">${esc(PRODUCT[l.product] || '')}${l.business ? ' · ' + esc(l.business) : ''} · from ${esc(l.source || 'website')} ${ago(l.created)}</p></div>${pill(KIND[l.status], LABEL[l.status])}</div>
-${next ? banner('info', `Next step: ${next}`) : ''}${appCard(l, app, problem)}${['receptionist', 'books'].includes(l.product) && l.status !== 'lost' ? `<div class="card"><h2>Payment link</h2><p class="mute">Makes a Stripe checkout link for ${esc(PRODUCT[l.product] || 'this product')}${l.product === 'receptionist' && l.checklist && l.checklist.founding ? ' (founding client: monthly price only, 7-day trial)' : ' (monthly price plus the setup fee)'}. It is only shown here. Nothing is sent to them: you copy it and send it yourself.</p><form method="post" action="/leads/${esc(l.id)}/checkout"><button class="btn line">Make a payment link</button></form></div>` : ''}<div class="card"><h2>Contact</h2><p><b>${esc(l.phone)}</b></p><div class="qa">${btn(`tel:${l.phone.replace(/[^\d+]/g, '')}`, 'Call', 'dark')}</div>
+${next ? banner('info', `Next step: ${next}`) : ''}${appCard(l, app, problem)}${['receptionist', 'books'].includes(l.product) && l.status !== 'lost' ? `<div class="card"><h2>Payment link</h2><p class="mute">Makes a Stripe checkout link for ${esc(PRODUCT[l.product] || 'this product')}${l.product === 'receptionist' && l.checklist && l.checklist.founding ? ' (founding client: monthly price only, 7-day trial)' : ' (monthly price plus the setup fee)'}. It is only shown here. Nothing is sent to them: you copy it and send it yourself.</p><form method="post" action="/leads/${esc(l.id)}/checkout"><button class="btn line">Make a payment link</button></form></div>` : ''}<div class="card"><h2>Contact</h2><p><b>${esc(l.phone)}</b></p>${blockedCall ? banner('bad', 'Do not cold call this number', l.dnc ? 'You marked this lead do not call. No follow-up is scheduled.' : 'This number is registered with the TPS. Do not make a marketing call to it unless they have asked you to ring.') : `<div class="qa">${btn(`tel:${l.phone.replace(/[^\d+]/g, '')}`, 'Call', 'dark')}${l.meeting_link ? btn(l.meeting_link, 'Open the Zoom link', 'line', true) : ''}</div>`}
 ${(l.messages || []).length ? `<div class="sp"></div><h2>What they wrote</h2>${l.messages.map(m => `<p>${esc(m.text)}<br><small class="mute">${ago(m.at)}</small></p>`).join('')}` : ''}</div>
 <div class="card"><h2>Where they are</h2><form method="post" action="/leads/${esc(l.id)}/save"><div class="stack">${forward.slice(0, 2).map((s, i) => moveBtn(s, i ? 'line' : 'dark')).join('')}${back.map(s => moveBtn(s)).join('')}${l.status === 'lost' ? mv.map(s => moveBtn(s)).join('') : moveBtn('lost')}</div></form>
 <p class="mute">Next look: <b>${esc(dayStr(l.next_at))}</b>${isDue(l) ? ' (due now)' : ''}. ${l.status === 'onboarding' ? 'Counts as paying only once Stripe shows an active subscription.' : ''}</p></div>
-<div class="card"><h2>Draft message</h2><p class="mute">Nothing is sent from here. The buttons open your own phone's apps with this text, and you press send. Edit it first.</p>
+<div class="card"><h2>Call plan</h2><form method="post" action="/leads/${esc(l.id)}/save"><input type="hidden" name="plan_form" value="1">
+<label for="na">Next action</label><input id="na" name="next_action" maxlength="120" value="${esc(l.next_action || '')}" placeholder="e.g. Ring back Tuesday after 4pm">
+<label for="ma">Zoom date and time</label><input id="ma" name="meeting_at" type="datetime-local" value="${esc(l.meeting_at || '')}">
+<label for="ml">Zoom link (optional)</label><input id="ml" name="meeting_link" inputmode="url" maxlength="200" value="${esc(l.meeting_link || '')}" placeholder="https://zoom.us/j/...">
+<label for="tp">TPS and CTPS check${l.tps_checked ? ` <small>(checked ${esc(l.tps_checked)})</small>` : ''}</label><select id="tp" name="tps"><option value=""${!l.tps ? ' selected' : ''}>Not checked yet</option><option value="clear"${l.tps === 'clear' ? ' selected' : ''}>Checked: not registered, OK to ring</option><option value="registered"${l.tps === 'registered' ? ' selected' : ''}>Registered: do not cold call</option></select>
+<label class="ck"><input type="checkbox" name="dnc" value="1"${l.dnc ? ' checked' : ''}><span>They told me not to ring again (do not call)</span></label>
+<p class="mute">${l.tps ? '' : 'Check the number against the TPS (and CTPS for companies) before you cold call. '}See docs/COLD-CALLING-COMPLIANCE.md.</p><div class="stack"><button class="btn dark">Save call plan</button></div></form></div>
+<div class="card"><h2>Draft message</h2><p class="mute">Nothing is sent from here. The buttons open your own phone's apps with this text, and you press send. Edit it first.${coldCalled ? ' <b>You rang them, so only send a message if they agreed to hear from you that way.</b>' : ''}</p>
 <form method="post" action="/leads/${esc(l.id)}/save"><label for="d">Message</label><textarea id="d" name="draft" rows="5" maxlength="1200">${esc(draft)}</textarea>
 <label for="x">Follow up on</label><input id="x" name="next_at" type="date" value="${esc(l.next_at || '')}">
 <label for="no">Your notes</label><textarea id="no" name="notes" rows="4" maxlength="3000">${esc(l.notes || '')}</textarea>

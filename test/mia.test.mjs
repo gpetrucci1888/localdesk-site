@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const py = (code, env = {}) => spawnSync('python3', ['-I', '-c', `import importlib.util,json,sys\nspec=importlib.util.spec_from_file_location('nc','ops/new_client.py');nc=importlib.util.module_from_spec(spec);spec.loader.exec_module(nc)\n${code}`], { encoding: 'utf8', env: { ...process.env, ...env } });
+const py = (code, env = {}) => spawnSync('python3', ['-I', '-c', `import importlib.util,json,sys\nspec=importlib.util.spec_from_file_location('nc','ops/new_client.py');nc=importlib.util.module_from_spec(spec);spec.loader.exec_module(nc)\n${code}`], { encoding: 'utf8', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1', ...env } });
 const base = JSON.parse(readFileSync('ops/example-client.json', 'utf8'));
 const check = (client) => { const r = py(`print(json.dumps(nc.validate(json.loads(sys.argv[1]))))`.replace('sys.argv[1]', JSON.stringify(JSON.stringify(client)))); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
 

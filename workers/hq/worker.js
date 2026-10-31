@@ -295,6 +295,7 @@ async function leadSave(request, env, id) {
   if (!cur) return html(shell('Lead', banner('warn', 'No such lead', '', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404);
   if (v.status) patch.status = v.status;
   for (const k of ['draft', 'notes', 'next_at']) if (v[k] !== undefined) patch[k] = v[k];
+  if (v.plan_form) { for (const k of ['next_action', 'meeting_at', 'meeting_link', 'tps']) if (v[k] !== undefined) patch[k] = v[k]; patch.dnc = v.dnc === '1'; }
   if (v.checklist_form) patch.checklist = Object.fromEntries((CHECKLISTS[cur.product] || CHECKLISTS.unsure).map(([k]) => [k, v[`ck_${k}`] === '1']));
   const res = await putLead(env, id, patch);
   if (!res.ok) { const msg = String(await res.text().catch(() => '')).replace(/^Error: /, '') || 'That didn\'t work.'; return html(pageLead(cur, { flash: banner('bad', msg) }), 400); }

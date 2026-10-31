@@ -445,3 +445,23 @@ test('passphrase login ignores a stray space from a phone keyboard', async () =>
   const res = await call(w, '/login', { method: 'POST', form: { password: PASS + ' ', code } });
   assert.equal(res.status, 303);
 });
+
+test('cold-call lead page: stages, call plan, TPS and do-not-call hide the Call button, Zoom link, and a cold-called note on drafts', async () => {
+  const base = { id: 'C1', name: 'Steve', phone: '+447700900321', phoneKey: '7700900321', product: 'receptionist', source: 'phone call', status: 'interested', checklist: {}, history: [{ at: Date.now(), from: null, to: 'new' }], messages: [] };
+  let saved = null;
+  const look = async (lead, form) => {
+    const w = world(); const orig = w.env.BOOKS.fetch;
+    w.env.BOOKS.fetch = async (url, init = {}) => { const path = new URL(url).pathname; if (path === '/leads/C1' && !init.method) return Response.json(lead); if (path === '/leads/C1' && init.method === 'PUT') { saved = JSON.parse(init.body); return Response.json({ ...lead, ...saved }); } return orig(url, init); };
+    const { cookie } = await enrol(w); return form ? call(w, '/leads/C1/save', { method: 'POST', form, cookie }) : (await call(w, '/leads/C1', { cookie })).text();
+  };
+  let page = await look(base);
+  assert.match(page, /Interested/); assert.match(page, /Call plan/); assert.match(page, /Check the number against the TPS/); assert.match(page, />Call</); assert.match(page, /You rang them, so only send a message if they agreed/);
+  for (const label of ['Called or contacted', 'Zoom booked', 'Demo attended']) assert.match(page, new RegExp(label), label);
+  page = await look({ ...base, tps: 'registered', tps_checked: '2026-10-31' }); assert.match(page, /Do not cold call this number/); assert.ok(!/>Call</.test(page), 'no Call button for a TPS-registered number');
+  page = await look({ ...base, dnc: true }); assert.match(page, /marked this lead do not call/); assert.ok(!/>Call</.test(page));
+  page = await look({ ...base, tps: 'clear', tps_checked: '2026-10-31', meeting_link: 'https://zoom.us/j/9', meeting_at: '2026-11-05T14:30' }); assert.match(page, /Open the Zoom link/); assert.match(page, /checked 2026-10-31/);
+  page = await look({ ...base, messages: [{ at: Date.now(), text: 'please ring me' }], source: 'website' }); assert.ok(!/You rang them/.test(page), 'an enquiry they sent is not cold calling');
+  const res = await look(base, { plan_form: '1', next_action: 'Ring Tuesday', meeting_at: '2026-11-05T14:30', meeting_link: 'https://zoom.us/j/9', tps: 'clear' });
+  assert.equal(res.status, 303); assert.deepEqual(saved, { next_action: 'Ring Tuesday', meeting_at: '2026-11-05T14:30', meeting_link: 'https://zoom.us/j/9', tps: 'clear', dnc: false });
+  await look(base, { plan_form: '1', dnc: '1', tps: 'registered' }); assert.equal(saved.dnc, true); assert.equal(saved.tps, 'registered');
+});

@@ -2110,8 +2110,8 @@ const ENQUIRY_ORIGINS = ['https://www.localdeskai.co.uk', 'https://localdeskai.c
 const ENQUIRY_PRODUCTS = { receptionist: 'Receptionist', books: 'Books', unsure: 'Not sure yet' };
 // ---------- sales pipeline: leads (website enquiries and ones added by hand) ----------
 // new -> contacted -> demo -> trial -> onboarding -> paying, or lost from anywhere. Nothing here ever contacts anyone.
-const LEAD_STAGES = ['new', 'contacted', 'demo', 'trial', 'onboarding', 'paying'];
-const NEXT_DAYS = { contacted: 3, demo: 2, trial: 3, onboarding: 2 };   // when to look at a lead again after it moves
+const LEAD_STAGES = ['new', 'contacted', 'interested', 'zoom', 'demo', 'trial', 'onboarding', 'paying'];
+const NEXT_DAYS = { contacted: 3, interested: 3, zoom: 1, demo: 2, trial: 3, onboarding: 2 };   // when to look at a lead again after it moves
 function leadMove(from, to) {
   if (from === to) return true;
   if (to === 'lost') return true;
@@ -2155,6 +2155,12 @@ async function updateLead(store, id, patch) {
     lead.checklist.founding = want;
   }
 
+  for (const f of ['name', 'business']) if (patch[f] !== undefined) lead[f] = clean(patch[f], 100);
+  if (patch.next_action !== undefined) lead.next_action = clean(patch.next_action, 120);
+  if (patch.meeting_at !== undefined) { const m = clean(patch.meeting_at, 20); if (m && !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(m)) throw new Error('Meeting time must look like 2026-11-05T14:00'); lead.meeting_at = m; }
+  if (patch.meeting_link !== undefined) { const m = clean(patch.meeting_link, 200); if (m && !/^https:\/\/[\w.-]+\.[a-z]{2,}(\/[^\s<>"']*)?$/i.test(m)) throw new Error('The meeting link must start with https://'); lead.meeting_link = m; }
+  if (patch.tps !== undefined) { if (!['', 'clear', 'registered'].includes(patch.tps)) throw new Error('TPS result must be clear or registered'); lead.tps = patch.tps; if (patch.tps) lead.tps_checked = new Date(now).toISOString().slice(0, 10); else delete lead.tps_checked; }
+  if (patch.dnc !== undefined) { lead.dnc = Boolean(patch.dnc); if (lead.dnc) { lead.next_at = ''; lead.next_action = ''; } } // do not call: no follow-up is ever due
   if (patch.phone !== undefined) { const ph = clean(patch.phone, 40); if (ph.replace(/\D/g, '').length < 10) throw new Error('That phone number looks too short'); lead.phone = ph; lead.phoneKey = ph.replace(/\D/g, '').slice(-10); }
   if (patch.product !== undefined && ENQUIRY_PRODUCTS[patch.product]) lead.product = patch.product;
   lead.updated = now;
