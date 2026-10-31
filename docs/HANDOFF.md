@@ -61,3 +61,8 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 ## Deployed 31 Oct 2026, second time (owner approved "approve A": books worker, then hq worker, for the Stripe check)
 - books: new version `1d50027d` (previous `a0a0c13c`). hq: new version `2b32bcda` (previous `fa39aeb8`). Bindings and secrets unchanged (checked via the Cloudflare API). Adds the HQ Stripe check page and the Books `/stripe/status` route (read-only).
 - Still not done: website and main merge, Stripe keys, prices and webhook, Vapi, Twilio. Rollback targets are the two previous version ids above.
+
+## Deployed 31 Oct 2026, third time (owner approved "deploy" after the redeploy request: books worker, then hq worker)
+- books: new version `d5924a7d` (previous `1d50027d`). hq: new version `0cbb034f` (previous `2b32bcda`). Secrets and bindings unchanged. The deploy gate ran inside each upload ("Gate passed: all tests green, tree committed", commit `22453c2`).
+- Brings: Receptionist links without the setup fee (invoiced after the trial), permanent do-not-call and TPS bars by number, no duplicate manual leads, Stripe ticking a lead's payment step, Zoom reminders on Home, the deploy gate.
+- Still not done: website and main merge, Stripe keys, prices and webhook, Vapi, Twilio. Rollback targets: the two previous version ids above.
