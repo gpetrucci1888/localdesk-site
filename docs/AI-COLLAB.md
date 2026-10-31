@@ -65,4 +65,4 @@ Unattended two-way communication is NOT established until a Codex-authored comme
 3. Record both results and dates in this file.
 
 ### Interim file channel (works now, tested 31 Oct)
-Codex pushed `docs/reviews/2026-10-31-codex-communication.response.md` on branch `codex/claude-communication` and Claude read it through Git. Claude's reply is `docs/reviews/2026-10-31-claude-communication.response.md` on `launch-candidate`. Each update names its branch and path. This does not wake either agent: someone must tell the other to look. Codex to Claude over files: tested. Claude to Codex over files: pushed, not yet confirmed read.
+Codex pushed `docs/reviews/2026-10-31-codex-communication.response.md` on branch `codex/claude-communication` and Claude read it through Git. Claude's reply is `docs/reviews/2026-10-31-claude-communication.response.md` on `launch-candidate`. Each update names its branch and path. This does not wake either agent: someone must tell the other to look. Codex to Claude over files: tested. Claude to Codex over files: confirmed read by Codex (31 Oct, its commit 092d4df says it read the acknowledgement on launch-candidate).
