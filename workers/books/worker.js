@@ -1602,7 +1602,7 @@ async function health(env, store, opts = {}) {
   const clients = [];
   const rows = await Promise.all(companies.map(async (c) => { // every connected business is checked at once, so the page doesn't wait on them one by one
     const client = (await getClient(store, c.realmId)) || {};
-    const row = { realmId: c.realmId, name: client.name || c.realmId, ok: true };
+    const row = { realmId: c.realmId, name: client.name || c.realmId, ok: true, platform: c.platform || 'quickbooks', phoneKey: String(client.phone || '').replace(/\D/g, '').slice(-10) }; // last 10 digits only, so HQ can match a client to their lead
     if (PLATFORMS[c.platform]) { // other software: their module refreshes its own tokens; same figures as a QuickBooks row
       try {
         const X = PLATFORMS[c.platform]();
@@ -1615,7 +1615,7 @@ async function health(env, store, opts = {}) {
         ]);
         const week = Date.now() - 7 * 86400000;
         row.toTidy = tidyList.length; row.late = late.length; row.platform = c.platform;
-        row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length;
+        row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length; row.everFiled = log.some(e => e.kind === 'file' && !e.undone);
         row.seenDays = seen && seen.at ? Math.floor((Date.now() - seen.at) / 86400000) : null;
         row.chased = log.filter(e => e.kind === 'chase' && e.at > week).length;
       } catch (err) { row.ok = false; row.problem = String(err && err.message || err).slice(0, 120); }
@@ -1632,7 +1632,7 @@ async function health(env, store, opts = {}) {
       ]);
       const week = Date.now() - 7 * 86400000;
       row.toTidy = messy.length; row.late = late.length;
-      row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length;
+      row.filed = log.filter(e => e.kind === 'file' && !e.undone && e.at > week).length; row.everFiled = log.some(e => e.kind === 'file' && !e.undone);
       row.seenDays = seen && seen.at ? Math.floor((Date.now() - seen.at) / 86400000) : null;
       if (opts.chase && client.chase === 'on' && !isDemoClient(client)) row.chasedToday = await chaseAll(env, store, c.realmId, client, late);
       row.chased = log.filter(e => e.kind === 'chase' && e.at > week).length + (row.chasedToday || 0);

@@ -75,3 +75,9 @@ test('prices are the same wherever they appear', () => {
 test('the Receptionist page keeps its call demo, calculator and sticky booking bar', () => {
   for (const id of ['phone', 'replay', 'calc', 'c-calls', 'o-loss', 'lines', 'talk', 'orb', 'mbar', 'clock']) assert.match(rec, new RegExp(`id="${id}"`), id);
 });
+
+test('no absolute claims about answering: the pages say the receptionist answers the calls you miss, not every call', async () => {
+  const { readdirSync, readFileSync, statSync } = await import('node:fs'); const { join } = await import('node:path');
+  const walk = (d) => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.html') ? [p] : []; });
+  for (const f of walk('public')) { const t = readFileSync(f, 'utf8'); for (const bad of [/answers every call/i, /every call answered/i, /never clocks off/i, /never miss/i, /every enquiry captured/i]) assert.ok(!bad.test(t), `${f} still says ${bad}`); }
+});

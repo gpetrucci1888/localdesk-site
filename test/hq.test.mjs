@@ -284,3 +284,23 @@ test('payment link: made from a lead, shown only to the owner, never sent; error
   reply = { status: 200, body: { url: 'https://evil.example/phish' } };
   const odd = await call(w, '/leads/L1/checkout', { method: 'POST', cookie }); assert.equal(odd.status, 502); assert.ok(!(await odd.text()).includes('evil.example'));
 });
+
+test('Books lead page: software, connection and first receipt come from the connected app, with one clear next step', async () => {
+  const base = { id: 'B1', name: 'Dave', phone: '+447700900123', phoneKey: '7700900123', product: 'books', status: 'onboarding', checklist: { demo_done: true, agreement: true, id_check: true, payment: true }, history: [], messages: [] };
+  const look = async (app, lead = base) => { // a fresh HQ each time, because HQ caches the app health for a few minutes
+    const w = world(); const orig = w.env.BOOKS.fetch;
+    w.env.BOOKS.fetch = async (url, init = {}) => { const path = new URL(url).pathname; if (path === '/leads/B1' && !init.method) return Response.json(lead); if (path === '/health') return Response.json({ clients: app ? [app] : [] }); return orig(url, init); };
+    const { cookie } = await enrol(w); return (await call(w, '/leads/B1', { cookie })).text();
+  };
+  const app = { realmId: '555', name: 'Dave Plumbing', ok: true, platform: 'xero', phoneKey: '7700900123', everFiled: false, seenDays: 2 };
+  let page = await look(app);
+  assert.match(page, /Their app/); assert.match(page, />Xero</); assert.match(page, /Connected and working/); assert.match(page, /No receipt filed yet/);
+  assert.match(page, /Next step: First test receipt filed/, 'software, invite and connection are done automatically, so the next step is the first receipt');
+  assert.match(page, /name="ck_software" value="1" checked/); assert.match(page, /name="ck_connected" value="1" checked/); assert.ok(!/name="ck_first_receipt" value="1" checked/.test(page));
+  page = await look({ ...app, everFiled: true }); assert.match(page, /A receipt has been filed/); assert.match(page, /name="ck_first_receipt" value="1" checked/); assert.match(page, /Next step: Their accountant/);
+  page = await look({ ...app, ok: false, problem: 'invalid_grant' }); assert.match(page, /Needs attention/); assert.ok(!/name="ck_connected" value="1" checked/.test(page), 'a broken connection is not shown as connected');
+  page = await look(null); assert.match(page, /Not connected yet/); assert.match(page, /Next step: Their accounting software chosen/);
+  page = await look({ ...app, phoneKey: '7700900999' }); assert.match(page, /Not connected yet/, 'a different mobile is not matched');
+  page = await look(app, { ...base, product: 'receptionist' }); assert.ok(!/Their app/.test(page), 'other products never get the card');
+  page = await look(app, { ...base, status: 'lost' }); assert.ok(!/Their app/.test(page));
+});

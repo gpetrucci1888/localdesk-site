@@ -12,7 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
-import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
+import { appFor, pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
 
 const enc = new TextEncoder();
 const SESSION_SECONDS = 12 * 3600;            // this visit only
@@ -548,7 +548,7 @@ export default {
       let m;
       if (p === '/books/new') return respond(html(newClientForm('', { name: (url.searchParams.get('name') || '').slice(0, 100), phone: (url.searchParams.get('phone') || '').slice(0, 40) })));
       if (p === '/leads/new') return respond(html(newLeadForm()));
-      if ((m = p.match(/^\/leads\/([\w-]+)$/))) { const l = await getLead(env, m[1]); return respond(l ? html(pageLead(l, { template: url.searchParams.get('template') === '1', flash: leadFlash(url) })) : html(shell('Lead', banner('warn', 'No such lead', 'It may have been deleted.', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404)); }
+      if ((m = p.match(/^\/leads\/([\w-]+)$/))) { const l = await getLead(env, m[1]); const app = l && l.product === 'books' ? appFor(l, (await cachedHealth(env).catch(() => ({}))).clients) : null; return respond(l ? html(pageLead(l, { template: url.searchParams.get('template') === '1', flash: leadFlash(url), app, problem: app && !app.ok ? plainProblem(app.problem) : '' })) : html(shell('Lead', banner('warn', 'No such lead', 'It may have been deleted.', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404)); }
       if ((m = p.match(/^\/books\/client\/(\d+)$/))) return respond(await pageClient(env, m[1], url));
       if ((m = p.match(/^\/books\/client\/(\d+)\/check$/))) return respond(html(await pageCheck(env, m[1])));
       if ((m = p.match(/^\/books\/client\/(\d+)\/monthly$/))) return respond(html(await pageMonthly(env, m[1])));
