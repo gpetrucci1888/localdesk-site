@@ -303,4 +303,59 @@ test('Books lead page: software, connection and first receipt come from the conn
   page = await look({ ...app, phoneKey: '7700900999' }); assert.match(page, /Not connected yet/, 'a different mobile is not matched');
   page = await look(app, { ...base, product: 'receptionist' }); assert.ok(!/Their app/.test(page), 'other products never get the card');
   page = await look(app, { ...base, status: 'lost' }); assert.ok(!/Their app/.test(page));
+
+// ---- content approval queue ----
+import { move as moveP, edit as editP, blocked as blockedP, seedPosts as seedP } from '../workers/hq/posts.js';
+
+test('content queue: a founding-offer post cannot be approved once five places are used, or when places cannot be checked', () => {
+  const posts = seedP(); const founding = posts.find(p => p.founding), plain = posts.find(p => !p.founding && !p.demo);
+  assert.ok(founding && plain);
+  assert.equal(moveP(posts, founding.id, 'approved', 5).error?.includes('founding places are taken'), true);
+  assert.equal(moveP(posts, founding.id, 'approved', 9).error?.includes('founding places are taken'), true);
+  assert.match(moveP(posts, founding.id, 'approved', null).error, /cannot check/);
+  assert.equal(founding.status, 'draft');
+  assert.equal(moveP(posts, founding.id, 'approved', 4).ok, true);
+  assert.equal(moveP(posts, plain.id, 'approved', 5).ok, true, 'ordinary posts do not care');
+});
+
+test('content queue: sensible status moves only, edits need approving again, posted posts are final', () => {
+  const posts = seedP(); const p = posts.find(x => !x.founding);
+  assert.match(moveP(posts, p.id, 'posted', 0).error, /cannot become/);
+  assert.equal(moveP(posts, p.id, 'approved', 0).ok, true);
+  assert.equal(moveP(posts, p.id, 'scheduled', 0).ok, true);
+  assert.equal(editP(posts, p.id, 'A new version of this post.').ok, true); assert.equal(p.status, 'draft');
+  assert.match(editP(posts, p.id, 'x').error, /too short/);
+  moveP(posts, p.id, 'approved', 0); moveP(posts, p.id, 'posted', 0);
+  assert.match(editP(posts, p.id, 'Changed after posting.').error, /already been posted/);
+  assert.equal(moveP(posts, p.id, 'draft', 0).error.includes('cannot become'), true);
+});
+
+test('content queue: no absolute or unsupported claims in the drafts', () => {
+  const all = seedP().map(p => p.text).join('\n').toLowerCase();
+  for (const bad of ['every call', 'never missed', 'most people', 'honest review', 'first 5 founding clients', 'no vat', 'always']) assert.ok(!all.includes(bad), bad);
+});
+
+test('content queue: seeded posts are the 14 drafts, with correct prices and no stale claims', () => {
+  const posts = seedP(); assert.equal(posts.length, 14); assert.ok(posts.every(p => p.status === 'draft'));
+  const all = posts.map(p => p.text).join('\n');
+  assert.ok(!/£\s?(395)\b.*Receptionist/.test(all)); assert.match(all, /£397/); assert.match(all, /£150/); assert.match(all, /£395 setup/);
+  assert.ok(!all.includes('—'), 'no em dashes');
+  assert.ok(posts.every(p => !/\b0175\d? ?74/.test(p.text) || p.demo), 'the demo number only appears in a demo post');
+});
+
+test('content queue in HQ: login needed, approve works, a founding post is refused when five places are used', async () => {
+  const w = world(); const orig = w.env.BOOKS.fetch; let used = 5;
+  w.env.BOOKS.fetch = async (url, init) => new URL(url).pathname === '/founding' ? Response.json({ places: 5, used, ids: [] }) : orig(url, init);
+  assert.equal((await call(w, '/content')).status, 303);
+  assert.equal((await call(w, '/content/p01/approved', { method: 'POST' })).status, 303);
+  const { cookie } = await enrol(w);
+  const page = await call(w, '/content', { cookie }); assert.equal(page.status, 200); assert.match(await page.text(), /Day 1/);
+  assert.equal((await call(w, '/content/p01/approved', { method: 'POST', cookie })).status, 303);
+  const refused = await call(w, '/content/p05/approved', { method: 'POST', cookie }); assert.equal(refused.status, 400); assert.match(await refused.text(), /founding places are taken/);
+  used = 2;
+  const down = w.env.BOOKS.fetch; w.env.BOOKS.fetch = async (url, init) => new URL(url).pathname === '/founding' ? new Response('down', { status: 500 }) : down(url, init);
+  const unsure = await call(w, '/content/p10/approved', { method: 'POST', cookie }); assert.equal(unsure.status, 400); assert.match(await unsure.text(), /cannot check/, 'fails closed when the count is unavailable');
+  w.env.BOOKS.fetch = down;
+  assert.equal((await call(w, '/content/p05/approved', { method: 'POST', cookie })).status, 303);
+  const after = await (await call(w, '/content', { cookie })).text(); assert.match(after, /Approved \(2\)/);
 });
