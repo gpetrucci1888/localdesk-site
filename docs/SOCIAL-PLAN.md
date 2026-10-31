@@ -1,39 +1,36 @@
-# Running Localdesk's social media
+# Running Localdesk's social media (Facebook Page and Google Business Profile only)
 
-**Goal:** get UK tradespeople to book a 15 to 20 minute Zoom demo of Mia. Social media is the way people find us warm, before or after a cold call. It is not for cold messaging.
+**Goal:** get UK tradespeople to book a 15 to 20 minute Zoom demo of Mia. Only two accounts are used: the **Localdesk Facebook business Page** and the **Localdesk Google Business Profile**. No other platform is needed.
 
-## What exists (all drafts, nothing posted)
-- `content/social-30-day.md`: 30 days of posts from Mon 2 Nov 2026, with captions, links per channel, image briefs, Google Business Profile versions, and video ideas for some days.
-- `content/social/tiles/day-01.png` to `day-30.png`: one branded 1080 by 1080 image per post.
-- HQ, More, Content: the same 30 posts as drafts with planned days, plus the first pack. Approve, plan, tick "I scheduled it" and "It is posted". HQ Home shows "N posts to put out today". HQ never posts anything.
-- Lead tracking: every link ends `?utm_source=<channel>`. The website forms turn that into the lead source. HQ Leads, "Where leads come from", shows the count per channel.
-- Everything is generated from one file, `content/social-30-day.json`. Edit that, run `node ops/social_build.mjs --tiles`, and the calendar, HQ seed and images update together (a test fails if they drift apart).
+## What exists (all drafts; nothing posted or scheduled)
+- `content/social-30-day.md`: 30 days from Mon 2 Nov 2026. Every day has a Facebook post; 14 days (about three a week) also have a short Google Business Profile version. Captions, tracked links, suggested times, image briefs.
+- `content/first-batch.md`: **week 1 shown exactly as it would go out** (accounts, dates, times, text, images). This is what to approve first.
+- `content/social/tiles/day-01.png` to `day-30.png`: one branded image per post.
+- HQ, More, Content: the same posts as drafts with planned days. HQ never posts anything, and refuses to approve any post that mentions a price or cost.
+- Tracking: Facebook links end `?utm_source=facebook`, Google links `?utm_source=gbp`. The website form turns that into the lead source, shown in HQ Leads under "Where leads come from".
+- All generated from `content/social-30-day.json` by `node ops/social_build.mjs --tiles`; tests fail if the calendar, first batch, HQ seed or images drift apart.
 
-## Channels and their job
-| Channel | Job | Rhythm |
-|---|---|---|
-| Facebook page | Main home for posts; trades and local business groups see it by sharing, not by us posting into groups | Daily from the calendar |
-| Instagram | Same posts as images; "link in bio" carries the tracked link | Daily |
-| LinkedIn | The owner's own voice as a construction project manager; founder posts | Daily (same posts) |
-| Google Business Profile | Short local posts that show in search and Maps | 10 short versions are written |
-| TikTok and Reels | Short screen recordings and mock-ups for the days that have a video idea | About 6 videos in the month |
+## How posts can actually go out (checked 31 Oct; what I could and could not verify)
+| Method | Facebook Page | Google Business Profile | Cost | Verified? |
+|---|---|---|---|---|
+| **A. Meta Business Suite scheduler** (Meta's own free tool, you are already the admin) | Yes: you paste each post and pick a date and time once; Meta publishes | Not covered | Free | Not verified from here (docs unreachable); this is a standard Meta feature. Not automated by me. |
+| **B. Google Business Profile posting by hand** | n/a | Posted from your Google profile; **I could not verify that Google offers native scheduling**, so assume same-day, about two minutes, three times a week | Free | Not verified |
+| **C. A scheduler that covers both (Metricool)** | Expected | Expected | Unknown: it has paid plans and possibly a limited free plan; I could not read its pricing or its supported networks | Its listing in Claude's connector directory shows tools to create, read and update scheduled posts and read analytics. The networks and cost are unverified. No other connector in the directory posts to a Facebook Page or Google Business Profile. |
+| **D. Direct Meta and Google APIs** | Needs a Meta developer app and review | Google restricts Business Profile API access and needs an application | Free but slow and heavy | Not recommended. |
 
-## The routine (about 20 minutes a week)
-1. **Monday:** open HQ, Content. Read the week's drafts. Edit anything not in your voice. Founder and "personal wording" posts (Days 1, 13, 21, 29) only go out if every word is true for you.
-2. **Approve** the ones you like. HQ refuses founding-offer posts when all five founding places are taken.
-3. **Schedule** them in Meta Business Suite (Facebook and Instagram), LinkedIn and Google Business Profile (each has its own free scheduler), then tick "I scheduled it" in HQ.
-4. **Each day:** reply to comments and messages yourself. Only reply to people who contacted you. Never message someone who has not messaged you first.
-5. **Friday, 5 minutes:** open HQ Leads. Look at "Where leads come from". Note which channel and which post style brought enquiries, and tell Claude, who adjusts the next week.
+**Recommendation:** try C, because it is the only route where I can schedule for you after you approve. If it cannot cover both accounts on a plan you are happy with, fall back to A for Facebook plus B for Google, with HQ's Home reminder ("N posts to put out today") doing the nudging.
 
-## What is real and what is not
-- **Automatic posting or scheduling from here: not built, not live, not tested.** The queue is a record and a reminder.
-- **Direct integrations (checked in the connector directory on 31 Oct; none is installed):**
-  - **Metricool:** the most direct. It lists tools to create, read and update scheduled posts, analytics, and best time to post. I could not read its documentation here, so which networks it supports (I expect Facebook, Instagram, LinkedIn, TikTok and Google Business Profile) and what it costs on its free and paid plans are unverified. It needs a Metricool account and your pages connected inside it.
-  - **Typefully** (X, LinkedIn, Threads and others) and **Taplio** (LinkedIn only): do not cover Facebook or Instagram, so they are not the answer.
-  - **Canva:** can make designs. The images here are already generated, so it is optional.
-  - **Meta and TikTok ad tools:** these buy ads. Not authorised. No ads, no spend.
-  - Meta Business Suite and Google Business Profile have their own free schedulers, which is the safe fallback that works today.
-- **The one authorisation that would make scheduling direct:** create a Metricool account, connect your Facebook, Instagram, LinkedIn and Google pages inside it, then connect Metricool to Claude in claude.ai Settings, Connectors. I would then draft each post into Metricool's schedule for you to approve there. I will not post or publish anything myself.
+## The one authorisation to start (no card, no passwords in chat)
+Create a Metricool account on its **free plan** (do not enter card details) and connect the **Localdesk Facebook Page** and the **Localdesk Google Business Profile** inside Metricool when it asks (those are sign-ins with Facebook and Google, done by you in their own screens). If Metricool says Google Business Profile needs a paid plan, or asks for payment, **stop and tell me what it says**: I will explain the cost before you decide anything. The step after that, once it works, is connecting Metricool to Claude (claude.ai Settings, Connectors).
+
+## How publishing is approved
+1. You read `content/first-batch.md` (exact accounts, text, images, times).
+2. You say "approve first batch". That means: schedule those posts at those times on those two accounts, and nothing else.
+3. After that, you can approve an ongoing schedule (for example "run weeks 2 to 4 as drafted"). I then schedule inside that scope without asking each time. Anything outside it, any change of wording that touches founder claims or offers, ads, and any spend, still needs your word.
+4. Each Friday I report from Metricool (or HQ Leads) what went out, what failed, and which channel brought enquiries.
+
+## The routine if scheduling stays manual (about 20 minutes a week)
+Monday: read the week in HQ, Content, edit, approve. Schedule Facebook in Meta Business Suite and post the Google versions at the suggested times. Tick "I scheduled it" and "It is posted" in HQ. Reply to comments and messages yourself, only to people who contacted you. Never message anyone who has not messaged you first.
 
 ## Safety rules
-**No prices or costs in any post** (owner rule): no pound amounts, fees, "free setup" or minimum terms. HQ enforces it: a post that mentions a cost cannot be approved, scheduled or marked posted, and unapproved drafts are cleaned up automatically. Saying there is a 7-day free trial is fine. No invented testimonials, results or "customers"; only claims on the website; the founding offer always says "while places last"; no ads or spend; no posting without your approval; no cold messages; platform rules followed; and the cold-call rules in `docs/COLD-CALLING-COMPLIANCE.md` apply to anything that starts a conversation.
+**No prices or costs in any post** (owner rule): no pound amounts, fees, "free setup" or minimum terms. HQ enforces it: a post that mentions a cost cannot be approved, scheduled or marked posted. "7-day free trial" is fine. No invented testimonials, results or customers; only claims on the website; the founding offer always says "while places last" and HQ blocks it once the five places are taken; founder wording (Days 1, 13, 21, 29) only if every word is true; no ads or spend; no cold messages; the rules in `docs/COLD-CALLING-COMPLIANCE.md` apply to anything that starts a conversation.

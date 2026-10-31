@@ -7,9 +7,7 @@
    "id": "m01",
    "date": "2026-11-02",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "story",
    "title": "Why Localdesk exists",
@@ -24,8 +22,7 @@
    "date": "2026-11-03",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "problem",
    "title": "On the roof, phone ringing",
@@ -40,8 +37,7 @@
    "date": "2026-11-04",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "how",
    "title": "How Mia works in three steps",
@@ -55,9 +51,7 @@
    "id": "m04",
    "date": "2026-11-05",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "honest",
    "title": "She is an AI, and says so",
@@ -72,8 +66,7 @@
    "date": "2026-11-06",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "offer",
    "title": "Founding places",
@@ -88,7 +81,6 @@
    "date": "2026-11-07",
    "channels": [
     "facebook",
-    "instagram",
     "google"
    ],
    "kind": "value",
@@ -103,9 +95,7 @@
    "id": "m07",
    "date": "2026-11-08",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "question",
    "title": "What happens to your calls?",
@@ -118,9 +108,7 @@
    "id": "m08",
    "date": "2026-11-09",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "problem",
    "title": "Storm weekend",
@@ -133,9 +121,7 @@
    "id": "m09",
    "date": "2026-11-10",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "books",
    "title": "Receipts in your pocket",
@@ -149,23 +135,22 @@
    "date": "2026-11-11",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "problem",
    "title": "Burst pipe at 9pm",
    "caption": "A burst pipe at 9pm doesn't wait for morning.\n\nMia is set up to flag urgent jobs and text you who called and what they need, so you can decide what to do first.\n{LINK}",
    "tile": "Urgent jobs get flagged.",
    "brief": "Text tile.",
-   "link": "receptionist"
+   "link": "receptionist",
+   "gbp": "A burst pipe at 9pm doesn't wait for morning. Mia is set up to flag urgent jobs and text you who called and what they need. Message us to hear her."
   },
   {
    "id": "m11",
    "date": "2026-11-12",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "how",
    "title": "Set up around your business",
@@ -180,8 +165,7 @@
    "date": "2026-11-13",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "demo",
    "title": "Hear Mia on a Zoom",
@@ -195,9 +179,7 @@
    "id": "m13",
    "date": "2026-11-14",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "value",
    "title": "Tip: receipt photos",
@@ -211,9 +193,7 @@
    "id": "m14",
    "date": "2026-11-15",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "demo",
    "title": "Talk to Mia on our website",
@@ -228,23 +208,21 @@
    "date": "2026-11-16",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "problem",
    "title": "Keep your number",
    "caption": "Keep your number. When you can't pick up, the call can go to Mia. When you can, you answer as normal.\n\nNo new business cards.\n{LINK}",
    "tile": "Same number. Fewer missed calls.",
    "brief": "Text tile with a van-side phone number motif (no real number).",
-   "link": "receptionist"
+   "link": "receptionist",
+   "gbp": "Keep your own number. When you can't pick up, the call can go to Mia. When you can, you answer as normal. Message us to hear how she sounds."
   },
   {
    "id": "m16",
    "date": "2026-11-17",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "honest",
    "title": "Myth versus fact",
@@ -257,9 +235,7 @@
    "id": "m17",
    "date": "2026-11-18",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "books",
    "title": "Monthly text summary",
@@ -273,8 +249,7 @@
    "date": "2026-11-19",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "value",
    "title": "Five questions to ask first",
@@ -289,23 +264,21 @@
    "date": "2026-11-20",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "offer",
    "title": "Founding places still open",
    "caption": "Founding places for Mia are still open: a hands-on start and a 7-day free trial, while places last.\n{LINK}",
    "tile": "Founding places still open",
    "brief": "Text tile. Post only while founding places remain: HQ will not let you approve this once all five are taken.",
-   "link": "receptionist"
+   "link": "receptionist",
+   "gbp": "Founding places for Mia are still open: a hands-on start and a 7-day free trial, while places last. Message us to find out more."
   },
   {
    "id": "m20",
    "date": "2026-11-21",
    "channels": [
-    "facebook",
-    "instagram",
-    "google"
+    "facebook"
    ],
    "kind": "value",
    "title": "Tip: voicemail greeting",
@@ -318,8 +291,7 @@
    "id": "m21",
    "date": "2026-11-22",
    "channels": [
-    "facebook",
-    "linkedin"
+    "facebook"
    ],
    "kind": "story",
    "title": "Building in the open",
@@ -334,8 +306,7 @@
    "date": "2026-11-23",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "problem",
    "title": "Builders and heating engineers",
@@ -349,9 +320,7 @@
    "id": "m23",
    "date": "2026-11-24",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "books",
    "title": "Sole traders and paperwork",
@@ -364,9 +333,7 @@
    "id": "m24",
    "date": "2026-11-25",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "how",
    "title": "What the text looks like",
@@ -381,8 +348,7 @@
    "date": "2026-11-26",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "faq",
    "title": "Do I change my number?",
@@ -397,8 +363,7 @@
    "date": "2026-11-27",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "demo",
    "title": "15 minutes, no pressure",
@@ -412,9 +377,7 @@
    "id": "m27",
    "date": "2026-11-28",
    "channels": [
-    "facebook",
-    "instagram",
-    "google"
+    "facebook"
    ],
    "kind": "value",
    "title": "Tip: ring back quickly",
@@ -427,9 +390,7 @@
    "id": "m28",
    "date": "2026-11-29",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "question",
    "title": "What should Mia ask callers?",
@@ -442,9 +403,7 @@
    "id": "m29",
    "date": "2026-11-30",
    "channels": [
-    "facebook",
-    "instagram",
-    "linkedin"
+    "facebook"
    ],
    "kind": "story",
    "title": "Thirty days, one question",
@@ -459,8 +418,7 @@
    "date": "2026-12-01",
    "channels": [
     "facebook",
-    "instagram",
-    "linkedin"
+    "google"
    ],
    "kind": "demo",
    "title": "Book a demo",

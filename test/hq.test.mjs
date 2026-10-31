@@ -572,3 +572,11 @@ test('no social post may mention a price or a cost: it can be written and edited
   assert.equal(refreshDrafts(stale), true); assert.ok(!mentionsCost(stale[0].text), 'the unapproved seeded draft was cleaned up'); assert.match(stale[1].text, /£150/, 'an approved post is never rewritten'); assert.equal(stale[2].text, 'My own £ post', 'your own posts are never touched');
   assert.match(move(stale, 'p09', 'scheduled', 0).error, /price or a cost/, 'and the approved one cannot be scheduled until its wording is fixed');
 });
+
+test('seeded posts left over from an earlier plan with other channels are moved onto Facebook and Google, and a post you changed is left alone', async () => {
+  const { refreshDrafts } = await import('../workers/hq/posts.js');
+  const posts = [{ id: 'm01', title: 'x', text: 'x', status: 'draft', platform: 'all', updated: 0 }, { id: 'm02', title: 'x', text: 'x', status: 'approved', platform: 'instagram', updated: 5 }, { id: 'm06', title: 'x', text: 'x', status: 'draft', platform: 'google', updated: 7 }];
+  assert.equal(refreshDrafts(posts), true);
+  assert.ok(['facebook', 'both'].includes(posts[0].platform), 'a removed channel becomes the plan channel'); assert.ok(['facebook', 'both'].includes(posts[1].platform), 'even an approved one cannot keep a channel that no longer exists');
+  assert.equal(posts[2].platform, 'google', 'a post whose platform the owner already set is not overwritten');
+});

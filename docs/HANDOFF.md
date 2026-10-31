@@ -89,3 +89,6 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 - Contents: thank-you page design, softer answering wording, `?utm_source=` capture on the forms, the sales-calls privacy paragraph (wording says "we follow the rules on marketing calls"), and the preview-builds fix.
 - Not verified by me: the live pages (the live addresses are unreachable from the build environment). The owner can open the home page and `/thanks.html`.
 - Owner preference recorded: do not end each message with owner to-do reminders. Park owner tasks in `docs/OWNER-TODO.md` and raise them only when blocked and the owner is involved.
+
+## Deployed 31 Oct 2026, seventh time (hq only; owner said "deploy" in chat for the cleaned content queue)
+- hq `d3656366` (previous `5c9c1a25`). Gate passed; 5 bindings and logs (with query redaction) preserved. Brings the 30-day social queue as drafts, the rule that no post may mention a cost (HQ refuses to approve, schedule or mark posted any such post), and automatic clean-up of unapproved seeded drafts. books unchanged at `777e3fd3`. Nothing posted or scheduled by anyone.

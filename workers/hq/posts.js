@@ -14,7 +14,7 @@ const KIND = { draft: 'warn', approved: 'ok', scheduled: 'ok', posted: 'ok', rej
 // where each status may go next
 const MOVES = { draft: ['approved', 'rejected'], approved: ['scheduled', 'posted', 'draft', 'rejected'], scheduled: ['posted', 'approved'], posted: [], rejected: ['draft'] };
 
-const PLATFORMS = { facebook: 'Facebook', instagram: 'Instagram', linkedin: 'LinkedIn', tiktok: 'TikTok', google: 'Google Business Profile', all: 'Several channels (see the note)', both: 'Facebook and Google' };
+const PLATFORMS = { facebook: 'Facebook Page', google: 'Google Business Profile', both: 'Facebook and Google' };
 const FOUNDING_RE = /founding|setup waived|free setup/i, DEMO_RE = /talk to her|demo line|talk to mia/i;
 const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
 export const today = (now = Date.now()) => new Date(now).toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
@@ -47,7 +47,9 @@ export const missingSeeds = (posts) => { const have = new Set((posts || []).map(
 // Drafts nobody has approved yet follow the latest wording from the repo (for example when a post was reworded). Approved, scheduled, posted and your own posts are never touched.
 export function refreshDrafts(posts) {
   const latest = new Map([...SEED_POSTS, ...SEED_MORE].map(x => [x.id, x])); let changed = false;
-  for (const p of posts || []) { const n = latest.get(p.id); if (n && !p.custom && p.status === 'draft' && (p.text !== n.text || p.title !== n.title)) { Object.assign(p, { text: n.text, title: n.title, picture: n.picture, note: n.note, founding: n.founding, demo: n.demo }); changed = true; } }
+  for (const p of posts || []) { const n = latest.get(p.id);
+    // a platform that no longer exists (earlier plans had more channels) becomes the plan's one; an untouched draft follows the plan's platform
+    if (n && !p.custom && (!PLATFORMS[p.platform] || (p.status === 'draft' && !p.updated && p.platform !== n.platform))) { p.platform = n.platform; changed = true; } if (n && !p.custom && p.status === 'draft' && (p.text !== n.text || p.title !== n.title)) { Object.assign(p, { text: n.text, title: n.title, picture: n.picture, note: n.note, founding: n.founding, demo: n.demo }); changed = true; } }
   return changed;
 }
 export const seedPosts = () => SEED_POSTS.map(p => ({ ...p, status: 'draft', updated: 0 }));
