@@ -5,6 +5,11 @@ import { readFileSync } from 'node:fs';
 import { checkoutParams } from '../workers/books/stripe.js';
 
 const html = readFileSync('public/thanks.html', 'utf8');
+test('the thank-you pages do not promise a receipt (a trial sign-up has no payment, so none would be sent)', async () => {
+  const { readFileSync } = await import('node:fs'); const w = readFileSync('workers/books/worker.js', 'utf8'), p = readFileSync('public/thanks.html', 'utf8');
+  for (const t of [w.slice(w.indexOf('const THANKS_PAGE'), w.indexOf('const FOUNDING_PLACES')), p]) { assert.ok(!/receipt/i.test(t.replace(/<style>[\s\S]*?<\/style>/, ''))); assert.match(t, /tell you before anything is charged/); }
+});
+
 test('thanks page: not indexed, no scripts, legal links work, makes no promise of timing or price', () => {
   assert.match(html, /<meta name="robots" content="noindex">/); assert.ok(!/<script/i.test(html));
   assert.match(html, /href="terms\.html"/); assert.match(html, /href="privacy\.html"/); assert.match(html, /mailto:hello@localdeskai\.co\.uk/);

@@ -2137,7 +2137,7 @@ async function markLead(store, id, state, now = Date.now()) {
 }
 const THANKS_PAGE = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Thank you | Localdesk</title>
 <style>body{margin:0;background:#F6F7F8;color:#1F2328;font:18px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}main{max-width:560px;margin:0 auto;padding:48px 20px}.brand{font-weight:800;letter-spacing:.04em;margin-bottom:28px}.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,.08)}h1{margin:0 0 12px;font-size:28px}a{color:#8a6100}p{margin:0 0 14px}</style></head>
-<body><main><div class="brand">LOCALDESK</div><div class="card"><h1>Thank you</h1><p>Your sign-up has gone through. Stripe will email you a receipt, and nothing else is charged without you knowing.</p><p><b>What happens next:</b> we'll be in touch by phone or text to finish setting things up with you. If you have a question in the meantime, email <a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a>.</p><p>Localdesk, a trading name of Gio Petrucci, sole trader, Saltash, Cornwall.</p></div></main></body></html>`;
+<body><main><div class="brand">LOCALDESK</div><div class="card"><h1>Thank you</h1><p>Your sign-up has gone through. We will always tell you before anything is charged.</p><p><b>What happens next:</b> we'll be in touch by phone or text to finish setting things up with you. If you have a question in the meantime, email <a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a>.</p><p>Localdesk, a trading name of Gio Petrucci, sole trader, Saltash, Cornwall.</p></div></main></body></html>`;
 const FOUNDING_PLACES = 5;
 // Founding places are reserved in the Store, which handles one request at a time and serialises claims. Fail closed: any problem means no place.
 async function foundingOp(store, op, id, extra = {}) {
@@ -2542,8 +2542,12 @@ export class Store {
       return Response.json({ ok: true, id });
     }
     if (url.pathname === '/once' && request.method === 'POST') { // true the first time a key is seen (used to ignore repeated Stripe events)
-      const { key } = JSON.parse(await request.text() || '{}');
-      const run = async () => { if (await this.storage.get(`once:${key}`)) return { first: false }; await this.storage.put(`once:${key}`, Date.now()); return { first: true }; };
+      const { key, op } = JSON.parse(await request.text() || '{}');
+      const run = async () => {
+        if (op === 'check') return { first: !(await this.storage.get(`once:${key}`)) };            // look only
+        if (op === 'set') { await this.storage.put(`once:${key}`, Date.now()); return { ok: true }; } // record it, after the work succeeded
+        if (await this.storage.get(`once:${key}`)) return { first: false }; await this.storage.put(`once:${key}`, Date.now()); return { first: true };
+      };
       const turn = (this._once || Promise.resolve()).then(run, run); this._once = turn.catch(() => {});
       return Response.json(await turn);
     }

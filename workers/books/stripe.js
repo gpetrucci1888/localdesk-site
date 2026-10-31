@@ -25,9 +25,16 @@ export async function verifyStripeSignature(secret, rawBody, header, nowMs = Dat
 
 // What a subscription event means for the founding places.
 export async function handleEvent(event, { store, foundingOp, markLead, now = Date.now() }) {
-  const first = await (await store.fetch('https://store/once', { method: 'POST', body: JSON.stringify({ key: `stripe:${event.id}` }) })).json();
-  if (!first.first) return { ignored: 'event already handled' };
+  const once = async (op) => (await store.fetch('https://store/once', { method: 'POST', body: JSON.stringify({ key: `stripe:${event.id}`, op }) })).json();
+  if (!(await once('check')).first) return { ignored: 'event already handled' };
   if (!['customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'].includes(event.type)) return { ignored: 'event type not used' };
+  // An event is recorded as handled only AFTER its work succeeded. If a step fails, the error becomes a 500 and Stripe's retry runs the work again.
+  // Every step is safe to repeat (founding claim, activate and cancel are idempotent, and marking a lead sets values), so a retry cannot double anything.
+  const result = await applyEvent(event, { store, foundingOp, markLead, now });
+  await once('set');
+  return result;
+}
+async function applyEvent(event, { store, foundingOp, markLead, now }) {
   const sub = event.data && event.data.object || {}, md = sub.metadata || {};
   const validLead = /^[\w-]{1,40}$/.test(md.lead_id || '') && ['receptionist', 'books'].includes(md.product);
   const live = ['trialing', 'active'].includes(sub.status) && event.type !== 'customer.subscription.deleted';

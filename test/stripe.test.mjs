@@ -171,3 +171,17 @@ test('a failed payment is recorded on the lead without taking the payment tick o
   await hook(w, 'customer.subscription.updated', sub(b, 'past_due', 'true')); assert.equal((await places(w)).active, 1, 'a failed payment does not release a founding place');
   await hook(w, 'customer.subscription.deleted', sub(b, 'canceled', 'true')); assert.equal((await get(b)).checklist.payment, false); assert.equal((await get(b)).subscription.status, 'cancelled');
 });
+
+test('an event is recorded as handled only after its work succeeded: a failure mid-way leaves it retryable, and a retry cannot double anything', async () => {
+  const { handleEvent } = await import('../workers/books/stripe.js'); const seen = new Set();
+  const store = { fetch: async (u, init) => { const b = JSON.parse(init.body); const k = b.key; if (b.op === 'check') return Response.json({ first: !seen.has(k) }); if (b.op === 'set') { seen.add(k); return Response.json({ ok: true }); } return Response.json({ first: !seen.has(k) }); } };
+  const calls = []; let failMark = true;
+  const deps = { store, now: Date.now(), foundingOp: async (_s, op, id) => { calls.push(op); return { ok: true }; }, markLead: async () => { if (failMark) throw new Error('store hiccup'); calls.push('mark'); return true; } };
+  const ev = { id: 'evt_retry', type: 'customer.subscription.created', data: { object: { id: 'sub_1', status: 'trialing', metadata: { lead_id: 'lead1', product: 'receptionist', founding: 'true' } } } };
+  await assert.rejects(() => handleEvent(ev, deps), /store hiccup/, 'a failing step makes the webhook answer an error, so Stripe retries');
+  assert.equal(seen.has('stripe:evt_retry'), false, 'the failed attempt was NOT recorded as handled');
+  failMark = false; const again = await handleEvent(ev, deps);
+  assert.deepEqual(again, { activated: 'lead1', marked: true }); assert.equal(seen.has('stripe:evt_retry'), true);
+  assert.deepEqual(await handleEvent(ev, deps), { ignored: 'event already handled' }, 'once it worked, a repeat is ignored');
+  assert.equal(calls.filter(c => c === 'mark').length, 1);
+});
