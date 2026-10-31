@@ -580,3 +580,11 @@ test('seeded posts left over from an earlier plan with other channels are moved 
   assert.ok(['facebook', 'both'].includes(posts[0].platform), 'a removed channel becomes the plan channel'); assert.ok(['facebook', 'both'].includes(posts[1].platform), 'even an approved one cannot keep a channel that no longer exists');
   assert.equal(posts[2].platform, 'google', 'a post whose platform the owner already set is not overwritten');
 });
+
+test('trials ending within two days are listed for a decision call, founding or not, and finished, cancelled or lost ones are not', async () => {
+  const { trialsEnding } = await import('../workers/hq/leads.js');
+  const now = Date.parse('2026-11-05T10:00:00Z'), secs = (d) => Math.floor((now + d * 86400000) / 1000);
+  const L = (id, o = {}) => ({ id, name: id, product: 'receptionist', status: 'trial', subscription: { status: 'trialing', trial_end: secs(1) }, ...o });
+  const rows = trialsEnding([L('soon'), L('founding', { checklist: { founding: true }, subscription: { status: 'trialing', trial_end: secs(0.5) } }), L('later', { subscription: { status: 'trialing', trial_end: secs(5) } }), L('over', { subscription: { status: 'active', trial_end: secs(-1) } }), L('cancelled', { subscription: { status: 'cancelled', trial_end: secs(1) } }), L('lost', { status: 'lost' }), L('books', { product: 'books' }), L('nosub', { subscription: undefined })], now);
+  assert.deepEqual(rows.map(r => r.lead.id), ['founding', 'soon']);
+});

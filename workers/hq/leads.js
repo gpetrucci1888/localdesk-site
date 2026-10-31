@@ -34,6 +34,9 @@ export const zoomsSoon = (leads, now = Date.now()) => {
 // Non-founding Receptionist clients owe the setup fee when the 7-day trial ends. Returns those whose trial ends within 2 days or has ended and who are not ticked as invoiced.
 export const setupDue = (leads, now = Date.now()) => (leads || []).filter(l => l.product === 'receptionist' && !(l.checklist && l.checklist.founding) && !(l.checklist && l.checklist.setup_fee) && l.subscription && l.subscription.trial_end && l.subscription.status !== 'cancelled' && l.status !== 'lost' && l.subscription.trial_end * 1000 <= now + 2 * 86400000)
   .map(l => ({ lead: l, ends: new Date(l.subscription.trial_end * 1000), over: l.subscription.trial_end * 1000 <= now }));
+// Every Receptionist trial (founding or not) that ends within 2 days and is still running: ring them for the decision before the first payment is taken.
+export const trialsEnding = (leads, now = Date.now()) => (leads || []).filter(l => l.product === 'receptionist' && l.subscription && l.subscription.trial_end && l.subscription.status !== 'cancelled' && l.status !== 'lost' && l.subscription.trial_end * 1000 > now && l.subscription.trial_end * 1000 <= now + 2 * 86400000)
+  .map(l => ({ lead: l, ends: new Date(l.subscription.trial_end * 1000) })).sort((x, y) => x.ends - y.ends);
 export const isDue = (l) => Boolean(l.next_at) && l.next_at <= today() && l.status !== 'paying' && l.status !== 'lost';
 const first = (n) => String(n || '').trim().split(/\s+/)[0] || 'there';
 const intl = (p) => { const d = String(p || '').replace(/\D/g, ''); return d.startsWith('00') ? d.slice(2) : d.startsWith('44') ? d : d.startsWith('0') ? '44' + d.slice(1) : d; };
