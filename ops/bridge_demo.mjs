@@ -6,25 +6,29 @@ import { MemStorage } from '../test/harness.mjs';
 
 const SECRET = 'demo-webhook-secret', t0 = Date.now(), stamp = () => `+${String(Date.now() - t0).padStart(4)}ms`;
 const say = (m) => console.log(`${stamp()}  ${m}`);
-const obj = new Bridge({ storage: new MemStorage() }), stub = { fetch: (u, i) => obj.fetch(new Request(u, i)) };
+const storage = new MemStorage(); storage.setAlarm = async () => {}; // in production a Durable Object alarm runs the job a moment after the webhook returns
 const env = { BRIDGE_MODE: 'live', GITHUB_WEBHOOK_SECRET: SECRET, GITHUB_TOKEN: 'github_pat_demo0123456789abcdefghij', OPENAI_API_KEY: 'sk-demo-0123456789abcdefghij', OPENAI_MODEL: 'demo-model',
-  ALLOWED_REPO: 'owner/repo', ALLOWED_AUTHORS: 'owner', PRICE_IN_PER_MTOK: '2', PRICE_OUT_PER_MTOK: '8', BRIDGE_ADMIN_TOKEN: 'demo-admin', MIN_SECONDS_BETWEEN_REVIEWS: '0', BRIDGE: { idFromName: () => 'main', get: () => stub } };
+  ALLOWED_REPO: 'owner/repo', ALLOWED_AUTHORS: 'owner', PRICE_IN_PER_MTOK: '2', PRICE_OUT_PER_MTOK: '8', BRIDGE_ADMIN_TOKEN: 'demo-admin', MIN_SECONDS_BETWEEN_REVIEWS: '0' };
+const obj = new Bridge({ storage }, env), stub = { fetch: (u, i) => obj.fetch(new Request(u, i)) };
+env.BRIDGE = { idFromName: () => 'main', get: () => stub };
 
 const posted = [];
 globalThis.fetch = async (u, init = {}) => {
   const url = String(u);
   if (url.startsWith('https://api.openai.com/')) { say('OpenAI (mock): reviewer called'); return Response.json({ output_text: 'VERDICT: approve with changes\nDECISION CLASS: routine (Claude proceeds on its own)\nFINDINGS:\n1. medium: workers/books/worker.js: the founding claim has no test for a release after a failed save. Add one.\nINSTRUCTIONS FOR CLAUDE:\n1. Add the test, then continue with the Stripe plan.\nQUESTIONS: none', usage: { input_tokens: 14000, output_tokens: 300 } }); }
+  const accept = (init.headers || {}).Accept || '';
   if (init.method === 'POST') { posted.push(JSON.parse(init.body).body); say('GitHub (mock): reply posted on the pull request'); return Response.json({ id: 1 }); }
-  if (url.includes('/pulls/')) return new Response('diff --git a/x b/x\n+example change\n');
-  if (url.includes('/comments')) return Response.json([]);
+  if (/\/pulls\/\d+$/.test(url)) return accept.includes('diff') ? new Response('diff --git a/x b/x\n+example change\n') : Response.json({ head: { sha: 'c'.repeat(40), ref: 'stage1-founding' }, base: { ref: 'main' } });
+  if (url.includes('/commits/')) return Response.json({ sha: 'c'.repeat(40) });
+  if (url.includes('/comments')) return Response.json(posted.map(body => ({ body, created_at: new Date().toISOString() })));
   return new Response(`(mock contents of ${url.split('/contents/')[1]})`);
 };
 
 const sign = async (body) => { const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); return 'sha256=' + [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(body)))].map(b => b.toString(16).padStart(2, '0')).join(''); };
 async function webhook(comment, { who = 'owner', assoc = 'OWNER', delivery } = {}) {
   const body = JSON.stringify({ action: 'created', repository: { full_name: 'owner/repo' }, issue: { number: 6, pull_request: {} }, comment: { id: Math.floor(Math.random() * 1e9), body: comment, user: { login: who }, author_association: assoc } });
-  const pending = [], res = await bridgeWorker.fetch(new Request('https://bridge.demo/webhook', { method: 'POST', headers: { 'X-GitHub-Event': 'issue_comment', 'X-GitHub-Delivery': delivery || crypto.randomUUID(), 'X-Hub-Signature-256': await sign(body) }, body }), env, { waitUntil: (p) => pending.push(p) });
-  await Promise.all(pending); return res.json();
+  const res = await bridgeWorker.fetch(new Request('https://bridge.demo/webhook', { method: 'POST', headers: { 'X-GitHub-Event': 'issue_comment', 'X-GitHub-Delivery': delivery || crypto.randomUUID(), 'X-Hub-Signature-256': await sign(body) }, body }), env, { waitUntil: () => {} });
+  const out = await res.json(); if (res.status === 202) { say('   job saved, alarm fires, review runs'); await obj.runDue(); } return out;
 }
 
 say('1. Claude finishes a milestone and posts a structured request on PR #6');

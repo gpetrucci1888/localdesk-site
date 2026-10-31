@@ -20,5 +20,5 @@
   },
   "durable_objects": { "bindings": [{ "name": "BRIDGE", "class_name": "Bridge" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Bridge"] }],
-  "triggers": { "crons": ["*/5 * * * *"] }
+  "triggers": { "crons": ["*/15 * * * *"] }
 }
