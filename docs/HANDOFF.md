@@ -1,5 +1,7 @@
 # Handoff (written 30 Oct 2026, end of a long session)
 
+**RELEASED 30 Oct 2026 (owner said "deploy" in chat): `main` is at 40e39a3 (PRs #2 and #3 merged). Books and HQ workers were deployed from that commit; rollback copies of the previous live code were saved in the old session scratchpad only. HQ has `leads.js`. Not yet live: nothing except the open branches `claude-handoff` (PR #6) and `fix-xero-selftest`. HQ money figures count nobody as paying until `STRIPE_PRICES_BOOKS` / `STRIPE_PRICES_RECEPTIONIST` are set on the HQ worker (and Stripe is connected there: HQ has no STRIPE_KEY yet).**
+
 Read this first in a new session, then `CLAUDE.md` and `PROGRESS.md`. Secrets and private business notes are NOT in this repo (see "Where private things live").
 
 ## What exists and is live
