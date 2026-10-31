@@ -12,6 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
+import { b64u, newChallenge, verifyRegistration, verifyAssertion, loginScript } from './passkey.js';
 import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
 
 const enc = new TextEncoder();
@@ -106,6 +107,15 @@ export class Vault {
       if (request.method === 'PUT') { await s.put('totp', body); return Response.json({ ok: true }); }
       if (request.method === 'DELETE') { await s.delete('totp'); return Response.json({ ok: true }); }
     }
+    if (url.pathname === '/pk') { // passkeys: devices, and one-time challenges
+      const now = Date.now();
+      if (body.op === 'list') return Response.json((await s.get('pk')) || []);
+      if (body.op === 'add') { const l = ((await s.get('pk')) || []).filter(k => k.id !== body.key.id); l.push(body.key); await s.put('pk', l.slice(-10)); return Response.json({ ok: true }); }
+      if (body.op === 'remove') { await s.put('pk', ((await s.get('pk')) || []).filter(k => k.id !== body.id)); return Response.json({ ok: true }); }
+      if (body.op === 'count') { await s.put('pk', ((await s.get('pk')) || []).map(k => k.id === body.id ? { ...k, signCount: body.count, lastUsed: now } : k)); return Response.json({ ok: true }); }
+      if (body.op === 'challenge') { await s.put(`pkch:${body.value}`, { kind: body.kind, exp: now + 5 * 60000 }); return Response.json({ ok: true }); }
+      if (body.op === 'use') { const c = await s.get(`pkch:${body.value}`); await s.delete(`pkch:${body.value}`); return Response.json({ ok: !!c && c.kind === body.kind && c.exp > now }); }
+    }
     if (url.pathname === '/reset') {
       if (body.value !== undefined && (await s.get('resetSeen')) !== body.value) { await s.put('resetSeen', body.value); await s.delete('totp'); }
       return Response.json({ ok: true });
@@ -152,32 +162,36 @@ const vpost = (v, path, body) => vget(v, path, { method: 'POST', body: JSON.stri
 
 
 // ---------- login ----------
-const loginPage = (msg = '', enrol = null) => bare('Log in', `<h1>${enrol ? 'First time here' : 'Welcome back'}</h1>
+const loginPage = (msg = '', enrol = null, nonce = '') => bare('Log in', `<h1>${enrol ? 'First time here' : 'Welcome back'}</h1>
 <p class="lead">${enrol ? 'Set up your phone app once. After this, login takes seconds.' : 'Your private control room for Localdesk.'}</p>
 ${msg ? `<div class="banner bad" style="margin-top:14px">${ICON.alert}<div><p>${msg}</p></div></div>` : ''}
 ${enrol ? `<ol class="steps" style="margin-top:16px"><li>Open your authenticator app (Google Authenticator) and tap <b>+</b>, then <b>Enter a setup key</b>.</li><li>Name it <b>Localdesk HQ</b>, type this key, and choose <b>Time based</b>:</li></ol><p class="key">${esc(enrol)}</p><p class="help">The app then shows a 6-digit code. Type it below, together with your passphrase.</p>` : ''}
-<form method="post" action="/login" autocomplete="off">
-<label for="pw">Your passphrase</label><input id="pw" type="password" name="password" autocomplete="current-password" required autofocus>
+${enrol ? '' : `<button type="button" id="pk-login" class="btn block" hidden style="margin-top:14px">Log in with Face ID or fingerprint</button><p id="pk-msg" class="help" hidden role="alert"></p>`}
+<form method="post" action="/login">
+<label for="pw">Your passphrase</label><input id="pw" type="password" name="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required${enrol ? ' autofocus' : ''}>
+<label style="display:flex;align-items:center;gap:12px;font-weight:600;margin-top:10px"><input type="checkbox" id="pw-show" style="width:26px;height:26px;min-height:0;flex:none">Show what I type</label>
 <label for="cd">6-digit code from your phone app${enrol ? '' : '<small>Leave blank only the very first time.</small>'}</label><input id="cd" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"${enrol ? ' required' : ''}>
 <label style="display:flex;align-items:center;gap:12px;font-weight:600;margin-top:16px"><input type="checkbox" name="remember" value="1" checked style="width:26px;height:26px;min-height:0;flex:none">Keep me logged in on this device for 3 months</label>
-<button class="btn block" style="margin-top:14px">Log in</button></form>`);
+<button class="btn block" style="margin-top:14px">Log in</button></form>
+${nonce ? `<script nonce="${nonce}">document.getElementById('pw-show').addEventListener('change',function(e){document.getElementById('pw').type=e.target.checked?'text':'password'})</script>${loginScript(nonce)}` : ''}`);
+const pageCsp = (nonce) => `default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data:; form-action 'self'; connect-src 'self'; script-src 'nonce-${nonce}'; frame-ancestors 'none'; base-uri 'none'`;
 const WRONG = 'That didn\'t work. Check your passphrase, and that the 6-digit code is the current one (it changes every 30 seconds).';
 
-async function handleLogin(request, env) {
+async function handleLogin(request, env, nonce) {
   const vault = vaultOf(env), who = await sha256(request.headers.get('CF-Connecting-IP') || 'unknown');
-  if ((await vpost(vault, '/check', { who })).locked) return html(loginPage('Too many wrong tries from this device. For your security, wait 15 minutes and try again.'), 429);
+  if ((await vpost(vault, '/check', { who })).locked) return html(loginPage('Too many wrong tries from this device. For your security, wait 15 minutes and try again.', null, nonce), 429);
   const form = await request.formData().catch(() => null);
   const password = form && String(form.get('password') || ''), code = form ? String(form.get('code') || '').trim() : '';
-  const fail = async (msg) => { await vpost(vault, '/fail', { who }); return html(loginPage(msg), 401); };
-  if (!env.OWNER_PASSWORD || !(await same(password, env.OWNER_PASSWORD))) return fail(WRONG);
+  const fail = async (msg) => { await vpost(vault, '/fail', { who }); return html(loginPage(msg, null, nonce), 401); };
+  if (!env.OWNER_PASSWORD || !(await same(password, env.OWNER_PASSWORD) || await same(password.trim(), env.OWNER_PASSWORD))) return fail(WRONG); // phone keyboards add a stray space
   let rec = await vget(vault, '/totp');
   if (!rec) { // first login: make a secret, keep it pending until a valid code proves the authenticator works
     rec = { secret: b32encode(crypto.getRandomValues(new Uint8Array(20))), active: false, lastStep: -1 };
     await vget(vault, '/totp', { method: 'PUT', body: JSON.stringify(rec) });
   }
-  if (!code && !rec.active) return html(loginPage('', rec.secret));
+  if (!code && !rec.active) return html(loginPage('', rec.secret, nonce));
   const step = await codeStep(rec.secret, code);
-  if (step < 0 || step <= rec.lastStep) return rec.active ? fail(WRONG) : html(loginPage('That code wasn\'t right. Wait for the app to show a new one and try again.', rec.secret), 401);
+  if (step < 0 || step <= rec.lastStep) return rec.active ? fail(WRONG) : html(loginPage('That code wasn\'t right. Wait for the app to show a new one and try again.', rec.secret, nonce), 401);
   rec = { ...rec, active: true, lastStep: step };
   await vget(vault, '/totp', { method: 'PUT', body: JSON.stringify(rec) });
   await vpost(vault, '/ok', { who });
@@ -458,7 +472,17 @@ const pageSettings = () => shell('Settings', `<h1>Settings</h1>
 <div class="card"><h2>Your HQ login</h2><details><summary>I've lost my phone</summary><p>In Cloudflare, open <b>Workers &amp; Pages</b>, then <b>hq</b>, then <b>Settings</b>, then <b>Variables and Secrets</b>. Change the variable <code>RESET_TOTP</code> to any new word. Then log in again and set up the app on your new phone.</p></details><details><summary>I want a new passphrase</summary><p>In the same place in Cloudflare, edit <code>OWNER_PASSWORD</code> and save. Every phone and computer is logged out and you log in with the new one.</p></details></div>
 <div class="card"><h2>Lost or lent a device?</h2><p class="mute">HQ remembers your phone and computer for 3 months so you don't log in every time. If a device is lost, log every device out at once. You then log back in with your passphrase and code.</p><form method="post" action="/logout-all"><button class="btn block danger">Log out every device</button></form></div>
 <form method="post" action="/logout"><button class="btn block line">Log out of this device</button></form>`, '/settings');
-const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/leads', 'Leads', 'Enquiries and follow-ups', 'leads'], ['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
+async function pagePasskey(vault, nonce, added) {
+  const keys = await vpost(vault, '/pk', { op: 'list' });
+  return shell('Face ID login', `<h1>Face ID or fingerprint login</h1>
+${added ? banner('ok', 'Added', 'Next time, tap "Log in with Face ID or fingerprint" on the login page.') : ''}
+<div class="card"><h2>Add this device</h2><p class="mute">Do this on each phone or computer you want to log in with. You will be asked for your Face ID, fingerprint or phone PIN.</p>
+<label for="pk-name">Name for this device</label><input id="pk-name" maxlength="40" placeholder="e.g. My iPhone" autocapitalize="words">
+<button type="button" id="pk-add" class="btn block" style="margin-top:14px">Add Face ID or fingerprint</button><p id="pk-msg" class="help" hidden role="alert"></p></div>
+<div class="card"><h2>Your devices</h2>${keys.length ? `<div class="list">${keys.map(k => `<div class="item"><span class="body"><b>${esc(k.name)}</b><small>Added ${esc(k.added || '')}</small></span><form method="post" action="/passkey/delete"><input type="hidden" name="id" value="${esc(k.id)}"><button class="btn line">Remove</button></form></div>`).join('')}</div>` : '<p class="mute">None yet. Your passphrase and code still work either way.</p>'}</div>
+${loginScript(nonce)}`, '/more');
+}
+const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/leads', 'Leads', 'Enquiries and follow-ups', 'leads'], ['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/passkey', 'Face ID login', 'Log in with a touch', 'settings'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
 
 // ---------- help ----------
 function md(src) {
@@ -499,7 +523,29 @@ export default {
     if (url.pathname === '/font.woff') return fontResponse();
     if (!env.OWNER_PASSWORD) return respond(html(bare('Not set up', '<h1>Not switched on yet</h1><p class="lead">HQ stays closed until you set your passphrase in Cloudflare. The setup guide has the steps.</p>'), 503));
     if (env.RESET_TOTP !== undefined) await vpost(vault, '/reset', { value: String(env.RESET_TOTP) });
-    if (url.pathname === '/login') return respond(request.method === 'POST' ? await handleLogin(request, env) : html(loginPage()));
+    const nonce = newChallenge().slice(0, 16), withNonce = { csp: pageCsp(nonce) };
+    if (url.pathname === '/login') return respond(request.method === 'POST' ? await handleLogin(request, env, nonce) : html(loginPage('', null, nonce)), withNonce);
+    const origin = url.origin, jsonOut = (o, status = 200) => respond(Response.json(o, { status, headers: { 'Cache-Control': 'no-store' } }));
+    if (request.method === 'POST' && url.pathname === '/passkey/options') { // login step 1: a one-time challenge
+      const who = await sha256(request.headers.get('CF-Connecting-IP') || 'unknown');
+      if ((await vpost(vault, '/check', { who })).locked) return jsonOut({ error: 'Too many wrong tries. Wait 15 minutes.' }, 429);
+      const challenge = newChallenge(); await vpost(vault, '/pk', { op: 'challenge', kind: 'get', value: challenge });
+      return jsonOut({ challenge });
+    }
+    if (request.method === 'POST' && url.pathname === '/passkey/login') { // login step 2: check the signature
+      const who = await sha256(request.headers.get('CF-Connecting-IP') || 'unknown');
+      if ((await vpost(vault, '/check', { who })).locked) return jsonOut({ error: 'Too many wrong tries. Wait 15 minutes.' }, 429);
+      const body = await request.json().catch(() => ({}));
+      const bad = async () => { await vpost(vault, '/fail', { who }); return jsonOut({ error: 'That did not work. Use your passphrase instead.' }, 401); };
+      let cd; try { cd = JSON.parse(new TextDecoder().decode(b64u.dec(body.clientDataJSON))); } catch { return bad(); }
+      if (!(await vpost(vault, '/pk', { op: 'use', kind: 'get', value: String(cd.challenge || '') })).ok) return bad();
+      const key = (await vpost(vault, '/pk', { op: 'list' })).find(k => k.id === body.id), rec2 = await vget(vault, '/totp');
+      if (!key || !rec2 || !rec2.active) return bad();
+      const count = await verifyAssertion(body, key, { challenge: cd.challenge, origin, rpId: url.hostname });
+      if (count === null) return bad();
+      await vpost(vault, '/pk', { op: 'count', id: key.id, count }); await vpost(vault, '/ok', { who });
+      return respond(Response.json({ ok: true }, { headers: { 'Set-Cookie': cookie(await makeSession(env, rec2, (await vget(vault, '/epoch')).n, REMEMBER_SECONDS), REMEMBER_SECONDS), 'Cache-Control': 'no-store' } }));
+    }
     const [rec, ep] = await Promise.all([vget(vault, '/totp'), vget(vault, '/epoch')]);
     const epoch = ep.n;
     const authed = await validSession(env, rec, epoch, request.headers.get('Cookie'));
@@ -508,6 +554,25 @@ export default {
     if (!authed) return respond(redirect('/login'));
     try {
       const p = url.pathname;
+      if (request.method === 'POST' && p === '/passkey/new-options') {
+        const challenge = newChallenge(); await vpost(vault, '/pk', { op: 'challenge', kind: 'create', value: challenge });
+        return jsonOut({ challenge, user: b64u.enc(enc.encode('owner')) });
+      }
+      if (request.method === 'POST' && p === '/passkey/register') {
+        const body = await request.json().catch(() => ({}));
+        let cd; try { cd = JSON.parse(new TextDecoder().decode(b64u.dec(body.clientDataJSON))); } catch { return jsonOut({ error: 'That did not work.' }, 400); }
+        if (!(await vpost(vault, '/pk', { op: 'use', kind: 'create', value: String(cd.challenge || '') })).ok) return jsonOut({ error: 'That took too long. Try again.' }, 400);
+        const key = await verifyRegistration(body, { challenge: cd.challenge, origin });
+        if (!key) return jsonOut({ error: 'That did not work. Nothing was added.' }, 400);
+        await vpost(vault, '/pk', { op: 'add', key: { ...key, name: String(body.name || '').trim().slice(0, 40) || 'My device', added: new Date().toISOString().slice(0, 10) } });
+        return jsonOut({ ok: true });
+      }
+      if (request.method === 'POST' && p === '/passkey/delete') {
+        const f = await request.formData().catch(() => new FormData());
+        await vpost(vault, '/pk', { op: 'remove', id: String(f.get('id') || '') });
+        return respond(redirect('/passkey'));
+      }
+      if (request.method === 'GET' && p === '/passkey') return respond(html(await pagePasskey(vault, nonce, url.searchParams.get('added') === '1')), withNonce);
       if (request.method === 'POST') {
         if (p === '/backups/download') {
           const date = String((await request.formData().catch(() => new FormData())).get('date') || '');
