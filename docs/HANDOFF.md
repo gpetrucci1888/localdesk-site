@@ -82,4 +82,4 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 - Rollback targets: books `6c138077`, hq `15d95823`. Bindings and Stripe secrets preserved (books 24 bindings incl. the key, webhook secret and four price variables; hq 5).
 
 ## Deployed 31 Oct 2026, sixth time (books only; owner asked for a cleaner, modern thank-you page, under the standing permission for books and hq fixes)
-- books: new version recorded on PR #6; previous `4a2673d8`. hq unchanged at `5c9c1a25`. Redesigned `/thanks` page (card, tick, three steps, call to action, dark mode, mobile first, no scripts). `public/thanks.html` has the same design for the next website publish.
+- books: new version `777e3fd3`; previous `4a2673d8`. hq unchanged at `5c9c1a25`. Redesigned `/thanks` page (card, tick, three steps, call to action, dark mode, mobile first, no scripts). `public/thanks.html` has the same design for the next website publish.
