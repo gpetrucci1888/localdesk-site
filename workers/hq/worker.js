@@ -234,6 +234,16 @@ async function cachedHealth(env) {
   if (!data.error) await vpost(v, '/hc', { at: Date.now(), data });
   return data;
 }
+// The owner lists the monthly price ids in Cloudflare on the books worker. HQ reads them from there too, so they are set once. The hq
+// variables STRIPE_PRICES_RECEPTIONIST and STRIPE_PRICES_BOOKS still work and are added on top.
+async function priceCfg(env, status) {
+  const cfg = priceConfig(env);
+  try {
+    const st = status !== undefined ? status : await books(env, '/stripe/status').then(r => r.ok ? r.json() : null);
+    if (st && st.prices) { if (/^price_\w+$/.test(st.prices.receptionist || '')) cfg.receptionist.add(st.prices.receptionist); if (/^price_\w+$/.test(st.prices.books || '')) cfg.books.add(st.prices.books); }
+  } catch { /* the hq variables still apply */ }
+  return cfg;
+}
 async function load(env) {
   const [health, subs, charges, bl] = await Promise.all([
     cachedHealth(env),
@@ -242,7 +252,7 @@ async function load(env) {
     vget(vaultOf(env), '/bk/list'),
   ]);
   const clients = health.clients || [];
-  const cfg = priceConfig(env);
+  const cfg = await priceCfg(env);
   const subList = (subs.data || []).map(s => {
     const cust = s.customer && typeof s.customer === 'object' ? s.customer : {}, f = subscriptionFacts(s, cfg);
     return { id: s.id, who: cust.name || cust.email || 'Customer', email: cust.email || '', plan: f.plan, per: f.per, status: s.status, cancelling: Boolean(s.cancel_at_period_end), since: s.created * 1000, priceId: f.priceId, product: f.product, isBooks: f.product === 'books', invoicePaid: s.latest_invoice && typeof s.latest_invoice === 'object' ? s.latest_invoice.status === 'paid' : null };
@@ -306,7 +316,7 @@ async function leadSave(request, env, id) {
   return redirect(`/leads/${encodeURIComponent(id)}?done=saved`);
 }
 async function pageStripeCheck(env) {
-  const status = await books(env, '/stripe/status').then(r => r.ok ? r.json() : null).catch(() => null), cfg = priceConfig(env), fetched = {};
+  const status = await books(env, '/stripe/status').then(r => r.ok ? r.json() : null).catch(() => null), cfg = await priceCfg(env, status), fetched = {};
   if (status && env.STRIPE_KEY) await Promise.all(Object.keys(STRIPE_EXPECTED).map(async (k) => { const id = status.prices && status.prices[k]; if (id && /^price_[\w]+$/.test(id)) fetched[k] = await stripeFetch(env, `/prices/${id}`); }));
   const r = stripeEval({ status, fetched, hqKey: env.STRIPE_KEY, hqMonthlyIds: new Set([...cfg.books, ...cfg.receptionist]) });
   const line = (g) => `<div class="banner ${g.bad ? 'bad' : g.warn ? 'warn' : 'ok'}">${g.bad || g.warn ? ICON.alert : ICON.check}<div><p>${esc(g.text)}</p></div></div>`;

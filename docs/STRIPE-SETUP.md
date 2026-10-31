@@ -41,7 +41,7 @@ Do these in Stripe with the **Test mode** switch on. Never paste a key into GitH
 3. **Read-only key for HQ** (restricted key): **read** on Customers, Subscriptions, Invoices, Charges, **Prices**. Copy it.
 4. **Webhook** (Developers, Webhooks, Add endpoint): `https://books.localdeskai.co.uk/stripe/webhook`, events `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Copy its signing secret.
 5. **Cloudflare, worker `books`, Variables and Secrets:** secrets `STRIPE_SECRET_KEY` (step 2), `STRIPE_WEBHOOK_SECRET` (step 4). Variables `STRIPE_PRICE_RECEPTIONIST`, `STRIPE_PRICE_RECEPTIONIST_SETUP`, `STRIPE_PRICE_BOOKS`, `STRIPE_PRICE_BOOKS_SETUP` (step 1).
-6. **Cloudflare, worker `hq`:** secret `STRIPE_KEY` (step 3). Variables `STRIPE_PRICES_RECEPTIONIST` = the Receptionist monthly price id, `STRIPE_PRICES_BOOKS` = the Books monthly price id.
+6. **Cloudflare, worker `hq`:** secret `STRIPE_KEY` (step 3) only. HQ reads the monthly price ids from the books worker. (`STRIPE_PRICES_RECEPTIONIST` and `STRIPE_PRICES_BOOKS` on hq still work if set.)
 7. Open **HQ, More, Stripe check**. Every line should be green. It tells you what to fix in plain words.
 8. Run `docs/JOURNEY-TEST-PLAN.md` steps 1 to 6 with Stripe's test card 4242 4242 4242 4242.
 Rules built in: Receptionist £397 a month with a 7-day free trial, £497 setup waived only for the first five founding clients and otherwise invoiced when the trial ends; Books £150 a month plus £395 setup, no trial, never waived.

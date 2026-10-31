@@ -533,3 +533,13 @@ test('content workflow end to end: write, edit, approve, plan, mark scheduled, m
   assert.equal((await post(`/content/${a.replace(/^x/, 'y')}/approved`)).status, 404, 'an id that is not a route is a plain not-found, not a crash'); assert.equal((await post('/content/x0nosuchpost/approved')).status, 400, 'a well-formed id that does not exist is refused');
   assert.ok(posted.every(u => !/facebook|graph\.|business\.google|api\.twitter|linkedin/i.test(u)), 'HQ never calls Facebook, Google or any social service');
 });
+
+test('HQ learns the monthly price ids from the Books worker, so STRIPE_PRICES_* on hq are optional', async (t) => {
+  const w = world(); w.env.STRIPE_KEY = ['rk', 'test', 'HQREADONLY'].join('_'); const orig = w.env.BOOKS.fetch;
+  w.env.BOOKS.fetch = async (url, init = {}) => new URL(url).pathname === '/stripe/status' ? Response.json({ secretKey: true, webhookSecret: true, prices: { receptionist: 'price_rec', receptionist_setup: 'price_recs', books: 'price_bk', books_setup: 'price_bks' } }) : orig(url, init);
+  const sub = (id, price, amount) => ({ id, status: 'active', created: 1790000000, customer: { name: id, email: `${id}@example.test` }, items: { data: [{ quantity: 1, price: { id: price, unit_amount: amount, product: {}, recurring: { interval: 'month' } } }] }, latest_invoice: { status: 'paid' } });
+  t.mock.method(globalThis, 'fetch', async (u) => { const p = String(u); if (p.includes('/subscriptions')) return Response.json({ data: [sub('Dave', 'price_bk', 15000), sub('Steve', 'price_rec', 39700)] }); if (/\/prices\/(\w+)/.test(p)) return new Response(JSON.stringify({ error: { message: 'x' } }), { status: 404 }); return Response.json({ data: [] }); });
+  const { cookie } = await enrol(w); const page = await (await call(w, '/payments', { cookie })).text();
+  assert.ok(!/not matched to a product/.test(page), 'subscriptions on the Books-listed price ids are recognised with no hq price variables');
+  assert.match(await (await call(w, '/leads', { cookie })).text(), /1 .*Receptionist|Receptionist|Books/, 'the leads page still loads');
+});
