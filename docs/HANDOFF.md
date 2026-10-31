@@ -29,6 +29,9 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 - QuickBooks only: quotes, quarterly accountant pack, profit per job and customer list, payment alerts.
 
 ## Decisions and standing rules
+- **Receptionist price is £397 a month** (confirmed by Gio 31 Oct 2026; £497 setup waived for the first 5 founding clients). Books is £150 a month plus £395 setup. 20 of each paying is £10,940 a month, not £10,900.
+- **Every change to Twilio or Vapi needs Gio's approval, one change at a time.** No blanket approval.
+- Long-term vision (31 Oct 2026): a highly automated UK tradesperson SaaS where the owner sells and approves. A roadmap is proposed only when Gio asks (say 'roadmap'). The Receptionist backend (Vapi assistant, Twilio numbers, call-summary worker) is not in this repo and should be brought under version control first. Preserve usage for Monday's plumber pilot.
 - Never deploy, push to `main`, spend money, contact customers or change production config without Gio's explicit approval in the current conversation. Pushing `main` publishes the website.
 - No secrets in chat or in the repo. Gio types secrets into Cloudflare himself.
 - Do not claim a legal requirement unless confirmed (identity checks wording was removed from the pages). The monthly books-check only flags things; it never certifies accounts or replaces an accountant.
