@@ -1,0 +1,24 @@
+// Claude <-> GPT bridge. NOT deployed. Deploy only after the owner approves (see docs/BRIDGE.md):
+//   npx wrangler deploy -c workers/bridge/wrangler.jsonc
+// BRIDGE_MODE starts "off". Secrets are set by the owner in the Cloudflare dashboard, never here.
+{
+  "name": "bridge",
+  "main": "worker.js",
+  "compatibility_date": "2025-09-01",
+  "keep_vars": true,
+  "workers_dev": false,
+  "vars": {
+    "BRIDGE_MODE": "off",
+    "ALLOWED_REPO": "gpetrucci1888/localdesk-site",
+    "ALLOWED_AUTHORS": "gpetrucci1888",
+    "MAX_REVIEWS_PER_DAY": "30",
+    "MAX_REVIEWS_PER_PR_PER_DAY": "8",
+    "MIN_SECONDS_BETWEEN_REVIEWS": "20",
+    "MONTHLY_CAP_USD": "20",
+    "MAX_INPUT_CHARS": "90000",
+    "MAX_OUTPUT_TOKENS": "2500"
+  },
+  "durable_objects": { "bindings": [{ "name": "BRIDGE", "class_name": "Bridge" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Bridge"] }],
+  "triggers": { "crons": ["*/5 * * * *"] }
+}

@@ -16,6 +16,8 @@ Tested so far: labelling PR #2 `gpt-review` started the workflow, which ran and 
 
 Do not describe the review as automated until the "Turning it on" test has passed.
 
+> **Direct bridge (built, not active):** see `docs/BRIDGE.md`. A webhook-driven worker that lets Claude request a review and get a GPT reply on the pull request without the owner relaying anything. It needs owner approval, GitHub and OpenAI setup before it can run.
+
 ## How Claude asks for a review
 1. Open a pull request from a branch (never push straight to `main`: that publishes the website).
 2. Fill in the PR template: what changed, risk, test evidence, the specific questions.
