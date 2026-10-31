@@ -53,3 +53,7 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 
 ## Where private things live
 - Private notes (launch blockers, onboarding checklist, breach record, runbooks, FreeAgent and Xero status) were in `Localdesk/00 Private` and `Localdesk/10 Bookkeeping` in the old session's working folder, and are copied into a PRIVATE Claude artifact titled "Localdesk private handoff" (find it with the Artifact tool `list`). The private repo `localdesk-client-sites` could not be attached to the session.
+
+## Deployed 31 Oct 2026 (owner approved in chat: books worker, then hq worker, from `launch-candidate`)
+- books: new version `a0a0c13c` (previous `1c815831`). hq: new version `fa39aeb8` (previous `5d07d17d`). Bindings and secrets unchanged, checked through the Cloudflare API. Rolling back restores that version's secrets, so use these two ids only.
+- Not done: website (main not merged), Stripe (no keys, prices or webhook), Vapi, Twilio. I could not reach the live addresses from the build environment, so no live page check was possible.
