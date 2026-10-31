@@ -80,3 +80,6 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 - **Standing permission, as I apply it:** the owner's words cover deploying fixes to the `books` and `hq` workers, gated by the full test run, with rollback ids recorded here and reported on PR #6. They do NOT cover the website or merging to main, Stripe live mode or any charge, Vapi, Twilio, customers or publishing: those still need fresh explicit approval.
 - Brings: webhook event recorded only after its work succeeds, setup-fee reminder after the trial, failed-payment banners, trial end date from Stripe, thank-you wording without a receipt promise.
 - Rollback targets: books `6c138077`, hq `15d95823`. Bindings and Stripe secrets preserved (books 24 bindings incl. the key, webhook secret and four price variables; hq 5).
+
+## Deployed 31 Oct 2026, sixth time (books only; owner asked for a cleaner, modern thank-you page, under the standing permission for books and hq fixes)
+- books: new version recorded on PR #6; previous `4a2673d8`. hq unchanged at `5c9c1a25`. Redesigned `/thanks` page (card, tick, three steps, call to action, dark mode, mobile first, no scripts). `public/thanks.html` has the same design for the next website publish.
