@@ -26,12 +26,12 @@ const { chromium } = require('playwright');
     const t = (n) => `${name}: ${n}`;
     await page.goto(base + '/');
     ck(t('not logged in: sent to the login page'), page.url().endsWith('/login'));
-    await page.fill('[name=password]', 'wrong'); await page.click('.btn'); await page.waitForTimeout(300);
+    await page.fill('[name=password]', 'wrong'); await page.click('form .btn'); await page.waitForTimeout(300);
     ck(t('wrong passphrase is refused kindly'), /didn't work/.test(await page.textContent('body')));
-    await page.fill('[name=password]', PASS); await page.click('.btn'); await page.waitForTimeout(300);
+    await page.fill('[name=password]', PASS); await page.click('form .btn'); await page.waitForTimeout(300);
     const key = (await page.textContent('.key')).trim();
     ck(t('first login shows the setup key and steps'), /^[A-Z2-7]{32}$/.test(key) && /Enter a setup key/.test(await page.textContent('body')));
-    await page.fill('[name=password]', PASS); await page.fill('[name=code]', await totp(key, Math.floor(Date.now() / 30000) + (name === 'desktop' ? 0 : 0))); await page.click('.btn'); await page.waitForTimeout(700);
+    await page.fill('[name=password]', PASS); await page.fill('[name=code]', await totp(key, Math.floor(Date.now() / 30000) + (name === 'desktop' ? 0 : 0))); await page.click('form .btn'); await page.waitForTimeout(700);
     ck(t('the code logs in and shows Home'), page.url() === base + '/' && /Good (morning|afternoon|evening)/.test(await page.textContent('h1')));
     // Sales pipeline: a fictional website enquiry becomes a lead that can be moved and onboarded. Nothing is sent.
     const ph = name === 'phone' ? '07700 900321' : '07700 900654', who = name === 'phone' ? 'Pat Phone' : 'Dee Desktop';

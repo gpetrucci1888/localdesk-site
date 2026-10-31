@@ -60,7 +60,7 @@ test('with no passphrase set, HQ is switched off and nothing gets in', async () 
   for (const p of ['/', '/login', '/customers', '/books']) assert.equal((await call(w, p)).status, 503, p);
 });
 
-test('a visitor who is not logged in is sent to the login page; the login page has strict headers, no scripts, and the brand font is public', async () => {
+test('a visitor who is not logged in is sent to the login page; the login page has strict headers, only nonce-locked scripts, and the brand font is public', async () => {
   const w = world();
   for (const p of ['/', '/customers', '/payments', '/books', '/books/new', '/books/client/111', '/books/client/111/check', '/receptionist', '/backups', '/settings', '/more', '/docs', '/docs/start']) {
     const r = await call(w, p); assert.equal(r.status, 303, p); assert.equal(r.headers.get('location'), '/login', p);
@@ -69,10 +69,12 @@ test('a visitor who is not logged in is sent to the login page; the login page h
   assert.equal(w.booksCalls.length, 0, 'Books was never contacted');
   const login = await call(w, '/login'); assert.equal(login.status, 200);
   const csp = login.headers.get('content-security-policy');
-  assert.match(csp, /default-src 'none'/); assert.doesNotMatch(csp, /script-src/); assert.match(csp, /frame-ancestors 'none'/); assert.match(csp, /font-src 'self'/);
+  assert.match(csp, /default-src 'none'/); assert.match(csp, /script-src 'nonce-[\w-]+'/); assert.doesNotMatch(csp, /unsafe-inline'[^;]*script|script-src[^;]*unsafe/); assert.match(csp, /frame-ancestors 'none'/); assert.match(csp, /font-src 'self'/);
   assert.equal(login.headers.get('x-frame-options'), 'DENY'); assert.equal(login.headers.get('cache-control'), 'no-store');
   assert.match(login.headers.get('x-robots-tag'), /noindex/); assert.equal(login.headers.get('referrer-policy'), 'no-referrer');
-  assert.ok(!(await login.text()).includes('<script'));
+  const lh = await login.text(), nn = /nonce-([\w-]+)/.exec(csp)[1];
+  assert.ok([...lh.matchAll(/<script([^>]*)>/g)].every(m => m[1].includes(`nonce="${nn}"`)), 'every script carries the page nonce');
+  assert.match(lh, /autocapitalize="none"/); assert.match(lh, /autocorrect="off"/); assert.doesNotMatch(lh, /autocomplete="off"/);
   const font = await call(w, '/font.woff'); assert.equal(font.status, 200); assert.equal(font.headers.get('content-type'), 'font/woff'); assert.ok((await font.arrayBuffer()).byteLength > 50000);
 });
 
@@ -303,6 +305,7 @@ test('Books lead page: software, connection and first receipt come from the conn
   page = await look({ ...app, phoneKey: '7700900999' }); assert.match(page, /Not connected yet/, 'a different mobile is not matched');
   page = await look(app, { ...base, product: 'receptionist' }); assert.ok(!/Their app/.test(page), 'other products never get the card');
   page = await look(app, { ...base, status: 'lost' }); assert.ok(!/Their app/.test(page));
+});
 
 // ---- content approval queue ----
 import { move as moveP, edit as editP, blocked as blockedP, seedPosts as seedP } from '../workers/hq/posts.js';
@@ -358,4 +361,87 @@ test('content queue in HQ: login needed, approve works, a founding post is refus
   w.env.BOOKS.fetch = down;
   assert.equal((await call(w, '/content/p05/approved', { method: 'POST', cookie })).status, 303);
   const after = await (await call(w, '/content', { cookie })).text(); assert.match(after, /Approved \(2\)/);
+
+});
+
+// ---- Face ID / fingerprint login (a simulated phone signs with a real P-256 key) ----
+const B = (u) => Buffer.from(u).toString('base64url');
+async function fakePhone(w, cookie, { ip } = {}) {
+  const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const spki = new Uint8Array(await crypto.subtle.exportKey('spki', pair.publicKey));
+  const id = B(crypto.getRandomValues(new Uint8Array(16)));
+  const postJson = (path, body, ck, from) => hq.fetch(new Request('https://hq.test' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': from || ip || '203.0.113.9', ...(ck ? { Cookie: ck } : {}) }, body: JSON.stringify(body || {}) }), w.env);
+  const cdj = (type, challenge, origin = 'https://hq.test') => new TextEncoder().encode(JSON.stringify({ type, challenge, origin }));
+  return {
+    id, postJson,
+    async register(name = 'My iPhone') {
+      const { challenge } = await (await postJson('/passkey/new-options', {}, cookie)).json();
+      return postJson('/passkey/register', { id, clientDataJSON: B(cdj('webauthn.create', challenge)), publicKey: B(spki), alg: -7, name }, cookie);
+    },
+    async assert({ flags = 0x05, count = 1, rp = 'hq.test', origin, tamper = false, challenge, from } = {}) {
+      const ch = challenge || (await (await postJson('/passkey/options', {}, null, from)).json()).challenge;
+      const ad = new Uint8Array(37); ad.set(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rp)))); ad[32] = flags; new DataView(ad.buffer).setUint32(33, count);
+      const cd = cdj('webauthn.get', ch, origin);
+      const signed = new Uint8Array([...ad, ...new Uint8Array(await crypto.subtle.digest('SHA-256', cd))]);
+      const raw = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, pair.privateKey, signed));
+      const der = (x) => { let i = 0; while (i < 31 && x[i] === 0) i++; let v = x.slice(i); if (v[0] & 0x80) v = new Uint8Array([0, ...v]); return [2, v.length, ...v]; };
+      const r = der(raw.slice(0, 32)), sg = der(raw.slice(32)); const sig = new Uint8Array([0x30, r.length + sg.length, ...r, ...sg]);
+      if (tamper) sig[sig.length - 1] ^= 1;
+      return postJson('/passkey/login', { id, clientDataJSON: B(cd), authenticatorData: B(ad), signature: B(sig) }, null, from);
+    },
+  };
+}
+
+test('Face ID login: add a device while logged in, then log in with it and no passphrase', async () => {
+  const w = world(); const { cookie } = await enrol(w);
+  const phone = await fakePhone(w, cookie);
+  assert.equal((await (await phone.register()).json()).ok, true);
+  const page = await (await call(w, '/passkey', { cookie })).text(); assert.match(page, /My iPhone/);
+  const res = await phone.assert();
+  assert.equal(res.status, 200); assert.equal((await res.json()).ok, true);
+  const ck = sessionCookie(res); assert.match(ck, /^hq=/);
+  assert.equal((await call(w, '/', { cookie: ck })).status, 200, 'the passkey session works like a normal login');
+});
+
+test('Face ID login refuses: no login for adding, wrong origin or site, no Face ID check, replay, bad signature, unknown device, used challenge', async () => {
+  const w = world(); const { cookie } = await enrol(w);
+  const stranger = await fakePhone(w, null);
+  assert.equal((await stranger.postJson('/passkey/new-options', {})).status, 303, 'cannot add a device without being logged in');
+  assert.equal((await stranger.postJson('/passkey/register', {})).status, 303);
+  const phone = await fakePhone(w, cookie); await phone.register();
+  assert.equal((await phone.assert({ origin: 'https://evil.test', from: '192.0.2.10' })).status, 401, 'wrong origin');
+  assert.equal((await phone.assert({ rp: 'evil.test', from: '192.0.2.11' })).status, 401, 'wrong site');
+  assert.equal((await phone.assert({ flags: 0x01, from: '192.0.2.12' })).status, 401, 'no Face ID or PIN check');
+  assert.equal((await phone.assert({ tamper: true, from: '192.0.2.13' })).status, 401, 'bad signature');
+  assert.equal((await phone.assert({ challenge: 'made-up', from: '192.0.2.14' })).status, 401, 'unknown challenge');
+  assert.equal((await stranger.assert({ from: '192.0.2.30' })).status, 401, 'unknown device');
+  assert.equal((await phone.assert({ count: 5 })).status, 200);
+  assert.equal((await phone.assert({ count: 5, from: '192.0.2.31' })).status, 401, 'replayed counter');
+  assert.equal((await phone.assert({ count: 4, from: '192.0.2.32' })).status, 401, 'counter went backwards');
+  assert.equal((await phone.assert({ count: 6 })).status, 200);
+});
+
+test('Face ID login: removing a device stops it, and log out everywhere stops sessions', async () => {
+  const w = world(); const { cookie } = await enrol(w);
+  const phone = await fakePhone(w, cookie); await phone.register();
+  await call(w, '/passkey/delete', { method: 'POST', form: { id: phone.id }, cookie });
+  assert.equal((await phone.assert()).status, 401);
+  const phone2 = await fakePhone(w, cookie); await phone2.register();
+  const ck = sessionCookie(await phone2.assert());
+  await call(w, '/logout-all', { method: 'POST', cookie });
+  assert.equal((await call(w, '/', { cookie: ck })).status, 303);
+});
+
+test('Face ID login: wrong tries are counted toward the lockout', async () => {
+  const w = world(); const { cookie } = await enrol(w);
+  const phone = await fakePhone(w, cookie, { ip: '198.51.100.7' }); await phone.register();
+  for (let i = 0; i < 5; i++) assert.equal((await phone.assert({ tamper: true })).status, 401);
+  assert.equal((await phone.assert()).status, 429);
+});
+
+test('passphrase login ignores a stray space from a phone keyboard', async () => {
+  const w = world(); const { key } = await enrol(w);
+  const code = await totp(key, Math.floor(Date.now() / 30000) + 1);
+  const res = await call(w, '/login', { method: 'POST', form: { password: PASS + ' ', code } });
+  assert.equal(res.status, 303);
 });
