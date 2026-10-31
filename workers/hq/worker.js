@@ -15,7 +15,7 @@ import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, 
 import { pageContent, seedPosts, move as movePost, edit as editPost, add as addPost, plan as planPost, dueToday, STATUSES } from './posts.js';
 import { b64u, newChallenge, verifyRegistration, verifyAssertion, loginScript } from './passkey.js';
 import { evaluate as stripeEval, EXPECTED as STRIPE_EXPECTED } from './stripecheck.js';
-import { zoomsSoon, appFor, pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
+import { setupDue, zoomsSoon, appFor, pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
 
 const enc = new TextEncoder();
 const SESSION_SECONDS = 12 * 3600;            // this visit only
@@ -353,6 +353,7 @@ async function pageHome(env) {
   if (leadsNow) {
     const fresh = leadsNow.filter(l => l.status === 'new'), due = leadsNow.filter(l => l.status !== 'new' && isDue(l));
     if (fresh.length) todos.push(banner('warn', `${fresh.length} new enquir${fresh.length === 1 ? 'y' : 'ies'}`, fresh.slice(0, 3).map(l => esc(l.name)).join(', ') + (fresh.length > 3 ? '...' : '') + '. Nobody has been contacted automatically.', btn('/leads', 'Open Leads', 'dark')));
+    const owing = setupDue(leadsNow); if (owing.length) todos.push(banner('warn', `${owing.length} setup fee${owing.length === 1 ? '' : 's'} to invoice`, owing.slice(0, 3).map(x => `${esc(x.lead.name)} (${x.over ? 'trial ended' : 'trial ends ' + x.ends.toLocaleDateString('en-GB')})`).join(', ') + '. Not taken at sign-up: send each a Stripe invoice for 497 pounds, then tick it off on the lead.', btn(`/leads/${esc(owing[0].lead.id)}`, 'Open the first', 'dark')));
     const zooms = zoomsSoon(leadsNow); if (zooms.length) todos.push(banner('info', `${zooms.length} Zoom demo${zooms.length === 1 ? '' : 's'} ${zooms.every(z => z.when === 'today') ? 'today' : 'today or tomorrow'}`, zooms.slice(0, 4).map(z => `${esc(z.lead.name)}${z.time ? ' at ' + esc(z.time) : ''}${z.when === 'tomorrow' ? ' (tomorrow)' : ''}`).join(', ') + '.', btn(`/leads/${esc(zooms[0].lead.id)}`, 'Open the first', 'dark')));
     if (due.length) todos.push(banner('warn', `${due.length} follow-up${due.length === 1 ? '' : 's'} due`, due.slice(0, 3).map(l => esc(l.name)).join(', ') + '.', btn('/leads', 'Open Leads', 'dark')));
   }

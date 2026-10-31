@@ -2129,8 +2129,9 @@ function leadMove(from, to) {
 async function markLead(store, id, state, now = Date.now()) {
   const res = await store.fetch(`https://store/lead/${encodeURIComponent(id)}`); if (!res.ok) return false;
   const lead = await res.json(); lead.checklist = lead.checklist || {};
-  lead.subscription = { id: state.sub, status: state.status, at: now };
-  lead.checklist.payment = state.live === true; lead.updated = now;
+  lead.subscription = { id: state.sub, status: state.status, at: now, trial_end: state.trialEnd || (lead.subscription && lead.subscription.trial_end) || null };
+  if (state.live === true) lead.checklist.payment = true; else if (state.gone === true) lead.checklist.payment = false; // a failed payment leaves the tick alone
+  lead.updated = now;
   await store.fetch(`https://store/lead/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(lead) });
   return true;
 }

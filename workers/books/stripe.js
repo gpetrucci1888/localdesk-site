@@ -33,7 +33,8 @@ export async function handleEvent(event, { store, foundingOp, markLead, now = Da
   const live = ['trialing', 'active'].includes(sub.status) && event.type !== 'customer.subscription.deleted';
   const gone = event.type === 'customer.subscription.deleted' || ['canceled', 'incomplete_expired'].includes(sub.status);
   let marked = false;
-  if (validLead && markLead && (live || gone)) marked = await markLead(store, md.lead_id, { sub: sub.id, status: gone ? 'cancelled' : sub.status, live }, now);
+  const failing = ['past_due', 'unpaid'].includes(sub.status) && !gone; // a payment failed: say so on the lead, keep the payment step and any founding place as they are
+  if (validLead && markLead && (live || gone || failing)) marked = await markLead(store, md.lead_id, { sub: sub.id, status: gone ? 'cancelled' : sub.status, live, gone, trialEnd: sub.trial_end || null }, now);
   if (md.product !== 'receptionist' || md.founding !== 'true' || !validLead) return marked ? { marked: true, ignored: 'not a founding Receptionist subscription' } : { ignored: 'not a founding Receptionist subscription' };
   if (live) { const r = await foundingOp(store, 'activate', md.lead_id, { sub: sub.id, now }); return r.over ? { flagged: 'all five places were already used', lead: md.lead_id, marked } : { activated: md.lead_id, marked }; }
   if (gone) { const r = await foundingOp(store, 'cancel', md.lead_id, { sub: sub.id, now }); return { cancelled: md.lead_id, released: !!r.released, marked }; }

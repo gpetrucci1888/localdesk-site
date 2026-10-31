@@ -3,7 +3,7 @@
 ## Built on branch `stripe-checkout` (tested with a fake Stripe, not deployed)
 - **Checkout link from a lead.** In HQ, a lead page has "Make a payment link". It asks Stripe for a Checkout Session and shows the link to the owner only. Nothing is sent to the customer: the owner copies and sends it.
   - Founding Receptionist client: monthly price only, 7-day free trial.
-  - Any other Receptionist client: monthly price with the 7-day free trial. **The 497 pound setup fee is not in the link**, because the published terms say nothing is charged during the trial. HQ tells you to charge it (a Stripe invoice) when the trial ends.
+  - Any other Receptionist client: monthly price with the 7-day free trial. **The 497 pound setup fee is not in the link**, because the published terms say nothing is charged during the trial. HQ tells you to charge it (a Stripe invoice) when the trial ends: Home shows "N setup fees to invoice" from 2 days before the trial ends, and the lead page has a "Setup fee invoiced" tick that clears the reminder.
   - Books: monthly price plus the 395 pound setup fee, never waived, no trial.
 - **Signed webhook** at `https://books.localdeskai.co.uk/stripe/webhook`. Stripe signature checked (5-minute tolerance), every event handled once.
 - **Founding places** (five): reserved when the owner ticks the waiver on a lead (held 7 days), become permanent when the subscription starts, come back if the client cancels within 7 days, expire if nobody pays. If a sixth founding subscription ever arrives, it is flagged (not granted) and shown by `GET /founding` as a flag.

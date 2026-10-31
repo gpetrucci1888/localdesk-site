@@ -153,3 +153,21 @@ test('checkout: a Receptionist link does not need the Receptionist setup price (
   delete w.booksEnv.STRIPE_PRICE_BOOKS_SETUP; const no = await checkout(w, await leadId(w, 2)); assert.equal(no.status, 503); assert.match((await no.json()).error, /STRIPE_PRICE_BOOKS_SETUP/);
   const terms = (await import('node:fs')).readFileSync('public/terms.html', 'utf8'); assert.match(terms, /nothing is charged during the trial/, 'this behaviour matches the published terms');
 });
+
+test('a failed payment is recorded on the lead without taking the payment tick or a founding place away; the trial end date is kept; recovery and cancel behave', async () => {
+  const w = world(); enable(w); await enquire(w, 1); await enquire(w, 2); const [a, b] = [await leadId(w, 1), await leadId(w, 2)];
+  await asAdmin(w, 'PUT', `/leads/${b}`, { checklist: { founding: true } });
+  const get = async (id) => (await (await asAdmin(w, 'GET', '/leads')).json()).find(l => l.id === id);
+  const end = Math.floor(Date.now() / 1000) + 7 * 86400;
+  const sub = (lead, status, founding = 'false', extra = {}) => ({ id: `sub_${lead}`, status, trial_end: end, metadata: { lead_id: lead, product: 'receptionist', founding }, ...extra });
+  await hook(w, 'customer.subscription.created', sub(a, 'trialing')); let l = await get(a);
+  assert.equal(l.subscription.status, 'trialing'); assert.equal(l.subscription.trial_end, end, 'the trial end date is kept so HQ can remind the owner to invoice the setup fee'); assert.equal(l.checklist.payment, true);
+  await hook(w, 'customer.subscription.updated', sub(a, 'past_due', 'false', { trial_end: null })); l = await get(a);
+  assert.equal(l.subscription.status, 'past_due'); assert.equal(l.checklist.payment, true, 'a failed payment leaves the tick alone'); assert.equal(l.subscription.trial_end, end, 'an update without a trial date does not wipe it');
+  await hook(w, 'customer.subscription.updated', sub(a, 'unpaid')); assert.equal((await get(a)).subscription.status, 'unpaid');
+  await hook(w, 'customer.subscription.updated', sub(a, 'active')); l = await get(a); assert.equal(l.subscription.status, 'active'); assert.equal(l.checklist.payment, true);
+  // a founding client whose payment fails keeps their place; only a cancellation inside 7 days frees it
+  await hook(w, 'customer.subscription.created', sub(b, 'trialing', 'true')); assert.equal((await places(w)).active, 1);
+  await hook(w, 'customer.subscription.updated', sub(b, 'past_due', 'true')); assert.equal((await places(w)).active, 1, 'a failed payment does not release a founding place');
+  await hook(w, 'customer.subscription.deleted', sub(b, 'canceled', 'true')); assert.equal((await get(b)).checklist.payment, false); assert.equal((await get(b)).subscription.status, 'cancelled');
+});

@@ -543,3 +543,18 @@ test('HQ learns the monthly price ids from the Books worker, so STRIPE_PRICES_* 
   assert.ok(!/not matched to a product/.test(page), 'subscriptions on the Books-listed price ids are recognised with no hq price variables');
   assert.match(await (await call(w, '/leads', { cookie })).text(), /1 .*Receptionist|Receptionist|Books/, 'the leads page still loads');
 });
+
+test('setup-fee reminder: non-founding Receptionist clients whose trial ends within 2 days or has ended show on Home and the lead page until ticked; founding, cancelled and ticked ones never do; failed payments are flagged', async () => {
+  const { setupDue } = await import('../workers/hq/leads.js');
+  const now = Date.parse('2026-11-10T09:00:00Z'), secs = (d) => Math.floor((now + d * 86400000) / 1000);
+  const L = (id, over = {}) => ({ id, name: id, product: 'receptionist', status: 'trial', checklist: {}, subscription: { id: 's', status: 'trialing', trial_end: secs(1) }, ...over });
+  const rows = setupDue([L('soon'), L('over', { subscription: { status: 'active', trial_end: secs(-3) } }), L('later', { subscription: { status: 'trialing', trial_end: secs(6) } }), L('founding', { checklist: { founding: true } }), L('done', { checklist: { setup_fee: true } }), L('cancelled', { subscription: { status: 'cancelled', trial_end: secs(-1) } }), L('lost', { status: 'lost' }), L('books', { product: 'books' }), L('nosub', { subscription: undefined })], now);
+  assert.deepEqual(rows.map(r => [r.lead.id, r.over]), [['soon', false], ['over', true]]);
+  const w = world(); const orig = w.env.BOOKS.fetch; const real = Math.floor(Date.now() / 1000);
+  const leads = [{ id: 'S1', name: 'Sam Setup', phone: '+447700900611', product: 'receptionist', status: 'trial', checklist: { payment: true }, history: [], messages: [], created: Date.now(), updated: Date.now(), subscription: { id: 'sub', status: 'trialing', at: Date.now(), trial_end: real - 3600 } }, { id: 'S2', name: 'Pat Pays', phone: '+447700900612', product: 'receptionist', status: 'trial', checklist: { payment: true }, history: [], messages: [], created: Date.now(), updated: Date.now(), subscription: { id: 'sub2', status: 'past_due', at: Date.now(), trial_end: real + 9 * 86400 } }];
+  w.env.BOOKS.fetch = async (url, init = {}) => { const p = new URL(url).pathname; if (p === '/leads' && !init.method) return Response.json(leads); const m = /^\/leads\/(S\d)$/.exec(p); if (m && !init.method) return Response.json(leads.find(l => l.id === m[1])); return orig(url, init); };
+  const { cookie } = await enrol(w); const home = await (await call(w, '/', { cookie })).text();
+  assert.match(home, /1 setup fee to invoice/); assert.match(home, /Sam Setup \(trial ended\)/); assert.ok(!/Pat Pays \(/.test(home), 'a trial ending in 9 days is not due yet');
+  const p1 = await (await call(w, '/leads/S1', { cookie })).text(); assert.match(p1, /Setup fee: invoice the 497 pounds now \(the trial has ended\)/); assert.match(p1, /Setup fee invoiced when the trial ended/);
+  const p2 = await (await call(w, '/leads/S2', { cookie })).text(); assert.match(p2, /Their payment failed/); assert.match(p2, /after 14 days, phone them/);
+});
