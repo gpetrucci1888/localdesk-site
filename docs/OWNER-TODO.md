@@ -1,43 +1,23 @@
-# Your list (owner actions only), in order
+# Parked for you (short). Everything else is done or on its way.
 
-Everything else is built and waiting. Tick as you go. Anything marked "tell Claude" needs your word in chat first. Never paste a key into chat or GitHub: type it into Cloudflare yourself.
+Last updated 31 Oct 2026. Items marked **say it** need one word from you in the Claude chat. Never paste a key into chat or GitHub.
 
-## 0. First: approve one more redeploy of the workers (tell Claude: "approve redeploy")
-The live Books worker still has an old checkout rule that would put the 497 pound setup fee into a Receptionist payment link (against our terms: nothing is charged during the trial). It is harmless today because Stripe is not set up, but **do not do section 3 (Stripe test keys) until the redeploy is done.** The redeploy also brings: do-not-call and TPS protection that lasts forever by number, no duplicate leads when you add one by hand, Stripe ticking the payment step on a lead, Zoom reminders on Home, and the deploy gate. Same method, backup and rollback as before (rollback targets: books `1d50027d`, hq `2b32bcda`).
+## Say it (one word each)
+- [ ] **"merge website"**: publishes the website (thank-you page design, softer "answers the calls you miss" wording, lead-source links, the sales-calls paragraph in the privacy page, the preview-builds fix). Ready on `launch-candidate`; I tried to publish it and the permission system blocked a production publish on a bare "approve", so it needs those two words.
+- [ ] **"enable logs"**: turns on request logs for the books and hq workers, so there is something to read if anything breaks. Worth doing before real customers.
 
-## 1. Check what is already live (15 minutes)
-- [ ] HQ smoke test: `docs/SMOKE-TEST.md` (11 lines, your own test lead). Tell Claude any line that fails.
-- [ ] HQ, More, **Stripe check**: it should show red items in plain words (Stripe not set up yet). If it shows an error page instead, tell Claude.
-- [ ] HQ, More, **Face ID login**: add your phone.
-- [ ] Vapi, **Calls** page, for **Mia Localdesk**: anything odd (stuck calls, many calls at once)? Balance still fine?
+## 5-minute jobs
+- [ ] Open your test lead in HQ: it should show "Stripe: subscription trialing" and a note to invoice the 497 pound setup fee on 7 November. Tell me if it does not.
+- [ ] HQ read-only Stripe key (Stripe, API keys, create secret key, Custom permissions, Read on Customers, Subscriptions, Invoices, Charges, Prices, Products, named `Localdesk HQ read-only`) saved in Cloudflare on **hq** as a **Secret** named `STRIPE_KEY`. Then HQ Payments and Stripe check show revenue and the price checks.
+- [ ] Ring the demo line once to confirm the greeting says calls may be recorded.
 
-## 2. Before you cold call anyone (the legal basics)
-- [ ] **ICO registration** (you need your number for the privacy page).
-- [ ] Your **business address** for the privacy page. Insurance wording if you want it shown.
-- [ ] A way to check **TPS and CTPS** (find the current options and costs on their websites). Do not cold call until you can check. Guide: `docs/COLD-CALLING-COMPLIANCE.md`.
-- [ ] You can ring out **showing your number**.
-- [ ] Read `docs/SALES-WORKFLOW.md` and `docs/ZOOM-DEMO-FLOW.md` once.
+## Before you cold call anyone
+- [ ] ICO registration, your business address (and ICO number) for the privacy page, a way to check TPS and CTPS, and ringing out showing your number. See `docs/COLD-CALLING-COMPLIANCE.md` and `docs/COLD-CALL-SCRIPT.md`.
 
-## 3. Stripe test mode (about 15 minutes): `docs/STRIPE-SETUP.md`, "Owner action list"
-- [ ] Four prices in Stripe test mode: Receptionist £397 monthly, Receptionist setup £497 one-off, Books £150 monthly, Books setup £395 one-off.
-- [ ] Restricted checkout key, read-only HQ key, webhook to `https://books.localdeskai.co.uk/stripe/webhook` (created, updated, deleted).
-- [ ] Type the keys and price ids into Cloudflare (`books` and `hq`).
-- [ ] HQ, More, **Stripe check**: all green.
-- [ ] Decide three defaults (tell Claude if you want any changed): the **£497 setup fee is invoiced when the trial ends** (the website terms promise nothing is charged during the trial; built that way, not in the payment link); cancelling within 7 days gives a founding place back (built as yes); an unpaid hold lasts 7 days (built as 7).
-- [ ] Run `docs/JOURNEY-TEST-PLAN.md` steps 1 to 6 with the test card 4242 4242 4242 4242.
+## Before real customers
+- [ ] The ten Mia test calls (`docs/MIA-TEST-SCRIPT.md`).
+- [ ] Optional more Stripe test payments: a founding lead (tick the founding box on the lead first), cancelling inside 7 days, and the failed card 4000 0000 0000 0341. Or tell me to do the founding and cancel ones if you give the Stripe connection write access to the sandbox.
+- [ ] Switching Stripe to live mode is yours alone, last.
 
-## 4. Mia
-- [ ] The ten test calls: `docs/MIA-TEST-SCRIPT.md`. Ticked every row?
-- [ ] Confirm the claims you will make: 7-day free trial honoured, 300 minutes included, answers day and night, text summary after each call, recording notice (list in `docs/LAUNCH-READINESS.md`).
-
-## 5. Books
-- [ ] Connect one test or your own accounting company (QuickBooks, FreeAgent or Xero) through "Make the connect link" and file one receipt. The lead page should then show the software, Connected, and "A receipt has been filed".
-- [ ] FreeAgent: the live approval email, if it has arrived.
-
-## 6. Things waiting for your word (tell Claude)
-- [ ] **Turn on logs** for the `books` and `hq` workers (a Cloudflare setting; worth doing before real customers). Say "enable logs" and I will tell you the exact clicks.
-- [ ] **Website merge** (publishes the site): thank-you page, softer wording, source tracking, a draft sales-calls paragraph for the privacy page, and the preview-builds fix. Read the privacy paragraph first (`public/privacy.html`, "Business contacts and sales calls"). Say "merge website" when happy.
-- [ ] **Live payments** come last, and you switch Stripe to live mode yourself, after sections 3 and 4 pass.
-
-## Parked (no action needed now)
-Claude and GPT bridge (`gpt-bridge`, needs an OpenAI key and budget: your call, later), Lovable website add-on, social posting automation, Meta ads, caller exclusion lists for Mia, any Vapi or Twilio change.
+## Decisions I have assumed (tell me if you want any changed)
+Cancel inside 7 days gives a founding place back; an unpaid hold lasts 7 days; the 497 pound setup fee is invoiced when the trial ends (the terms say nothing is charged during the trial).
