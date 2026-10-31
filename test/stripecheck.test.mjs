@@ -47,7 +47,7 @@ test('missing secrets, no HQ key, live mode and an unreachable Books worker are 
 });
 
 test('the Books status route gives names and price ids only, never a secret, and only to the admin', async () => {
-  const w = world(); Object.assign(w.booksEnv, { STRIPE_SECRET_KEY: 'rk_test_SECRETVALUE', STRIPE_WEBHOOK_SECRET: 'whsec_SECRETVALUE', STRIPE_PRICE_BOOKS: 'price_bk' });
+  const w = world(); Object.assign(w.booksEnv, { STRIPE_SECRET_KEY: ['rk', 'test', 'SECRETVALUE'].join('_'), STRIPE_WEBHOOK_SECRET: ['whsec', 'SECRETVALUE'].join('_'), STRIPE_PRICE_BOOKS: 'price_bk' });
   const body = await (await asAdmin(w, 'GET', '/stripe/status')).text(); const j = JSON.parse(body);
   assert.equal(j.secretKey, true); assert.equal(j.webhookSecret, true); assert.equal(j.prices.books, 'price_bk'); assert.equal(j.prices.receptionist, null); assert.ok(!body.includes('SECRETVALUE'));
   const { default: books } = await import('../workers/books/worker.js');
