@@ -83,3 +83,9 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 
 ## Deployed 31 Oct 2026, sixth time (books only; owner asked for a cleaner, modern thank-you page, under the standing permission for books and hq fixes)
 - books: new version `777e3fd3`; previous `4a2673d8`. hq unchanged at `5c9c1a25`. Redesigned `/thanks` page (card, tick, three steps, call to action, dark mode, mobile first, no scripts). `public/thanks.html` has the same design for the next website publish.
+
+## Website published 31 Oct 2026 (owner said "merge" in chat; fast-forward of `main` from `afff2c2` to `f75f22c`, the `launch-candidate` tip)
+- Cloudflare's build published website version `6545b782` at 13:09 UTC. **Rollback target: `e38b0c0f`** (the version live before), or revert the merge commit on main.
+- Contents: thank-you page design, softer answering wording, `?utm_source=` capture on the forms, the sales-calls privacy paragraph (wording says "we follow the rules on marketing calls"), and the preview-builds fix.
+- Not verified by me: the live pages (the live addresses are unreachable from the build environment). The owner can open the home page and `/thanks.html`.
+- Owner preference recorded: do not end each message with owner to-do reminders. Park owner tasks in `docs/OWNER-TODO.md` and raise them only when blocked and the owner is involved.
