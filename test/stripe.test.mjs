@@ -95,17 +95,17 @@ function fakeStripe(t, { status = 200 } = {}) {
 }
 const checkout = (w, lead_id) => asAdmin(w, 'POST', '/checkout', { lead_id });
 
-test('checkout: founding Receptionist is monthly only with a 7-day trial; others pay the setup fee; Books never gets the waiver', async (t) => {
+test('checkout: Receptionist links are monthly price plus a 7-day trial only (setup fee is invoiced after the trial); Books is monthly plus setup and never founding', async (t) => {
   const w = world(); enable(w); const calls = fakeStripe(t);
   await enquire(w, 1); await enquire(w, 2); await enquire(w, 3, 'books'); const [a, b, c] = [await leadId(w, 1), await leadId(w, 2), await leadId(w, 3)];
   await asAdmin(w, 'PUT', `/leads/${a}`, { checklist: { founding: true } });
   let r = await (await checkout(w, a)).json(); assert.equal(r.founding, true); assert.equal(r.setupFee, false); assert.match(r.url, /^https:\/\/checkout\.stripe\.com\//);
   let q = new URLSearchParams(calls[0].body); assert.equal(q.get('line_items[0][price]'), 'price_rec'); assert.equal(q.get('line_items[1][price]'), null); assert.equal(q.get('subscription_data[trial_period_days]'), '7'); assert.equal(q.get('subscription_data[metadata][founding]'), 'true'); assert.equal(q.get('mode'), 'subscription');
   assert.equal(calls[0].headers.Authorization, `Bearer ${SK}`); assert.ok(calls[0].headers['Idempotency-Key']);
-  r = await (await checkout(w, b)).json(); assert.equal(r.founding, false); assert.equal(r.setupFee, true);
-  q = new URLSearchParams(calls[1].body); assert.deepEqual([q.get('line_items[0][price]'), q.get('line_items[1][price]')], ['price_rec', 'price_rec_setup']); assert.equal(q.get('subscription_data[metadata][founding]'), 'false');
+  r = await (await checkout(w, b)).json(); assert.equal(r.founding, false); assert.equal(r.setupFee, true); assert.equal(r.setupDueAfterTrial, true); assert.equal(r.setupAtCheckout, false);
+  q = new URLSearchParams(calls[1].body); assert.equal(q.get('line_items[0][price]'), 'price_rec'); assert.equal(q.get('line_items[1][price]'), null, 'the setup fee is never taken at sign-up, because the terms say nothing is charged during the trial'); assert.equal(q.get('subscription_data[trial_period_days]'), '7'); assert.equal(q.get('subscription_data[metadata][founding]'), 'false');
   r = await (await checkout(w, c)).json(); q = new URLSearchParams(calls[2].body);
-  assert.deepEqual([q.get('line_items[0][price]'), q.get('line_items[1][price]')], ['price_books', 'price_books_setup']); assert.equal(q.get('subscription_data[trial_period_days]'), null, 'Books has no trial'); assert.equal(q.get('subscription_data[metadata][founding]'), 'false');
+  assert.deepEqual([q.get('line_items[0][price]'), q.get('line_items[1][price]')], ['price_books', 'price_books_setup']); assert.equal(q.get('subscription_data[trial_period_days]'), null, 'Books has no trial'); assert.equal(r.setupAtCheckout, true); assert.equal(q.get('subscription_data[metadata][founding]'), 'false');
   assert.ok(!JSON.stringify(r).includes(SK), 'the key never leaves');
 });
 
@@ -144,4 +144,12 @@ test('a subscription ticks the lead\'s payment step and records its state; cance
   await hook(w, 'customer.subscription.deleted', sub(r, 'receptionist', 'canceled')); l = await get(r); assert.equal(l.checklist.payment, false); assert.equal(l.subscription.status, 'cancelled');
   const ghost = await (await hook(w, 'customer.subscription.created', sub('nosuchlead1', 'books', 'active'))).json(); assert.match(ghost.ignored, /not a founding/); assert.equal(ghost.marked, undefined);
   assert.equal((await places(w)).used, 0, 'non-founding subscriptions never take a founding place');
+});
+
+test('checkout: a Receptionist link does not need the Receptionist setup price (it is never in the link); Books still does', async (t) => {
+  const w = world(); enable(w); delete w.booksEnv.STRIPE_PRICE_RECEPTIONIST_SETUP; const calls = fakeStripe(t);
+  await enquire(w, 1); await enquire(w, 2, 'books');
+  const ok = await checkout(w, await leadId(w, 1)); assert.equal(ok.status, 200); assert.equal(calls.length, 1);
+  delete w.booksEnv.STRIPE_PRICE_BOOKS_SETUP; const no = await checkout(w, await leadId(w, 2)); assert.equal(no.status, 503); assert.match((await no.json()).error, /STRIPE_PRICE_BOOKS_SETUP/);
+  const terms = (await import('node:fs')).readFileSync('public/terms.html', 'utf8'); assert.match(terms, /nothing is charged during the trial/, 'this behaviour matches the published terms');
 });

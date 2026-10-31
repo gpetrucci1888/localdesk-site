@@ -10,7 +10,7 @@ Journey: website enquiry, qualified lead, correct offer and founding place, Stri
 | Lead moves through the stages in order | leads tests, journey 1 |
 | HQ Leads shows founding places reserved and where leads come from | journey 1 |
 | Founding waiver: five only, Receptionist only, atomic under eight simultaneous claims, released on lost, untick or delete, fails closed | leads tests |
-| Payment link: founding = monthly only plus 7-day trial; other Receptionist = plus 497 setup; Books = plus 395 setup, no trial, never founding | stripe tests, journey 1 and 3 |
+| Payment link: Receptionist (founding or not) = monthly price plus 7-day trial only, the 497 setup fee is invoiced when the trial ends and never taken at sign-up (matches the published terms); Books = plus 395 setup, no trial, never founding | stripe tests, journey 1 and 3 |
 | Link shown to the owner only, nothing sent to the customer, success page set | journey 1 |
 | Signed webhook activates the place, duplicate event ignored, later update changes nothing | journey 1, stripe tests |
 | Cancellation within 7 days frees the place, after 7 days keeps it | journey 1, stripe tests |

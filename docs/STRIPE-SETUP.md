@@ -3,7 +3,7 @@
 ## Built on branch `stripe-checkout` (tested with a fake Stripe, not deployed)
 - **Checkout link from a lead.** In HQ, a lead page has "Make a payment link". It asks Stripe for a Checkout Session and shows the link to the owner only. Nothing is sent to the customer: the owner copies and sends it.
   - Founding Receptionist client: monthly price only, 7-day free trial.
-  - Any other Receptionist client: monthly price plus the 497 pound setup fee, 7-day free trial.
+  - Any other Receptionist client: monthly price with the 7-day free trial. **The 497 pound setup fee is not in the link**, because the published terms say nothing is charged during the trial. HQ tells you to charge it (a Stripe invoice) when the trial ends.
   - Books: monthly price plus the 395 pound setup fee, never waived, no trial.
 - **Signed webhook** at `https://books.localdeskai.co.uk/stripe/webhook`. Stripe signature checked (5-minute tolerance), every event handled once.
 - **Founding places** (five): reserved when the owner ticks the waiver on a lead (held 7 days), become permanent when the subscription starts, come back if the client cancels within 7 days, expire if nobody pays. If a sixth founding subscription ever arrives, it is flagged (not granted) and shown by `GET /founding` as a flag.
@@ -24,6 +24,7 @@
 - Does a founding place come back if the client cancels in the first 7 days? **Built: yes.** After 7 days it stays used.
 - How long does an unpaid reservation hold a place? **Built: 7 days.**
 - A founding client's setup fee is waived. Is the 7-day trial also given to non-founding Receptionist clients? **Built: yes** (it is on the website).
+- **Setup fee timing (new, your call):** the terms promise nothing is charged during the trial, so the 497 pound setup fee is built as a separate invoice you send when the trial ends. If you would rather take it at sign-up, the terms must change first (say so and I will prepare both).
 
 ## Not built
 - Customer portal (card updates, invoices), proration rules, refunds, and any automatic provisioning of the Vapi assistant or Twilio number after payment. Each of those needs a separate owner decision, and Vapi and Twilio changes need approval one at a time.
@@ -32,7 +33,7 @@
 Do these in Stripe with the **Test mode** switch on. Never paste a key into GitHub or chat: type each into Cloudflare yourself.
 1. **Products and prices** (Product catalogue, Add product). Four prices, all GBP:
    - Localdesk Receptionist: **£397**, recurring, **monthly**.
-   - Receptionist setup: **£497**, **one-off**.
+   - Receptionist setup: **£497**, **one-off** (used for the invoice you send when the trial ends; it is not in the payment link).
    - Books by Localdesk: **£150**, recurring, **monthly**.
    - Books setup: **£395**, **one-off**.
    Copy each price id (starts `price_`).
@@ -43,4 +44,4 @@ Do these in Stripe with the **Test mode** switch on. Never paste a key into GitH
 6. **Cloudflare, worker `hq`:** secret `STRIPE_KEY` (step 3). Variables `STRIPE_PRICES_RECEPTIONIST` = the Receptionist monthly price id, `STRIPE_PRICES_BOOKS` = the Books monthly price id.
 7. Open **HQ, More, Stripe check**. Every line should be green. It tells you what to fix in plain words.
 8. Run `docs/JOURNEY-TEST-PLAN.md` steps 1 to 6 with Stripe's test card 4242 4242 4242 4242.
-Rules built in: Receptionist £397 a month with a 7-day free trial, £497 setup waived only for the first five founding clients; Books £150 a month plus £395 setup, no trial, never waived.
+Rules built in: Receptionist £397 a month with a 7-day free trial, £497 setup waived only for the first five founding clients and otherwise invoiced when the trial ends; Books £150 a month plus £395 setup, no trial, never waived.

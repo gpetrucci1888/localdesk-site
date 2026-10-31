@@ -24,7 +24,7 @@ Run `docs/MIA-TEST-SCRIPT.md` completely. Fix and re-run anything that fails.
 ## 6. Go live and the trial
 - [ ] Client does one real forwarded test call and sees the text.
 - [ ] Tick "Live, and a test call made" on the lead and move it to Trial.
-- [ ] Day 7: owner asks for the decision. If yes, **Make a payment link** in HQ (founding or full price), the owner sends it. Move to Paying only when Stripe shows the subscription paid.
+- [ ] Day 7: owner asks for the decision. If yes, **Make a payment link** in HQ (monthly price with the 7-day trial), the owner sends it. A non-founding client also owes the 497 pound setup fee: send it as a Stripe invoice when the trial ends (the terms say nothing is charged during the trial). Move to Paying only when Stripe shows the subscription paid.
 
 ## 7. First week
 - [ ] Check the Vapi Calls page for this assistant on days 1, 3 and 7: calls look sensible, no stuck calls, cost per call small.

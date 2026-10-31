@@ -320,7 +320,7 @@ async function leadCheckout(env, id) {
   if (!res || !res.ok || !out.url) return html(pageLead(cur, { flash: banner('bad', out.error || 'That didn\'t work. Stripe may not be set up yet.') }), 400);
   const link = String(out.url);
   if (!/^https:\/\/checkout\.stripe\.com\//.test(link)) return html(pageLead(cur, { flash: banner('bad', 'Stripe sent back something unexpected, so no link is shown.') }), 502);
-  return html(pageLead(cur, { flash: banner('ok', `Payment link made${out.founding ? ' (founding client, no setup fee, 7-day trial)' : out.setupFee ? ' (includes the setup fee)' : ''}`, `Copy this and send it yourself. Nothing was sent. <code style="word-break:break-all">${esc(link)}</code>`) }));
+  return html(pageLead(cur, { flash: banner('ok', `Payment link made${out.founding ? ' (founding client: monthly price only, no setup fee, 7-day trial)' : out.setupDueAfterTrial ? ' (monthly price with a 7-day trial)' : out.setupAtCheckout ? ' (includes the setup fee)' : ''}`, `Copy this and send it yourself. Nothing was sent. <code style="word-break:break-all">${esc(link)}</code>${out.setupDueAfterTrial ? ' <b>The £497 setup fee is not in this link:</b> our terms say nothing is charged during the 7-day trial. Charge it (a Stripe invoice) when the trial ends, and note it on the lead.' : ''}`) }));
 }
 async function leadCreate(request, env) {
   const f = await request.formData(), v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)]));

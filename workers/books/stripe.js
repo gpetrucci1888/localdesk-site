@@ -4,8 +4,10 @@
 // missing, the webhook and the checkout both refuse (fail closed) and no call to Stripe is made. No prices exist in Stripe yet.
 //   STRIPE_PRICE_RECEPTIONIST (397 pounds monthly)   STRIPE_PRICE_RECEPTIONIST_SETUP (497 pounds one-off)
 //   STRIPE_PRICE_BOOKS (150 pounds monthly)          STRIPE_PRICE_BOOKS_SETUP (395 pounds one-off)
-// A founding Receptionist client is charged the monthly price only (7-day trial) and takes one of five places. Everyone else pays
-// the monthly price plus the setup fee. Books never gets the waiver. A place is reserved when the owner ticks it on the lead, becomes
+// Receptionist: the link has the monthly price and a 7-day trial and NOTHING else, because the published terms promise nothing is charged
+// during the trial. A founding client (one of five) has no setup fee at all. Everyone else owes the 497 pound setup fee, which is
+// charged as a separate invoice when the trial ends (the owner does that; HQ says so). Books has no trial, so its link has the monthly
+// price plus the 395 pound setup fee. Books never gets the waiver. A place is reserved when the owner ticks it on the lead, becomes
 // theirs when the subscription starts, and comes back if they cancel within 7 days (an owner decision proposed in docs/FOUNDING-RESERVATION-DESIGN.md).
 const enc = new TextEncoder();
 const hex = (buf) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -53,7 +55,7 @@ export function checkoutParams(env, lead, founding) {
   const [monthly, setup] = PRICE[lead.product] || [];
   if (!monthly) throw new Error('Checkout is for Receptionist or Books leads only');
   const p = new URLSearchParams(), items = [env[monthly]];
-  if (!founding) items.push(env[setup]);
+  if (lead.product === 'books') items.push(env[setup]); // Receptionist has a trial: its setup fee is never taken at sign-up
   items.forEach((price, i) => { p.set(`line_items[${i}][price]`, price); p.set(`line_items[${i}][quantity]`, '1'); });
   p.set('mode', 'subscription'); p.set('client_reference_id', lead.id);
   p.set('success_url', env.CHECKOUT_SUCCESS_URL || 'https://www.localdeskai.co.uk/thanks.html'); p.set('cancel_url', env.CHECKOUT_CANCEL_URL || 'https://localdeskai.co.uk/');
@@ -69,7 +71,7 @@ export async function createCheckout(env, store, leadId, { foundingOp }) {
   if (!lead || !lead.id) return { status: 404, error: 'No such lead' };
   if (!PRICE[lead.product]) return { status: 400, error: 'Checkout is for Receptionist or Books leads only. Set what they are interested in first.' };
   const [monthly, setup] = PRICE[lead.product];
-  const missing = [...need, monthly, setup].filter(k => !env[k]);
+  const missing = [...need, monthly, ...(lead.product === 'books' ? [setup] : [])].filter(k => !env[k]);
   if (missing.length) return { status: 503, error: `Stripe is not set up yet. Missing in Cloudflare: ${missing.join(', ')}` };
   let founding = false;
   if (lead.product === 'receptionist' && lead.checklist && lead.checklist.founding === true) { // the owner ticked the waiver: confirm the place is really still held
@@ -81,5 +83,6 @@ export async function createCheckout(env, store, leadId, { foundingOp }) {
   const res = await fetch('https://api.stripe.com/v1/checkout/sessions', { method: 'POST', headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': `checkout-${lead.id}-${lead.product}-${founding}-${new Date().toISOString().slice(0, 13)}` }, body: params });
   if (!res.ok) return { status: 502, error: `Stripe refused to make the link (status ${res.status})` };
   const s = await res.json();
-  return { status: 200, url: s.url, founding, setupFee: !founding, trialDays: lead.product === 'receptionist' ? 7 : 0 };
+  const receptionist = lead.product === 'receptionist';
+  return { status: 200, url: s.url, founding, setupFee: !founding, setupAtCheckout: !receptionist, setupDueAfterTrial: receptionist && !founding, trialDays: receptionist ? 7 : 0 };
 }

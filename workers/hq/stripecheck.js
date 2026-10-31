@@ -4,7 +4,7 @@
 export const ENV_NAME = { receptionist: 'STRIPE_PRICE_RECEPTIONIST', receptionist_setup: 'STRIPE_PRICE_RECEPTIONIST_SETUP', books: 'STRIPE_PRICE_BOOKS', books_setup: 'STRIPE_PRICE_BOOKS_SETUP' };
 export const EXPECTED = {
   receptionist: { label: 'Receptionist, monthly', amount: 39700, monthly: true },
-  receptionist_setup: { label: 'Receptionist, setup fee (waived for the first five)', amount: 49700, monthly: false },
+  receptionist_setup: { label: 'Receptionist, setup fee (invoiced when the trial ends; waived for the first five)', amount: 49700, monthly: false },
   books: { label: 'Books, monthly', amount: 15000, monthly: true },
   books_setup: { label: 'Books, setup fee', amount: 39500, monthly: false },
 };

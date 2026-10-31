@@ -20,7 +20,7 @@ Everything else is built and waiting. Tick as you go. Anything marked "tell Clau
 - [ ] Restricted checkout key, read-only HQ key, webhook to `https://books.localdeskai.co.uk/stripe/webhook` (created, updated, deleted).
 - [ ] Type the keys and price ids into Cloudflare (`books` and `hq`).
 - [ ] HQ, More, **Stripe check**: all green.
-- [ ] Decide two defaults (tell Claude if you want either changed): cancelling within 7 days gives a founding place back (built as yes); an unpaid hold lasts 7 days (built as 7).
+- [ ] Decide three defaults (tell Claude if you want any changed): the **£497 setup fee is invoiced when the trial ends** (the website terms promise nothing is charged during the trial; built that way, not in the payment link); cancelling within 7 days gives a founding place back (built as yes); an unpaid hold lasts 7 days (built as 7).
 - [ ] Run `docs/JOURNEY-TEST-PLAN.md` steps 1 to 6 with the test card 4242 4242 4242 4242.
 
 ## 4. Mia
