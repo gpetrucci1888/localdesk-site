@@ -48,7 +48,7 @@ test('journey: enquiry, founding place, payment link, payment, duplicate events,
   assert.match(await (await j.h('/leads', { cookie })).text(), /1 of 5/);
   const made = await j.h(`/leads/${l.id}/checkout`, { method: 'POST', cookie }); const madeHtml = await made.text();
   assert.equal(made.status, 200); assert.match(madeHtml, /checkout\.stripe\.com\/c\/pay\/cs_1/); assert.match(madeHtml, /Nothing was sent/);
-  const q = j.sessions[0]; assert.equal(q.get('line_items[0][price]'), 'price_rec'); assert.equal(q.get('line_items[1][price]'), null); assert.equal(q.get('subscription_data[trial_period_days]'), '7'); assert.equal(q.get('success_url'), 'https://www.localdeskai.co.uk/thanks.html');
+  const q = j.sessions[0]; assert.equal(q.get('line_items[0][price]'), 'price_rec'); assert.equal(q.get('line_items[1][price]'), null); assert.equal(q.get('subscription_data[trial_period_days]'), '7'); assert.equal(q.get('success_url'), 'https://books.localdeskai.co.uk/thanks');
   assert.equal(j.texts.filter(x => /checkout/.test(x)).length, 0, 'no link was texted to anyone');
   // 4. the customer pays: the signed webhook makes the place permanent; a repeat of the same event and a later update change nothing
   assert.equal((await (await hook(w, 'customer.subscription.created', subOf(l), 'evt_a')).json()).activated, l.id);

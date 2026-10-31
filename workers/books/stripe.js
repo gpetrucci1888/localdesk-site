@@ -58,7 +58,7 @@ export function checkoutParams(env, lead, founding) {
   if (lead.product === 'books') items.push(env[setup]); // Receptionist has a trial: its setup fee is never taken at sign-up
   items.forEach((price, i) => { p.set(`line_items[${i}][price]`, price); p.set(`line_items[${i}][quantity]`, '1'); });
   p.set('mode', 'subscription'); p.set('client_reference_id', lead.id);
-  p.set('success_url', env.CHECKOUT_SUCCESS_URL || 'https://www.localdeskai.co.uk/thanks.html'); p.set('cancel_url', env.CHECKOUT_CANCEL_URL || 'https://localdeskai.co.uk/');
+  p.set('success_url', env.CHECKOUT_SUCCESS_URL || 'https://books.localdeskai.co.uk/thanks'); p.set('cancel_url', env.CHECKOUT_CANCEL_URL || 'https://localdeskai.co.uk/');
   for (const [k, v] of Object.entries({ lead_id: lead.id, product: lead.product, founding: String(!!founding) })) { p.set(`subscription_data[metadata][${k}]`, v); p.set(`metadata[${k}]`, v); }
   if (lead.product === 'receptionist') p.set('subscription_data[trial_period_days]', '7');
   return p;

@@ -13,6 +13,14 @@ test('thanks page: not indexed, no scripts, legal links work, makes no promise o
 });
 test('checkout sends customers to the thanks page by default, and the owner can override it', () => {
   const lead = { id: 'L1', product: 'books' }, env = { STRIPE_PRICE_BOOKS: 'a', STRIPE_PRICE_BOOKS_SETUP: 'b' };
-  assert.equal(checkoutParams(env, lead, false).get('success_url'), 'https://www.localdeskai.co.uk/thanks.html');
+  assert.equal(checkoutParams(env, lead, false).get('success_url'), 'https://books.localdeskai.co.uk/thanks');
   assert.equal(checkoutParams({ ...env, CHECKOUT_SUCCESS_URL: 'https://x.example/ok' }, lead, false).get('success_url'), 'https://x.example/ok');
+});
+
+test('the thank-you page is served by the Books worker, so the payment redirect never 404s before the website is published', async () => {
+  const { world } = await import('./harness.mjs'); const { default: books } = await import('../workers/books/worker.js'); const w = world();
+  const res = await books.fetch(new Request('https://books.test/thanks'), w.booksEnv); assert.equal(res.status, 200);
+  const h = await res.text(); assert.match(h, /<meta name="robots" content="noindex">/); assert.ok(!/<script/i.test(h)); assert.match(h, /Thank you/); assert.match(h, /mailto:hello@localdeskai\.co\.uk/); assert.ok(!/£|within \d|guarantee|today|tomorrow/i.test(h.replace(/<style>[\s\S]*<\/style>/, '')), 'no price, timing or guarantee claims');
+  assert.equal(res.headers.get('x-robots-tag'), 'noindex'); assert.match(res.headers.get('content-security-policy'), /default-src 'none'/); assert.match(res.headers.get('content-security-policy'), /script-src 'none'/, 'scripts are forbidden outright');
+  assert.equal((await books.fetch(new Request('https://books.test/thanks', { method: 'HEAD' }), w.booksEnv)).status, 200); assert.notEqual((await books.fetch(new Request('https://books.test/thanks', { method: 'POST', body: '{}' }), w.booksEnv)).status, 200, 'only GET and HEAD');
 });

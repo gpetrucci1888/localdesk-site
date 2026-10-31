@@ -15,7 +15,7 @@
 3. **Stripe, webhook:** add the endpoint above. Events: `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Copy its signing secret.
 4. **Cloudflare, worker `books`, Variables and Secrets:**
    - Secrets: `STRIPE_SECRET_KEY` (the restricted key), `STRIPE_WEBHOOK_SECRET`.
-   - Variables: `STRIPE_PRICE_RECEPTIONIST`, `STRIPE_PRICE_RECEPTIONIST_SETUP`, `STRIPE_PRICE_BOOKS`, `STRIPE_PRICE_BOOKS_SETUP`. Optional: `CHECKOUT_SUCCESS_URL`, `CHECKOUT_CANCEL_URL`.
+   - Variables: `STRIPE_PRICE_RECEPTIONIST`, `STRIPE_PRICE_RECEPTIONIST_SETUP`, `STRIPE_PRICE_BOOKS`, `STRIPE_PRICE_BOOKS_SETUP`. Optional: `CHECKOUT_SUCCESS_URL`, `CHECKOUT_CANCEL_URL`. By default customers return to a thank-you page served by the books worker itself (`https://books.localdeskai.co.uk/thanks`), so it works before the website is next published.
 5. **Cloudflare, worker `hq`:** the read-only `STRIPE_KEY` for revenue figures, and `STRIPE_PRICES_RECEPTIONIST` and `STRIPE_PRICES_BOOKS` (comma-separated price ids, monthly and setup) so the paying count classifies correctly.
 6. **Test with Stripe test mode first,** using a test card and a test lead. Check the lead shows a link, a test subscription lights up a founding place, and cancelling it gives the place back.
 7. Then go live with live-mode keys and prices.

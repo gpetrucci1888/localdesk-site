@@ -297,6 +297,9 @@ async function route(request, env) {
         return new Response(await docPage(env, store, link, `${url.origin}/d/${dl[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
       }
 
+      // The page customers land on after paying (Stripe sends them here). Static, no scripts, not indexed. Served from here so it works before the website is next published.
+      if (url.pathname === '/thanks' && (request.method === 'GET' || request.method === 'HEAD')) return new Response(request.method === 'HEAD' ? null : THANKS_PAGE, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex', 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'", 'Referrer-Policy': 'no-referrer' } });
+
       // Stripe webhook (public, but only accepted with a valid Stripe signature). Keeps the founding places honest.
       if (url.pathname === '/stripe/webhook' && request.method === 'POST') return await stripeWebhook(request, env, { store, foundingOp, markLead });
 
@@ -2131,6 +2134,9 @@ async function markLead(store, id, state, now = Date.now()) {
   await store.fetch(`https://store/lead/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(lead) });
   return true;
 }
+const THANKS_PAGE = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Thank you | Localdesk</title>
+<style>body{margin:0;background:#F6F7F8;color:#1F2328;font:18px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}main{max-width:560px;margin:0 auto;padding:48px 20px}.brand{font-weight:800;letter-spacing:.04em;margin-bottom:28px}.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,.08)}h1{margin:0 0 12px;font-size:28px}a{color:#8a6100}p{margin:0 0 14px}</style></head>
+<body><main><div class="brand">LOCALDESK</div><div class="card"><h1>Thank you</h1><p>Your sign-up has gone through. Stripe will email you a receipt, and nothing else is charged without you knowing.</p><p><b>What happens next:</b> we'll be in touch by phone or text to finish setting things up with you. If you have a question in the meantime, email <a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a>.</p><p>Localdesk, a trading name of Gio Petrucci, sole trader, Saltash, Cornwall.</p></div></main></body></html>`;
 const FOUNDING_PLACES = 5;
 // Founding places are reserved in the Store, which handles one request at a time and serialises claims. Fail closed: any problem means no place.
 async function foundingOp(store, op, id, extra = {}) {
