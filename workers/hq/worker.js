@@ -259,7 +259,6 @@ const putLead = (env, id, patch) => books(env, `/leads/${encodeURIComponent(id)}
 const LEAD_FLASH = { saved: ['ok', 'Saved.'], added: ['ok', 'Lead added. Nothing was sent to them.'], deleted: ['ok', 'Deleted.'] };
 const leadFlash = (url) => { const f = LEAD_FLASH[url.searchParams.get('done')]; return f ? banner(f[0], f[1]) : ''; };
 const leadsDown = () => shell('Leads', `<h1>Leads</h1>${booksError()}`, '/leads');
-const foundingCount = async (env) => { const l = await getLeads(env); return l ? l.filter(x => x.product === 'receptionist' && x.checklist && x.checklist.founding === true && x.status !== 'lost').length : null; };
 const loadPosts = async (vault) => { let p = await vpost(vault, '/posts', {}); if (!Array.isArray(p)) { p = seedPosts(); await vpost(vault, '/posts', { op: 'save', posts: p }); } return p; };
 async function contentAction(request, env, vault, id, action) {
   const posts = await loadPosts(vault); let r;
@@ -270,9 +269,11 @@ async function contentAction(request, env, vault, id, action) {
   await vpost(vault, '/posts', { op: 'save', posts });
   return redirect(`/content#${encodeURIComponent(id)}`);
 }
+// Founding places are reserved in the Books store (atomic, one at a time). null means it could not be checked.
+const foundingCount = (env) => books(env, '/founding').then(async r => { const j = r.ok ? await r.json() : null; return j && Number.isInteger(j.used) ? j.used : null; }).catch(() => null);
 async function pageLeadsList(env, url) {
-  const [leads, d] = await Promise.all([getLeads(env), load(env)]);
-  return leads ? pageLeads(leads, d.pr, !d.subs.off && !d.subs.error, leadFlash(url)) : leadsDown();
+  const [leads, d, founding] = await Promise.all([getLeads(env), load(env), foundingCount(env)]);
+  return leads ? pageLeads(leads, d.pr, !d.subs.off && !d.subs.error, leadFlash(url), founding) : leadsDown();
 }
 async function leadSave(request, env, id) {
   const f = await request.formData(), v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)])), patch = {};

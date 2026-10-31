@@ -314,12 +314,13 @@ async function route(request, env) {
 
       // Sales pipeline (HQ uses these). Leads hold a name and phone number, so they are admin-only and never logged.
       if (url.pathname === '/leads' && request.method === 'GET') return store.fetch('https://store/leads');
+      if (url.pathname === '/founding' && request.method === 'GET') return Response.json({ places: FOUNDING_PLACES, ...(await foundingOp(store, 'list')) });
       if (url.pathname === '/leads' && request.method === 'POST') return Response.json(await addLead(store, await request.json()));
       const ldm = url.pathname.match(/^\/leads\/([\w-]+)$/);
       if (ldm) {
         if (request.method === 'GET') return store.fetch(`https://store/lead/${ldm[1]}`);
         if (request.method === 'PUT') return Response.json(await updateLead(store, ldm[1], await request.json()));
-        if (request.method === 'DELETE') return store.fetch(`https://store/lead/${ldm[1]}`, { method: 'DELETE' });
+        if (request.method === 'DELETE') { await foundingOp(store, 'release', ldm[1]); return store.fetch(`https://store/lead/${ldm[1]}`, { method: 'DELETE' }); }
       }
 
       if (url.pathname === '/invite' && request.method === 'POST') {
@@ -2116,28 +2117,39 @@ function leadMove(from, to) {
   return b > a || b === a - 1;                            // forward any distance, back one step
 }
 const FOUNDING_PLACES = 5;
-const founding = (leads) => leads.filter(l => l.product === 'receptionist' && l.checklist && l.checklist.founding === true && l.status !== 'lost');
+// Founding places are reserved in the Store, which handles one request at a time and serialises claims. Fail closed: any problem means no place.
+async function foundingOp(store, op, id) {
+  const res = await store.fetch('https://store/founding', { method: 'POST', body: JSON.stringify({ op, id }) });
+  if (!res.ok) throw new Error('Could not check the founding places, so nothing was changed');
+  return res.json();
+}
 async function updateLead(store, id, patch) {
   const res = await store.fetch(`https://store/lead/${id}`);
   if (!res.ok) throw new Error('No such lead');
   const lead = await res.json(), now = Date.now(), clean = (v, n) => String(v == null ? '' : v).replace(/\r/g, '').trim().slice(0, n);
+  const before = { ...lead.checklist };
   if (patch.status !== undefined && patch.status !== lead.status) {
     if (!LEAD_STAGES.includes(patch.status) && patch.status !== 'lost') throw new Error('Unknown status');
     if (!leadMove(lead.status, patch.status)) throw new Error(`A lead can't go from ${lead.status} to ${patch.status}`);
     lead.history.push({ at: now, from: lead.status, to: patch.status }); lead.status = patch.status;
     lead.next_at = NEXT_DAYS[patch.status] ? new Date(now + NEXT_DAYS[patch.status] * 86400000).toISOString().slice(0, 10) : '';
     if (patch.status === 'contacted') lead.last_contacted = now;
+    if (patch.status === 'lost' && lead.checklist.founding) { lead.checklist.founding = false; await foundingOp(store, 'release', lead.id); }
   }
   if (patch.notes !== undefined) lead.notes = clean(patch.notes, 3000);
   if (patch.draft !== undefined) lead.draft = clean(patch.draft, 1200);
   if (patch.next_at !== undefined) { if (patch.next_at && !/^\d{4}-\d{2}-\d{2}$/.test(patch.next_at)) throw new Error('Follow-up date must look like 2026-11-05'); lead.next_at = patch.next_at; }
-  if (patch.checklist && patch.checklist.founding === true && !lead.checklist.founding) { // the setup waiver is for the first 5 Receptionist clients only
-    if (lead.product !== 'receptionist') throw new Error('The founding waiver is only for Receptionist clients');
-    const all = await (await store.fetch('https://store/leads')).json();
-    if (founding(all).filter(l => l.id !== lead.id).length >= FOUNDING_PLACES) throw new Error(`All ${FOUNDING_PLACES} founding places are taken, so the setup fee applies`);
+  if (patch.checklist && typeof patch.checklist === 'object') for (const [k, v] of Object.entries(patch.checklist)) if (k !== 'founding' && /^[a-z_]{2,30}$/.test(k) && Object.keys(lead.checklist).length < 25) lead.checklist[k] = Boolean(v);
+  if (patch.checklist && 'founding' in patch.checklist) { // the setup waiver is for the first 5 Receptionist clients only, claimed atomically in the Store
+    const want = patch.checklist.founding === true, had = !!before.founding;
+    if (want && !had) {
+      if (lead.product !== 'receptionist') throw new Error('The founding waiver is only for Receptionist clients');
+      const r = await foundingOp(store, 'claim', lead.id);
+      if (!r.ok) throw new Error(r.error || `All ${FOUNDING_PLACES} founding places are taken, so the setup fee applies`);
+    } else if (!want && had) await foundingOp(store, 'release', lead.id);
+    lead.checklist.founding = want;
   }
-  if (patch.checklist && typeof patch.checklist === 'object') for (const [k, v] of Object.entries(patch.checklist)) if (/^[a-z_]{2,30}$/.test(k) && Object.keys(lead.checklist).length < 25) lead.checklist[k] = Boolean(v);
-  for (const f of ['name', 'business']) if (patch[f] !== undefined) lead[f] = clean(patch[f], 100);
+
   if (patch.phone !== undefined) { const ph = clean(patch.phone, 40); if (ph.replace(/\D/g, '').length < 10) throw new Error('That phone number looks too short'); lead.phone = ph; lead.phoneKey = ph.replace(/\D/g, '').slice(-10); }
   if (patch.product !== undefined && ENQUIRY_PRODUCTS[patch.product]) lead.product = patch.product;
   lead.updated = now;
@@ -2493,6 +2505,24 @@ export class Store {
         messages: e.message ? [{ at: e.at, text: e.message }] : [], notes: '', next_at: new Date(e.at).toISOString().slice(0, 10), draft: '', checklist: {}, history: [{ at: e.at, from: null, to: 'new' }], repeat: 1 };
       await this.storage.put(`lead:${id}`, lead);
       return Response.json({ ok: true, id });
+    }
+    if (url.pathname === '/founding' && request.method === 'POST') { // reserve, release or list the first-five setup-waiver places (one at a time, so two claims can never both win the last place)
+      const { op, id } = JSON.parse(await request.text() || '{}');
+      const run = async () => {
+        const ids = [...(await this.storage.list({ prefix: 'founding:' })).keys()].map(k => k.slice(9));
+        if (op === 'list') return { used: ids.length, ids };
+        if (!/^[\w-]{1,40}$/.test(String(id || ''))) return { ok: false, error: 'Bad id' };
+        if (op === 'release') { await this.storage.delete(`founding:${id}`); return { ok: true, used: ids.filter(x => x !== id).length }; }
+        if (op === 'claim') {
+          if (ids.includes(id)) return { ok: true, used: ids.length, already: true };
+          if (ids.length >= 5) return { ok: false, used: ids.length };
+          await this.storage.put(`founding:${id}`, { at: Date.now() });
+          return { ok: true, used: ids.length + 1 };
+        }
+        return { ok: false, error: 'Unknown' };
+      };
+      const turn = (this._founding || Promise.resolve()).then(run, run); this._founding = turn.catch(() => {});
+      return Response.json(await turn);
     }
     if (url.pathname === '/leads' && request.method === 'GET') return Response.json([...(await this.storage.list({ prefix: 'lead:' })).values()].sort((a, b) => b.updated - a.updated));
     const ld = url.pathname.match(/^\/lead\/([\w-]+)$/);

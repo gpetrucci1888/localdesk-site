@@ -312,7 +312,7 @@ test('content queue: seeded posts are the 14 drafts, with correct prices and no 
 
 test('content queue in HQ: login needed, approve works, a founding post is refused when five places are used', async () => {
   const w = world(); const orig = w.env.BOOKS.fetch; let used = 5;
-  w.env.BOOKS.fetch = async (url, init) => new URL(url).pathname === '/leads' ? Response.json(Array.from({ length: used }, (_, i) => ({ id: 'l' + i, product: 'receptionist', status: 'onboarding', checklist: { founding: true } }))) : orig(url, init);
+  w.env.BOOKS.fetch = async (url, init) => new URL(url).pathname === '/founding' ? Response.json({ places: 5, used, ids: [] }) : orig(url, init);
   assert.equal((await call(w, '/content')).status, 303);
   assert.equal((await call(w, '/content/p01/approved', { method: 'POST' })).status, 303);
   const { cookie } = await enrol(w);
@@ -320,6 +320,9 @@ test('content queue in HQ: login needed, approve works, a founding post is refus
   assert.equal((await call(w, '/content/p01/approved', { method: 'POST', cookie })).status, 303);
   const refused = await call(w, '/content/p05/approved', { method: 'POST', cookie }); assert.equal(refused.status, 400); assert.match(await refused.text(), /founding places are taken/);
   used = 2;
+  const down = w.env.BOOKS.fetch; w.env.BOOKS.fetch = async (url, init) => new URL(url).pathname === '/founding' ? new Response('down', { status: 500 }) : down(url, init);
+  const unsure = await call(w, '/content/p10/approved', { method: 'POST', cookie }); assert.equal(unsure.status, 400); assert.match(await unsure.text(), /cannot check/, 'fails closed when the count is unavailable');
+  w.env.BOOKS.fetch = down;
   assert.equal((await call(w, '/content/p05/approved', { method: 'POST', cookie })).status, 303);
   const after = await (await call(w, '/content', { cookie })).text(); assert.match(after, /Approved \(2\)/);
 });

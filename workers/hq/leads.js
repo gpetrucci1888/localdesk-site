@@ -87,13 +87,13 @@ export const progressCard = (pr, stripeOk) => `<div class="card"><h2>Road to ${p
 
 const leadRow = (l) => item(`/leads/${esc(l.id)}`, l.name || 'Lead', `${esc(PRODUCT[l.product] || '')}${l.business ? ' · ' + esc(l.business) : ''} · ${ago(l.created)}${l.repeat > 1 ? ` · asked ${l.repeat} times` : ''}${l.next_at && l.status !== 'paying' && l.status !== 'lost' ? ` · follow up ${esc(dayStr(l.next_at))}` : ''}`, isDue(l) ? pill('bad', 'Follow up') : pill(KIND[l.status], LABEL[l.status]));
 
-export function pageLeads(leads, pr, stripeOk, flash = '') {
+export function pageLeads(leads, pr, stripeOk, flash = '', founding = null) {
   const open = leads.filter(l => l.status !== 'lost'), lost = leads.filter(l => l.status === 'lost');
   const due = open.filter(l => l.status === 'new' || isDue(l));
   const groups = STAGES.filter(([k]) => k !== 'paying').map(([k, t]) => [t, open.filter(l => l.status === k)]).filter(([, a]) => a.length);
   const payingLeads = open.filter(l => l.status === 'paying');
   return shell('Leads', `<div class="ph"><div><h1>Leads</h1><p class="lead">Website enquiries and people you've spoken to, from first message to paying customer. Nothing is ever sent to them automatically.</p></div></div>${flash}
-<div class="tiles">${tile(leads.filter(l => l.status === 'new').length, 'new enquiries', false, true)}${tile(due.length, 'to follow up')}${tile(open.filter(l => !['new', 'paying'].includes(l.status)).length, 'in the pipeline')}${tile(`${foundingUsed(leads)} of 5`, 'founding setup waivers used')}</div>
+<div class="tiles">${tile(leads.filter(l => l.status === 'new').length, 'new enquiries', false, true)}${tile(due.length, 'to follow up')}${tile(open.filter(l => !['new', 'paying'].includes(l.status)).length, 'in the pipeline')}${tile(founding === null ? 'unknown' : `${founding} of 5`, 'founding places reserved')}</div>
 <section class="section"><div class="qa">${btn('/leads/new', 'Add a lead')}</div></section>
 ${due.length ? `<div class="card"><h2>Needs a follow-up</h2><div class="list">${due.map(leadRow).join('')}</div></div>` : ''}
 ${groups.map(([t, a]) => `<div class="card"><h2>${esc(t)} (${a.length})</h2><div class="list">${a.map(leadRow).join('')}</div></div>`).join('')}
@@ -102,8 +102,6 @@ ${!open.length ? '<div class="card"><p class="mute">No leads yet. Website enquir
 ${progressCard(pr, stripeOk)}
 ${lost.length ? `<div class="card"><h2>Lost (${lost.length})</h2><div class="list">${lost.map(leadRow).join('')}</div></div>` : ''}`, '/leads');
 }
-
-export const foundingUsed = (leads) => leads.filter(l => l.product === 'receptionist' && l.checklist && l.checklist.founding === true && l.status !== 'lost').length;
 
 export const newLeadForm = (msg = '', v = {}) => shell('Add a lead', `${crumb('/leads', 'Leads')}<h1>Add a lead</h1><p class="lead">For someone you met or spoke to. Nothing is sent to them.</p>${msg ? banner('bad', msg) : ''}
 <div class="card"><form method="post" action="/leads/new">
