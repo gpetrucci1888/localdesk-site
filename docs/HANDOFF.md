@@ -92,3 +92,5 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 
 ## Deployed 31 Oct 2026, seventh time (hq only; owner said "deploy" in chat for the cleaned content queue)
 - hq `d3656366` (previous `5c9c1a25`). Gate passed; 5 bindings and logs (with query redaction) preserved. Brings the 30-day social queue as drafts, the rule that no post may mention a cost (HQ refuses to approve, schedule or mark posted any such post), and automatic clean-up of unapproved seeded drafts. books unchanged at `777e3fd3`. Nothing posted or scheduled by anyone.
+
+- 31 Oct: HQ deployed from commit bfd4de6 (Facebook and Google only platforms, old seeded channels migrated). Gate passed. Books unchanged. Version id was not printed by the script; roll back by redeploying the previous commit if needed.
