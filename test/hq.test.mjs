@@ -297,6 +297,11 @@ test('content queue: sensible status moves only, edits need approving again, pos
   assert.equal(moveP(posts, p.id, 'draft', 0).error.includes('cannot become'), true);
 });
 
+test('content queue: no absolute or unsupported claims in the drafts', () => {
+  const all = seedP().map(p => p.text).join('\n').toLowerCase();
+  for (const bad of ['every call', 'never missed', 'most people', 'honest review', 'first 5 founding clients', 'no vat', 'always']) assert.ok(!all.includes(bad), bad);
+});
+
 test('content queue: seeded posts are the 14 drafts, with correct prices and no stale claims', () => {
   const posts = seedP(); assert.equal(posts.length, 14); assert.ok(posts.every(p => p.status === 'draft'));
   const all = posts.map(p => p.text).join('\n');
