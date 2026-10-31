@@ -271,7 +271,7 @@ const dueGreeting = () => { const h = Number(new Date().toLocaleString('en-GB', 
 const getLeads = (env) => books(env, '/leads').then(async r => { const j = r.ok ? await r.json() : null; return Array.isArray(j) ? j : null; }).catch(() => null);
 const getLead = (env, id) => books(env, `/leads/${encodeURIComponent(id)}`).then(r => r.ok ? r.json() : null).catch(() => null);
 const putLead = (env, id, patch) => books(env, `/leads/${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
-const LEAD_FLASH = { saved: ['ok', 'Saved.'], added: ['ok', 'Lead added. Nothing was sent to them.'], deleted: ['ok', 'Deleted.'] };
+const LEAD_FLASH = { exists: ['info', 'That number was already in HQ, so this is the lead you already had. Nothing was changed.'], saved: ['ok', 'Saved.'], added: ['ok', 'Lead added. Nothing was sent to them.'], deleted: ['ok', 'Deleted.'] };
 const leadFlash = (url) => { const f = LEAD_FLASH[url.searchParams.get('done')]; return f ? banner(f[0], f[1]) : ''; };
 const leadsDown = () => shell('Leads', `<h1>Leads</h1>${booksError()}`, '/leads');
 const loadPosts = async (vault) => { let p = await vpost(vault, '/posts', {}); if (!Array.isArray(p)) { p = seedPosts(); await vpost(vault, '/posts', { op: 'save', posts: p }); } return p; };
@@ -326,8 +326,9 @@ async function leadCreate(request, env) {
   const f = await request.formData(), v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)]));
   const res = await books(env, '/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: v.name, phone: v.phone, business: v.business, product: v.product, source: v.source, message: v.message }) });
   const out = await res.json().catch(() => ({}));
+  if (out.blocked) return html(newLeadForm(`${String(out.error || 'Do not ring this number.')} It is already in HQ as a lead you marked.`, v), 400);
   if (!res.ok || !out.id) return html(newLeadForm(String(out.error || await res.text().catch(() => '') || 'That didn\'t work.').replace(/^Error: /, ''), v), 400);
-  return redirect(`/leads/${encodeURIComponent(out.id)}?done=added`);
+  return redirect(`/leads/${encodeURIComponent(out.id)}?done=${out.existing ? 'exists' : 'added'}`);
 }
 
 // ---------- pages ----------

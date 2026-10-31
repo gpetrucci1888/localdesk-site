@@ -22,16 +22,19 @@ export async function verifyStripeSignature(secret, rawBody, header, nowMs = Dat
 }
 
 // What a subscription event means for the founding places.
-export async function handleEvent(event, { store, foundingOp, now = Date.now() }) {
+export async function handleEvent(event, { store, foundingOp, markLead, now = Date.now() }) {
   const first = await (await store.fetch('https://store/once', { method: 'POST', body: JSON.stringify({ key: `stripe:${event.id}` }) })).json();
   if (!first.first) return { ignored: 'event already handled' };
   if (!['customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'].includes(event.type)) return { ignored: 'event type not used' };
   const sub = event.data && event.data.object || {}, md = sub.metadata || {};
-  if (md.product !== 'receptionist' || md.founding !== 'true' || !/^[\w-]{1,40}$/.test(md.lead_id || '')) return { ignored: 'not a founding Receptionist subscription' };
+  const validLead = /^[\w-]{1,40}$/.test(md.lead_id || '') && ['receptionist', 'books'].includes(md.product);
   const live = ['trialing', 'active'].includes(sub.status) && event.type !== 'customer.subscription.deleted';
   const gone = event.type === 'customer.subscription.deleted' || ['canceled', 'incomplete_expired'].includes(sub.status);
-  if (live) { const r = await foundingOp(store, 'activate', md.lead_id, { sub: sub.id, now }); return r.over ? { flagged: 'all five places were already used', lead: md.lead_id } : { activated: md.lead_id }; }
-  if (gone) { const r = await foundingOp(store, 'cancel', md.lead_id, { sub: sub.id, now }); return { cancelled: md.lead_id, released: !!r.released }; }
+  let marked = false;
+  if (validLead && markLead && (live || gone)) marked = await markLead(store, md.lead_id, { sub: sub.id, status: gone ? 'cancelled' : sub.status, live }, now);
+  if (md.product !== 'receptionist' || md.founding !== 'true' || !validLead) return marked ? { marked: true, ignored: 'not a founding Receptionist subscription' } : { ignored: 'not a founding Receptionist subscription' };
+  if (live) { const r = await foundingOp(store, 'activate', md.lead_id, { sub: sub.id, now }); return r.over ? { flagged: 'all five places were already used', lead: md.lead_id, marked } : { activated: md.lead_id, marked }; }
+  if (gone) { const r = await foundingOp(store, 'cancel', md.lead_id, { sub: sub.id, now }); return { cancelled: md.lead_id, released: !!r.released, marked }; }
   return { ignored: `status ${sub.status} changes nothing` };
 }
 

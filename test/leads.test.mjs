@@ -152,3 +152,43 @@ test('call plan: next action, Zoom time and link, TPS result and do-not-call are
   await move(w, id, 'contacted'); assert.ok((await leads(w))[0].next_at);
   assert.equal((await put({ dnc: true })).status, 200); l = (await leads(w))[0]; assert.equal(l.dnc, true); assert.equal(l.next_at, ''); assert.equal(l.next_action, '');
 });
+
+// ---- cold-call safety: do not call and TPS stay in force however old or closed the lead is ----
+const manual = (w, over = {}) => asAdmin(w, 'POST', '/leads', { name: 'Cold Caller Target', phone: '07700 900444', business: 'Target Roofing', product: 'receptionist', source: 'phone call', ...over });
+const DAYS = 86400000;
+
+test('do not call and TPS-registered numbers can never be added again by hand, however old or closed the lead is', async (t) => {
+  const w = world(); network(t);
+  const first = await (await manual(w)).json(); assert.equal(first.ok, true); const id = first.id;
+  await asAdmin(w, 'PUT', `/leads/${id}`, { dnc: true });
+  let again = await (await manual(w)).json(); assert.equal(again.blocked, true); assert.equal(again.id, id); assert.match(again.error, /do not call/);
+  // two weeks later, and with the lead marked lost: still barred
+  const lead = await (await w.store.fetch(`https://store/lead/${id}`)).json(); lead.created -= 14 * DAYS; lead.status = 'lost'; await w.store.fetch(`https://store/lead/${id}`, { method: 'PUT', body: JSON.stringify(lead) });
+  again = await (await manual(w, { phone: '+44 7700 900444' })).json(); assert.equal(again.blocked, true, 'a different spelling of the same number is the same number');
+  assert.equal((await leads(w)).length, 1, 'no second lead was created');
+  // TPS registered is barred the same way, but only for calls, and the lead can be cleared by the owner
+  const other = await (await manual(w, { phone: '07700 900445', name: 'Second Target' })).json(); await asAdmin(w, 'PUT', `/leads/${other.id}`, { tps: 'registered' });
+  const tps = await (await manual(w, { phone: '07700 900445', name: 'Second Target' })).json(); assert.equal(tps.blocked, true); assert.match(tps.error, /TPS registered/);
+  await asAdmin(w, 'PUT', `/leads/${other.id}`, { tps: 'clear' }); const ok = await (await manual(w, { phone: '07700 900445', name: 'Second Target' })).json(); assert.equal(ok.blocked, undefined, 'a clear result is no longer barred');
+});
+
+test('adding a number that is already in HQ opens the existing lead and changes nothing', async (t) => {
+  const w = world(); network(t);
+  const first = await (await manual(w)).json(); await asAdmin(w, 'PUT', `/leads/${first.id}`, { notes: 'Rang Monday, call back Thursday' });
+  const again = await (await manual(w, { message: 'second try' })).json(); assert.equal(again.existing, true); assert.equal(again.id, first.id);
+  const l = (await leads(w))[0]; assert.equal((await leads(w)).length, 1); assert.equal(l.repeat, 1, 'a second manual add does not count as them asking again'); assert.equal(l.messages.length, 0); assert.equal(l.notes, 'Rang Monday, call back Thursday');
+  await asAdmin(w, 'PUT', `/leads/${first.id}`, { status: 'lost' });
+  const reopened = await (await manual(w)).json(); assert.notEqual(reopened.id, first.id, 'a lost lead does not block a fresh start'); assert.equal((await leads(w)).length, 2);
+});
+
+test('when someone on the do-not-call list enquires themselves, their lead says so and the do-not-call marker stays', async (t) => {
+  const w = world(); network(t);
+  const first = await (await manual(w)).json(); await asAdmin(w, 'PUT', `/leads/${first.id}`, { dnc: true });
+  const enq = (ip) => enquire(w, { ...good, name: 'Cold Caller Target', phone: '07700 900444', product: 'receptionist' }, ip);
+  assert.equal((await enq('203.0.113.88')).status, 200);
+  let all = await leads(w); assert.equal(all.length, 1, 'inside a week their enquiry joins the same lead'); assert.ok(all[0].reenquired, 'and it is marked as an enquiry made after do-not-call'); assert.equal(all[0].dnc, true, 'the marker is untouched');
+  const old = { ...all[0], created: all[0].created - 14 * DAYS }; await w.store.fetch(`https://store/lead/${first.id}`, { method: 'PUT', body: JSON.stringify(old) });
+  assert.equal((await enq('203.0.113.89')).status, 200); all = await leads(w); assert.equal(all.length, 2, 'later it is a fresh lead');
+  const fresh = all.find(l => l.id !== first.id); assert.ok(fresh.reenquired, 'the fresh lead says they enquired after do-not-call'); assert.ok(!fresh.dnc, 'and they may now be answered');
+  assert.equal(all.find(l => l.id === first.id).dnc, true);
+});

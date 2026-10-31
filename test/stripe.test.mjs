@@ -43,7 +43,7 @@ test('founding place: reserved by the owner, becomes active when the subscriptio
   const w = world(); enable(w); await enquire(w, 1); const id = await leadId(w, 1);
   await asAdmin(w, 'PUT', `/leads/${id}`, { checklist: { founding: true } });
   assert.equal((await places(w)).active, 0);
-  assert.deepEqual(await (await hook(w, 'customer.subscription.created', fsub(id), { id: 'evt_same' })).json(), { activated: id });
+  assert.deepEqual(await (await hook(w, 'customer.subscription.created', fsub(id), { id: 'evt_same' })).json(), { activated: id, marked: true });
   assert.deepEqual(await (await hook(w, 'customer.subscription.created', fsub(id), { id: 'evt_same' })).json(), { ignored: 'event already handled' });
   await hook(w, 'customer.subscription.updated', fsub(id, 'active'));
   const p = await places(w); assert.equal(p.used, 1); assert.equal(p.active, 1);
@@ -69,13 +69,13 @@ test('founding place: cancel within 7 days gives it back, later keeps it, and a 
   const six = await (await hook(w, 'customer.subscription.created', fsub(ids[5]))).json(); assert.equal(six.flagged, 'all five places were already used');
   const p = await places(w); assert.equal(p.used, 5); assert.equal(p.flags.length, 1); assert.equal(p.flags[0].id, ids[5]);
   // cancel inside 7 days: the place comes back
-  assert.deepEqual(await (await hook(w, 'customer.subscription.deleted', fsub(ids[0], 'canceled'))).json(), { cancelled: ids[0], released: true });
+  assert.deepEqual(await (await hook(w, 'customer.subscription.deleted', fsub(ids[0], 'canceled'))).json(), { cancelled: ids[0], released: true, marked: true });
   assert.equal((await places(w)).used, 4);
   // cancel after 7 days: the place stays used (simulated by activating 8 days ago)
   const old = Date.now() - 8 * DAY;
   await w.store.fetch('https://store/founding', { method: 'POST', body: JSON.stringify({ op: 'activate', id: ids[1], sub: `sub_${ids[1]}`, now: old }) });
   await w.storage.put(`founding:${ids[1]}`, { at: old, state: 'active', sub: `sub_${ids[1]}`, activated: old });
-  assert.deepEqual(await (await hook(w, 'customer.subscription.deleted', fsub(ids[1], 'canceled'))).json(), { cancelled: ids[1], released: false });
+  assert.deepEqual(await (await hook(w, 'customer.subscription.deleted', fsub(ids[1], 'canceled'))).json(), { cancelled: ids[1], released: false, marked: true });
   assert.equal((await places(w)).used, 4);
 });
 
@@ -132,4 +132,16 @@ test('checkout: Stripe errors are reported plainly and the lead is untouched; on
   const r = await checkout(w, id); assert.equal(r.status, 502); assert.match((await r.json()).error, /status 402/);
   const anon = await books.fetch(new Request('https://books.test/checkout', { method: 'POST', body: JSON.stringify({ lead_id: id }) }), w.booksEnv); assert.equal(anon.status, 403);
   assert.throws(() => checkoutParams({}, { id: 'x', product: 'unsure' }, false), /Receptionist or Books/);
+});
+
+test('a subscription ticks the lead\'s payment step and records its state; cancelling clears the tick; an unknown lead is harmless', async () => {
+  const w = world(); enable(w); await enquire(w, 1, 'books'); await enquire(w, 2); const b = await leadId(w, 1), r = await leadId(w, 2);
+  const sub = (lead, product, status, founding = 'false') => ({ id: `sub_${lead}`, status, metadata: { lead_id: lead, product, founding } });
+  const get = async (id) => (await (await asAdmin(w, 'GET', '/leads')).json()).find(l => l.id === id);
+  assert.deepEqual(await (await hook(w, 'customer.subscription.created', sub(b, 'books', 'active'))).json(), { marked: true, ignored: 'not a founding Receptionist subscription' }, 'the payment is recorded; it is not a founding place');
+  let l = await get(b); assert.equal(l.checklist.payment, true); assert.equal(l.subscription.status, 'active'); assert.equal(l.status, 'new', 'the stage is never moved by a payment event');
+  await hook(w, 'customer.subscription.created', sub(r, 'receptionist', 'trialing')); l = await get(r); assert.equal(l.checklist.payment, true); assert.equal(l.subscription.status, 'trialing');
+  await hook(w, 'customer.subscription.deleted', sub(r, 'receptionist', 'canceled')); l = await get(r); assert.equal(l.checklist.payment, false); assert.equal(l.subscription.status, 'cancelled');
+  const ghost = await (await hook(w, 'customer.subscription.created', sub('nosuchlead1', 'books', 'active'))).json(); assert.match(ghost.ignored, /not a founding/); assert.equal(ghost.marked, undefined);
+  assert.equal((await places(w)).used, 0, 'non-founding subscriptions never take a founding place');
 });

@@ -14,3 +14,9 @@ No Vapi or Twilio change is needed. A demo call costs pennies; check the Vapi ba
 | 16 to 20 | Ask if they want to try it. If yes: agree the trial, note it in HQ (Demo attended, then Follow-up or trial or Signed up), set the next action. If no or not now: note why, set a date only if they want a follow-up. |
 
 **After:** move the lead stage, save notes, and only message them if they agreed. Use "Make a payment link" only when they say yes, and send it yourself.
+
+## Optional: a demo built for the prospect (a live phone change, so it needs your approval each time)
+`python3 ops/new_client.py their-file.json --check` builds and checks their receptionist offline (no phone numbers in the file). Creating it in Vapi, and then pointing the 01752 demo line at it with `python3 ops/demo_line.py <assistantId>` (and back with `python3 ops/demo_line.py mia` afterwards), both change live Vapi settings. Each needs your explicit approval at that moment, one change at a time. Skip this for the first demos: the standard Mia demo is enough.
+
+## Check once
+The standard demo's greeting lives in Vapi, not in this repository, so it cannot be checked offline. Ring the demo line and confirm it tells callers the call may be recorded. If it does not, that is a change to make in Vapi (with your approval), because the website already tells visitors demo calls may be recorded.

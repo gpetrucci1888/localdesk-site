@@ -16,7 +16,7 @@ Ring the client's test number (or use Vapi's Talk button). Ten calls, about 15 m
 | 10 | Existing customer: "It's Sarah, I had my gutters done last month, can you ring me back" | Take name, number and the message. | Treat it as a new job quote. |
 
 After the calls check:
-- [ ] The greeting names the business and says calls may be recorded.
+- [ ] The greeting names the business and says calls may be recorded. (Also ring the public demo line once: its greeting is set in Vapi, so confirm it says this too.)
 - [ ] A text summary reached the owner's phone after each call, under about 300 characters, with name, number, area, job, urgency and callback time where given.
 - [ ] The call ended itself (no long silent tail) and none ran past the maximum length.
 - [ ] The Vapi Calls page shows each test call, with cost per call small and no stuck call left open.

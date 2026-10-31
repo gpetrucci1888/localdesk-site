@@ -298,7 +298,7 @@ async function route(request, env) {
       }
 
       // Stripe webhook (public, but only accepted with a valid Stripe signature). Keeps the founding places honest.
-      if (url.pathname === '/stripe/webhook' && request.method === 'POST') return await stripeWebhook(request, env, { store, foundingOp });
+      if (url.pathname === '/stripe/webhook' && request.method === 'POST') return await stripeWebhook(request, env, { store, foundingOp, markLead });
 
       // Website enquiry form (public, called from www.localdeskai.co.uk). Texts the owner and keeps the enquiry for 90 days.
       if (url.pathname === '/enquiry') return await enquiry(request, env, store);
@@ -2122,6 +2122,15 @@ function leadMove(from, to) {
   if (to === 'paying') return from === 'onboarding';      // paying only after onboarding, and Stripe is what proves it
   return b > a || b === a - 1;                            // forward any distance, back one step
 }
+// A subscription for a lead started or ended in Stripe: tick the payment step and record the state on the lead. Never changes the stage.
+async function markLead(store, id, state, now = Date.now()) {
+  const res = await store.fetch(`https://store/lead/${encodeURIComponent(id)}`); if (!res.ok) return false;
+  const lead = await res.json(); lead.checklist = lead.checklist || {};
+  lead.subscription = { id: state.sub, status: state.status, at: now };
+  lead.checklist.payment = state.live === true; lead.updated = now;
+  await store.fetch(`https://store/lead/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(lead) });
+  return true;
+}
 const FOUNDING_PLACES = 5;
 // Founding places are reserved in the Store, which handles one request at a time and serialises claims. Fail closed: any problem means no place.
 async function foundingOp(store, op, id, extra = {}) {
@@ -2173,7 +2182,7 @@ async function addLead(store, b) {
   const name = clean(b.name, 80), phone = clean(b.phone, 40);
   if (name.length < 2) throw new Error('Put in their name');
   if (phone.replace(/\D/g, '').length < 10) throw new Error('Put in a phone number');
-  return (await store.fetch('https://store/enquiry', { method: 'POST', body: JSON.stringify({ name, phone, business: clean(b.business, 100), product: ENQUIRY_PRODUCTS[b.product] ? b.product : 'unsure', message: clean(b.message, 600), source: clean(b.source, 20) || 'manual', at: Date.now() }) })).json();
+  return (await store.fetch('https://store/enquiry', { method: 'POST', body: JSON.stringify({ name, phone, business: clean(b.business, 100), product: ENQUIRY_PRODUCTS[b.product] ? b.product : 'unsure', message: clean(b.message, 600), manual: true, source: clean(b.source, 20) || 'manual', at: Date.now() }) })).json();
 }
 
 async function enquiry(request, env, store) {
@@ -2506,15 +2515,22 @@ export class Store {
     if (url.pathname === '/enquiry' && request.method === 'POST') {
       // Every enquiry becomes a lead in the sales pipeline. The same person asking again within a week is added to their lead.
       const e = JSON.parse(await request.text()), key = String(e.phone || '').replace(/\D/g, '').slice(-10);
-      const dup = [...(await this.storage.list({ prefix: 'lead:' })).values()].find(l => l.phoneKey === key && l.status !== 'lost' && l.status !== 'paying' && e.at - l.created < 7 * 86400000);
+      const all = [...(await this.storage.list({ prefix: 'lead:' })).values()];
+      const barred = all.find(l => l.phoneKey === key && (l.dnc || l.tps === 'registered')); // a number marked do not call, or TPS registered, stays barred however old or closed that lead is
+      if (e.manual && barred) return Response.json({ ok: false, blocked: true, id: barred.id, error: barred.dnc ? 'This number is marked do not call. Do not ring it.' : 'This number is TPS registered. Do not cold call it.' });
+      if (e.manual) { // adding by hand: a number already in HQ is never added twice, and the existing lead is left as it is
+        const have = all.find(l => l.phoneKey === key && l.status !== 'lost');
+        if (have) return Response.json({ ok: true, id: have.id, merged: true, existing: true });
+      }
+      const dup = e.manual ? null : all.find(l => l.phoneKey === key && l.status !== 'lost' && l.status !== 'paying' && e.at - l.created < 7 * 86400000);
       if (dup) {
         if (e.message) dup.messages.push({ at: e.at, text: e.message });
-        dup.updated = e.at; dup.repeat = (dup.repeat || 1) + 1; await this.storage.put(`lead:${dup.id}`, dup);
+        dup.updated = e.at; dup.repeat = (dup.repeat || 1) + 1; if (barred && !e.manual) dup.reenquired = e.at; await this.storage.put(`lead:${dup.id}`, dup);
         return Response.json({ ok: true, id: dup.id, merged: true });
       }
       const id = `${e.at.toString(36)}${crypto.randomUUID().slice(0, 4)}`;
       const lead = { id, name: e.name, phone: e.phone, phoneKey: key, business: e.business || '', product: e.product, status: 'new', source: e.source || 'website', created: e.at, updated: e.at,
-        messages: e.message ? [{ at: e.at, text: e.message }] : [], notes: '', next_at: new Date(e.at).toISOString().slice(0, 10), draft: '', checklist: {}, history: [{ at: e.at, from: null, to: 'new' }], repeat: 1 };
+        messages: e.message ? [{ at: e.at, text: e.message }] : [], notes: '', next_at: new Date(e.at).toISOString().slice(0, 10), draft: '', checklist: {}, history: [{ at: e.at, from: null, to: 'new' }], repeat: 1, ...(barred && !e.manual ? { reenquired: e.at } : {}) };
       await this.storage.put(`lead:${id}`, lead);
       return Response.json({ ok: true, id });
     }

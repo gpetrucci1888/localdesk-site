@@ -487,3 +487,20 @@ test('Home shows Zoom demos booked for today and tomorrow, and leaves out lost, 
   const { cookie } = await enrol(w); const page = await (await call(w, '/', { cookie })).text();
   assert.match(page, /1 Zoom demo today/); assert.match(page, /Zoe Zoom at 16:45/);
 });
+
+test('cold-call edge cases in HQ: a blocked number says so, an existing number opens the existing lead, re-enquiry, subscription and missing Zoom date are explained', async () => {
+  const base = { id: 'E1', name: 'Eve', phone: '+447700900555', phoneKey: '7700900555', product: 'receptionist', source: 'phone call', status: 'zoom', checklist: {}, history: [{ at: Date.now(), from: null, to: 'new' }], messages: [] };
+  const mk = async (lead, post) => { const w = world(); const orig = w.env.BOOKS.fetch;
+    w.env.BOOKS.fetch = async (url, init = {}) => { const path = new URL(url).pathname; if (path === '/leads/E1' && !init.method) return Response.json(lead); if (path === '/leads' && init.method === 'POST') return Response.json(post, { status: post.ok === false ? 409 : 200 }); return orig(url, init); };
+    return { w, ...(await enrol(w)) }; };
+  let { w, cookie } = await mk(base, {}); let page = await (await call(w, '/leads/E1', { cookie })).text();
+  assert.match(page, /Zoom booked, but no date set/);
+  ({ w, cookie } = await mk({ ...base, reenquired: Date.parse('2026-11-02T10:00:00Z'), dnc: true, meeting_at: '2026-11-05T10:00', subscription: { id: 'sub_1', status: 'trialing', at: Date.parse('2026-11-03T10:00:00Z') } }, {}));
+  page = await (await call(w, '/leads/E1', { cookie })).text();
+  assert.match(page, /They got in touch themselves/); assert.match(page, /after you marked this number do not call/); assert.match(page, /Stripe: subscription trialing/); assert.match(page, /Counts as paying only when HQ Payments shows the subscription paid/); assert.ok(!/Zoom booked, but no date set/.test(page));
+  ({ w, cookie } = await mk(base, { ok: false, blocked: true, id: 'E1', error: 'This number is marked do not call. Do not ring it.' }));
+  let res = await call(w, '/leads/new', { method: 'POST', form: { name: 'Eve', phone: '07700 900555', product: 'receptionist', source: 'phone call' }, cookie }); assert.equal(res.status, 400); assert.match(await res.text(), /marked do not call/);
+  ({ w, cookie } = await mk(base, { ok: true, id: 'E1', merged: true, existing: true }));
+  res = await call(w, '/leads/new', { method: 'POST', form: { name: 'Eve', phone: '07700 900555', product: 'receptionist', source: 'phone call' }, cookie }); assert.equal(res.status, 303); assert.equal(res.headers.get('location'), '/leads/E1?done=exists');
+  page = await (await call(w, '/leads/E1?done=exists', { cookie })).text(); assert.match(page, /already in HQ/);
+});
