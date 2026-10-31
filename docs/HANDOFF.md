@@ -66,3 +66,11 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 - books: new version `d5924a7d` (previous `1d50027d`). hq: new version `0cbb034f` (previous `2b32bcda`). Secrets and bindings unchanged. The deploy gate ran inside each upload ("Gate passed: all tests green, tree committed", commit `22453c2`).
 - Brings: Receptionist links without the setup fee (invoiced after the trial), permanent do-not-call and TPS bars by number, no duplicate manual leads, Stripe ticking a lead's payment step, Zoom reminders on Home, the deploy gate.
 - Still not done: website and main merge, Stripe keys, prices and webhook, Vapi, Twilio. Rollback targets: the two previous version ids above.
+
+## Deployed 31 Oct 2026, fourth time (owner said "deploy" in chat: books worker, then hq worker, from `launch-candidate` commit `12399a6`)
+- books: new version `6c138077`. hq: new version `15d95823`. The deploy gate ran before each upload and passed.
+- **Rollback targets (current before this deploy; they include the Stripe secrets the owner added in the dashboard):** books `4a4f1a69`, hq `0cbb034f`. Do not roll books back to an older version than `4a4f1a69`: it would drop the Stripe webhook secret.
+- Preserved (Cloudflare API): books has 24 bindings including `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and the four `STRIPE_PRICE_*` variables; hq has its 5 bindings (no Stripe key yet).
+- Brings: the Books `/thanks` page (payment redirect default), HQ reading the monthly price ids from Books, content planning and the Home reminder for posts due.
+- Smoke checks, no charges: Stripe webhook endpoint still enabled with its three events; no checkout sessions or subscriptions exist; no traffic yet on either worker since the deploy. Live addresses are unreachable from the build environment.
+- Not done: website and main merge, any test charge, live Stripe, Vapi, Twilio, customers.
