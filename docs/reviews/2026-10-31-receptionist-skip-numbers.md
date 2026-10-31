@@ -28,4 +28,15 @@ A Receptionist client can name phone numbers (family, friends, suppliers, regula
 3. Is the text command worth the spoofing risk for a first version?
 4. What is the smallest safe first slice to build (suggested: storage, link page, and the check as a pure function with tests, with NO live phone change)?
 
+## Review outcome (31 Oct 2026, relayed by the owner from ChatGPT): design is sound, subject to these safeguards
+1. **Private link:** hard to guess (long random token), expires (renewable, for example every 90 days) and can be revoked or rotated at any time by the client or the owner.
+2. **No automated contact:** a blocked caller never gets an automatic text (including missed-call text-back) or a callback.
+3. **Fail closed on messages:** if the list cannot be checked, the system sends NO automated texts or callbacks for that call. (This refines the earlier fail-safe: a failed check may still let Mia take the call so a real customer is not lost, but nothing is ever sent to the caller automatically.)
+4. **Easy undo:** the client can restore a removed number in one tap (removed numbers stay visible for 30 days with a Restore button).
+5. **Emergencies and safety:** blocking stops AI engagement, not emergency handling. A blocked caller is routed to the client's own phone; if that is not answered, a short fixed message points to 999 for emergencies, with no AI conversation and no texts.
+6. **Wording:** "do not engage" is the feature; the customer chooses who, and can undo it.
+
+## Decision
+**Deferred.** Do not build until the owner says it is essential for a specific customer (the Monday plumber pilot is the priority and Claude usage is being preserved for it). When built: smallest slice first (storage, link page, the check as a pure function with tests, NO live phone change), then the safeguards above as tests.
+
 ## Response (reviewer: reply on the PR with a line starting `Claude:` for anything you want me to act on)
