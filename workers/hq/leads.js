@@ -17,7 +17,7 @@ export function moves(from) {
 }
 
 export const CHECKLISTS = {
-  receptionist: [['demo_done', 'Demo done'], ['trial_agreed', '7-day free trial agreed'], ['forwarding', 'Call forwarding set up on their phone'], ['assistant', 'Their receptionist built, and approved by them'], ['payment', 'Payment details taken on the day it goes live (Stripe link)'], ['founding', 'Founding-client setup waiver applied, if they are one of the first 5'], ['live', 'Live, and a test call made']],
+  receptionist: [['demo_done', 'Demo done'], ['trial_agreed', '7-day free trial agreed'], ['forwarding', 'Call forwarding set up on their phone'], ['assistant', 'Their receptionist built, and approved by them'], ['payment', 'Payment details taken on the day it goes live (Stripe link)'], ['founding', 'Founding-client setup waiver applied (only the first 5 Receptionist clients; HQ blocks a sixth)'], ['live', 'Live, and a test call made']],
   books: [['demo_done', 'Demo done'], ['agreement', 'Agreement signed'], ['id_check', 'Identity check done and recorded in your own files'], ['payment', 'Setup fee paid and subscription set up (Stripe link)'], ['software', 'Their accounting software chosen (QuickBooks, FreeAgent or Xero; they hold their own subscription)'], ['invited', 'Connect link made and sent (button below)'], ['connected', 'They connected, and you ran the accounting setup check'], ['first_receipt', 'First test receipt filed, and they have seen Undo'], ['accountant', 'Their accountant\'s email added in Settings'], ['terms', 'They ticked the terms in the app']],
   unsure: [['demo_done', 'Demo done'], ['chosen', 'They have chosen Receptionist, Books or both (then pick it above)']],
 };
@@ -93,7 +93,7 @@ export function pageLeads(leads, pr, stripeOk, flash = '') {
   const groups = STAGES.filter(([k]) => k !== 'paying').map(([k, t]) => [t, open.filter(l => l.status === k)]).filter(([, a]) => a.length);
   const payingLeads = open.filter(l => l.status === 'paying');
   return shell('Leads', `<div class="ph"><div><h1>Leads</h1><p class="lead">Website enquiries and people you've spoken to, from first message to paying customer. Nothing is ever sent to them automatically.</p></div></div>${flash}
-<div class="tiles">${tile(leads.filter(l => l.status === 'new').length, 'new enquiries', false, true)}${tile(due.length, 'to follow up')}${tile(open.filter(l => !['new', 'paying'].includes(l.status)).length, 'in the pipeline')}</div>
+<div class="tiles">${tile(leads.filter(l => l.status === 'new').length, 'new enquiries', false, true)}${tile(due.length, 'to follow up')}${tile(open.filter(l => !['new', 'paying'].includes(l.status)).length, 'in the pipeline')}${tile(`${foundingUsed(leads)} of 5`, 'founding setup waivers used')}</div>
 <section class="section"><div class="qa">${btn('/leads/new', 'Add a lead')}</div></section>
 ${due.length ? `<div class="card"><h2>Needs a follow-up</h2><div class="list">${due.map(leadRow).join('')}</div></div>` : ''}
 ${groups.map(([t, a]) => `<div class="card"><h2>${esc(t)} (${a.length})</h2><div class="list">${a.map(leadRow).join('')}</div></div>`).join('')}
@@ -102,6 +102,8 @@ ${!open.length ? '<div class="card"><p class="mute">No leads yet. Website enquir
 ${progressCard(pr, stripeOk)}
 ${lost.length ? `<div class="card"><h2>Lost (${lost.length})</h2><div class="list">${lost.map(leadRow).join('')}</div></div>` : ''}`, '/leads');
 }
+
+export const foundingUsed = (leads) => leads.filter(l => l.product === 'receptionist' && l.checklist && l.checklist.founding === true && l.status !== 'lost').length;
 
 export const newLeadForm = (msg = '', v = {}) => shell('Add a lead', `${crumb('/leads', 'Leads')}<h1>Add a lead</h1><p class="lead">For someone you met or spoke to. Nothing is sent to them.</p>${msg ? banner('bad', msg) : ''}
 <div class="card"><form method="post" action="/leads/new">

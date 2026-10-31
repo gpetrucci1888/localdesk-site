@@ -2115,6 +2115,8 @@ function leadMove(from, to) {
   if (to === 'paying') return from === 'onboarding';      // paying only after onboarding, and Stripe is what proves it
   return b > a || b === a - 1;                            // forward any distance, back one step
 }
+const FOUNDING_PLACES = 5;
+const founding = (leads) => leads.filter(l => l.product === 'receptionist' && l.checklist && l.checklist.founding === true && l.status !== 'lost');
 async function updateLead(store, id, patch) {
   const res = await store.fetch(`https://store/lead/${id}`);
   if (!res.ok) throw new Error('No such lead');
@@ -2129,6 +2131,11 @@ async function updateLead(store, id, patch) {
   if (patch.notes !== undefined) lead.notes = clean(patch.notes, 3000);
   if (patch.draft !== undefined) lead.draft = clean(patch.draft, 1200);
   if (patch.next_at !== undefined) { if (patch.next_at && !/^\d{4}-\d{2}-\d{2}$/.test(patch.next_at)) throw new Error('Follow-up date must look like 2026-11-05'); lead.next_at = patch.next_at; }
+  if (patch.checklist && patch.checklist.founding === true && !lead.checklist.founding) { // the setup waiver is for the first 5 Receptionist clients only
+    if (lead.product !== 'receptionist') throw new Error('The founding waiver is only for Receptionist clients');
+    const all = await (await store.fetch('https://store/leads')).json();
+    if (founding(all).filter(l => l.id !== lead.id).length >= FOUNDING_PLACES) throw new Error(`All ${FOUNDING_PLACES} founding places are taken, so the setup fee applies`);
+  }
   if (patch.checklist && typeof patch.checklist === 'object') for (const [k, v] of Object.entries(patch.checklist)) if (/^[a-z_]{2,30}$/.test(k) && Object.keys(lead.checklist).length < 25) lead.checklist[k] = Boolean(v);
   for (const f of ['name', 'business']) if (patch[f] !== undefined) lead[f] = clean(patch[f], 100);
   if (patch.phone !== undefined) { const ph = clean(patch.phone, 40); if (ph.replace(/\D/g, '').length < 10) throw new Error('That phone number looks too short'); lead.phone = ph; lead.phoneKey = ph.replace(/\D/g, '').slice(-10); }

@@ -81,3 +81,18 @@ test('leads are in the backup', async (t) => {
   const b = await (await asAdmin(w, 'GET', '/backup')).json();
   assert.ok(Object.keys(b.entries || b).some(k => k.startsWith('lead:')));
 });
+
+// ---- the setup waiver is for the first 5 Receptionist clients only ----
+test('founding waiver: five Receptionist clients can have it, a sixth cannot, a lost one frees a place, Books never gets it', async (t) => {
+  const w = world(); network(t);
+  const mk = async (i, product = 'receptionist') => { await enquire(w, { ...good, name: `Client ${i}`, phone: `07700 90${String(1000 + i).slice(-4)}`, product }, `203.0.113.${20 + i}`); return (await leads(w)).find(l => l.name === `Client ${i}`).id; };
+  const flag = (id, v = true) => asAdmin(w, 'PUT', `/leads/${id}`, { checklist: { founding: v } });
+  const ids = []; for (let i = 1; i <= 6; i++) ids.push(await mk(i));
+  for (const id of ids.slice(0, 5)) assert.equal((await flag(id)).status, 200);
+  const sixth = await flag(ids[5]); assert.equal(sixth.status, 500); assert.match(await sixth.text(), /founding places are taken/);
+  assert.equal((await flag(ids[0])).status, 200, 'ticking the same one again is harmless');
+  await move(w, ids[1], 'lost');
+  assert.equal((await flag(ids[5])).status, 200, 'a lost lead frees its place');
+  const book = await mk(7, 'books'); const r = await flag(book); assert.equal(r.status, 500); assert.match(await r.text(), /only for Receptionist/);
+  assert.equal((await flag(ids[2], false)).status, 200, 'it can be unticked');
+});
