@@ -1,0 +1,18 @@
+name: Tests
+# Runs every unit test, including the repository hygiene scan (no secrets, no real phone numbers), on every push and pull request.
+# A red cross here means: do not deploy. Uploads to Cloudflare also run the same tests themselves (ops/deploy_gate.py).
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test test/*.test.mjs

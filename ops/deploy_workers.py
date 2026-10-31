@@ -1,9 +1,11 @@
 """Upload the Books workers to Cloudflare without wrangler, keeping live secrets and settings.
   python3 ops/deploy_workers.py books|app|hq [dry]
 Needs CLOUDFLARE_API_TOKEN (a token with Workers Scripts: Edit) in the environment, or a session that injects credentials.
-Simplest alternative for a developer: npx wrangler deploy -c workers/<name>/wrangler.jsonc
+Every upload runs the deploy gate first (ops/deploy_gate.py): all tests must pass and the tree must be committed. `npx wrangler deploy` does NOT run the gate, so do not use it for releases.
 """
 import json,subprocess,sys,os
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
+from deploy_gate import gate, FILES
 A=os.environ.get('CLOUDFLARE_ACCOUNT_ID','473eff2d9b7f75e8cad6442ed5a4fc5a'); API=f'https://api.cloudflare.com/client/v4/accounts/{A}/workers/scripts'
 R=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','workers')
 AUTH=['-H','Authorization: Bearer '+os.environ['CLOUDFLARE_API_TOKEN']] if os.environ.get('CLOUDFLARE_API_TOKEN') else []
@@ -28,11 +30,13 @@ def deploy_hq(dry=False):
     s=settings('hq'); binds=[b for b in s['bindings'] if b['type']!='secret_text']
     meta={'main_module':'worker.js','compatibility_date':'2025-09-01','bindings':binds,'keep_bindings':['secret_text']}
     cmd=['curl','-s','-m','120',*AUTH,'-X','PUT',f'{API}/hq','-F','metadata='+json.dumps(meta)+';type=application/json']
-    for f in ('worker.js','content.js','ui.js','font.js','leads.js','passkey.js','posts.js','posts-seed.js','stripecheck.js'): cmd+=['-F',f'{f}=@{R}/hq/{f};type=application/javascript+module;filename={f}']
+    for f in FILES['hq']: cmd+=['-F',f'{f}=@{R}/hq/{f};type=application/javascript+module;filename={f}']
     if dry: print('hq bindings',[(b['name'],b['type']) for b in binds]); return
     r=json.loads(subprocess.run(cmd,capture_output=True,text=True).stdout); print('hq','success' if r.get('success') else r.get('errors'))
-which=sys.argv[1]; dry=len(sys.argv)>2 and sys.argv[2]=='dry'
-if which=='books': deploy('books',[('worker.js',f'{R}/books/worker.js'),('admin.js',f'{R}/books/admin.js'),('freeagent.js',f'{R}/books/freeagent.js'),('xero.js',f'{R}/books/xero.js'),('stripe.js',f'{R}/books/stripe.js')],dry=dry)
-if which=='app': deploy('receipt-demo',[(f,f'{R}/receipt-demo/{f}') for f in ['worker.js','page.js','brands.js','icons.js']],dry=dry)
+which=sys.argv[1] if len(sys.argv)>1 else ''; dry=len(sys.argv)>2 and sys.argv[2]=='dry'
+if which not in ('books','app','hq'): raise SystemExit('Usage: python3 ops/deploy_workers.py books|app|hq [dry]')
+if not dry: gate()   # no upload can start unless every test passes and the tree is committed
+if which=='books': deploy('books',[(f,f'{R}/books/{f}') for f in FILES['books']],dry=dry)
+if which=='app': deploy('receipt-demo',[(f,f'{R}/receipt-demo/{f}') for f in FILES['app']],dry=dry)
 
 if which=='hq': deploy_hq(dry=dry)

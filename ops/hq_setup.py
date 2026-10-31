@@ -10,7 +10,9 @@ It NEVER sets a secret. The owner types these into Cloudflare (Workers > hq > Se
   ADMIN_KEY        the Books admin key
   STRIPE_KEY       (optional) a restricted read-only Stripe key
 """
-import json, subprocess, sys
+import json, os, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from deploy_gate import gate, FILES
 ACC = '473eff2d9b7f75e8cad6442ed5a4fc5a'; HOST = 'hq.localdeskai.co.uk'; ZONE = 'localdeskai.co.uk'
 APPLY = '--apply' in sys.argv; BACKUPS = '--with-backups' in sys.argv
 API = 'https://api.cloudflare.com/client/v4'; R = 'workers'
@@ -26,6 +28,7 @@ plan = [f'Upload worker "hq" (workers/hq/worker.js + content.js) with Durable Ob
 if BACKUPS: plan += ['Create R2 bucket "books-backups"', 'Add binding BACKUPS -> books-backups to the books worker (keeping every other binding and secret)']
 print('\n'.join('- ' + p for p in plan))
 if not APPLY: print('\nDry run only. Then set OWNER_PASSWORD and ADMIN_KEY in the Cloudflare dashboard.'); sys.exit(0)
+gate()   # no upload unless every test passes and the tree is committed
 
 meta = {'main_module': 'worker.js', 'compatibility_date': '2025-09-01',
         'bindings': [{'type': 'durable_object_namespace', 'name': 'VAULT', 'class_name': 'Vault'},
@@ -33,7 +36,7 @@ meta = {'main_module': 'worker.js', 'compatibility_date': '2025-09-01',
                      {'type': 'plain_text', 'name': 'BOOKS_URL', 'text': books_url}],
         'migrations': {'new_tag': 'hq-v1', 'new_sqlite_classes': ['Vault']}, 'keep_bindings': ['secret_text']}
 form = [('metadata', json.dumps(meta) + ';type=application/json')]
-for f in ('worker.js', 'content.js'): form.append((f, f'@{__file__.rsplit("/ops/", 1)[0]}/workers/hq/{f};type=application/javascript+module;filename={f}'))
+for f in FILES['hq']: form.append((f, f'@{__file__.rsplit("/ops/", 1)[0]}/workers/hq/{f};type=application/javascript+module;filename={f}'))
 r = cf('PUT', f'/accounts/{ACC}/{R}/scripts/hq', form=form); print('worker:', 'ok' if r.get('success') else r.get('errors'))
 zone = cf('GET', '/zones?name=' + ZONE)['result'][0]
 r = cf('PUT', f'/accounts/{ACC}/{R}/domains', json={'hostname': HOST, 'service': 'hq', 'environment': 'production', 'zone_id': zone['id']}); print('domain:', 'ok' if r.get('success') else r.get('errors'))
