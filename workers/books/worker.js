@@ -2135,9 +2135,25 @@ async function markLead(store, id, state, now = Date.now()) {
   await store.fetch(`https://store/lead/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(lead) });
   return true;
 }
-const THANKS_PAGE = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Thank you | Localdesk</title>
-<style>body{margin:0;background:#F6F7F8;color:#1F2328;font:18px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}main{max-width:560px;margin:0 auto;padding:48px 20px}.brand{font-weight:800;letter-spacing:.04em;margin-bottom:28px}.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,.08)}h1{margin:0 0 12px;font-size:28px}a{color:#8a6100}p{margin:0 0 14px}</style></head>
-<body><main><div class="brand">LOCALDESK</div><div class="card"><h1>Thank you</h1><p>Your sign-up has gone through. We will always tell you before anything is charged.</p><p><b>What happens next:</b> we'll be in touch by phone or text to finish setting things up with you. If you have a question in the meantime, email <a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a>.</p><p>Localdesk, a trading name of Gio Petrucci, sole trader, Saltash, Cornwall.</p></div></main></body></html>`;
+const THANKS_PAGE = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta name="color-scheme" content="light dark"><title>Thank you | Localdesk</title>
+<style>:root{--charcoal:#1F2328;--ink:#15181C;--paper:#F7F8F8;--white:#fff;--line:#DDE1E5;--steel:#566069;--yellow:#F5B800;--teal:#1F8A7A;--card:#fff;--soft:#EEF6F4}
+@media (prefers-color-scheme:dark){:root{--ink:#F2F4F5;--paper:#14171A;--white:#1B1F23;--line:#2C3238;--steel:#A6AFB7;--card:#1B1F23;--soft:#16302C;--charcoal:#F2F4F5}}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--paper);color:var(--ink);font:17px/1.6 'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.top{display:flex;align-items:center;gap:10px;max-width:640px;margin:0 auto;padding:22px 20px 0}.dot{width:14px;height:14px;border-radius:50%;background:var(--yellow);box-shadow:0 0 0 4px rgba(245,184,0,.22)}.brand{font-weight:800;letter-spacing:.14em;font-size:15px;color:var(--ink)}
+main{max-width:640px;margin:0 auto;padding:28px 20px 56px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:36px 28px 30px;box-shadow:0 18px 40px -22px rgba(21,24,28,.28);text-align:center}
+.tick{width:68px;height:68px;border-radius:50%;background:var(--soft);display:grid;place-items:center;margin:0 auto 18px}.tick svg{width:34px;height:34px}
+h1{margin:0 0 8px;font-size:clamp(28px,6vw,36px);line-height:1.15;letter-spacing:-.02em}.lede{margin:0 auto;max-width:30em;color:var(--steel);font-size:18px}
+.steps{list-style:none;margin:30px 0 6px;padding:0;text-align:left;display:grid;gap:12px}.steps li{display:flex;gap:14px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--yellow);color:#15181C;font-weight:800;display:grid;place-items:center;font-size:15px}.steps b{display:block;font-size:16.5px}.steps div span{color:var(--steel);font-size:15.5px}
+.btn{display:inline-block;margin-top:24px;background:var(--yellow);color:#15181C;font-weight:800;text-decoration:none;padding:14px 26px;border-radius:12px;font-size:16.5px}.btn:hover{filter:brightness(.96)}.btn:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+.small{margin:22px 0 0;color:var(--steel);font-size:14.5px}.small a{color:inherit}
+.foot{max-width:640px;margin:0 auto;padding:0 20px 36px;text-align:center;color:var(--steel);font-size:13.5px}.foot a{color:inherit}</style></head>
+<body><div class="top"><span class="dot" aria-hidden="true"></span><span class="brand">LOCALDESK</span></div>
+<main><section class="card"><div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#1F8A7A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><h1>Thank you, you're signed up</h1><p class="lede">We'll always tell you before anything is charged.</p>
+<ol class="steps"><li><span class="n">1</span><div><b>Sign-up confirmed</b><span>Everything you entered has reached us safely.</span></div></li><li><span class="n">2</span><div><b>We get in touch</b><span>We'll phone or text you to finish setting things up with you.</span></div></li><li><span class="n">3</span><div><b>You stay in control</b><span>No surprises: we tell you first, every time.</span></div></li></ol>
+<a class="btn" href="mailto:hello@localdeskai.co.uk">Email us a question</a><p class="small">Or email <a href="mailto:hello@localdeskai.co.uk">hello@localdeskai.co.uk</a> at any time.</p></section></main>
+<div class="foot">Localdesk, a trading name of Gio Petrucci, sole trader, Saltash, Cornwall.</div></body></html>`;
 const FOUNDING_PLACES = 5;
 // Founding places are reserved in the Store, which handles one request at a time and serialises claims. Fail closed: any problem means no place.
 async function foundingOp(store, op, id, extra = {}) {
