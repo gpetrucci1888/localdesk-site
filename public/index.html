@@ -614,6 +614,7 @@ details p{padding:0 0 20px;color:var(--steel);max-width:36em}details a{text-deco
   f.addEventListener('submit', function (e) {
     e.preventDefault(); msg.className = 'msg'; msg.textContent = '';
     var d = {}; new FormData(f).forEach(function (v, k) { d[k] = v; });
+    try { var q = new URLSearchParams(location.search), s = (q.get('utm_source') || q.get('ref') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20); if (s) d.source = s; } catch (x) {} // where the visitor came from, for example a post link ending ?utm_source=facebook
     if (!d.name.trim() || d.phone.replace(/\D/g, '').length < 10) { msg.className = 'msg bad'; msg.textContent = 'Please add your name and a phone number we can reach you on.'; return; }
     btn.disabled = true; btn.textContent = 'Sending…';
     fetch('https://books.localdeskai.co.uk/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })

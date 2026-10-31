@@ -87,6 +87,8 @@ export const progressCard = (pr, stripeOk) => `<div class="card"><h2>Road to ${p
 
 const leadRow = (l) => item(`/leads/${esc(l.id)}`, l.name || 'Lead', `${esc(PRODUCT[l.product] || '')}${l.business ? ' · ' + esc(l.business) : ''} · ${ago(l.created)}${l.repeat > 1 ? ` · asked ${l.repeat} times` : ''}${l.next_at && l.status !== 'paying' && l.status !== 'lost' ? ` · follow up ${esc(dayStr(l.next_at))}` : ''}`, isDue(l) ? pill('bad', 'Follow up') : pill(KIND[l.status], LABEL[l.status]));
 
+const sourceCard = (leads) => { const by = {}; for (const l of leads) { const k = l.source || 'website'; by[k] = (by[k] || 0) + 1; } const rows = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  return rows.length > 1 || (rows[0] && rows[0][0] !== 'website') ? `<div class="card"><h2>Where leads come from</h2><div class="list">${rows.map(([k, n]) => `<div class="item"><span class="body"><b>${esc(k)}</b></span><b>${n}</b></div>`).join('')}</div><p class="mute">Add <code>?utm_source=facebook</code> (or google, flyer and so on) to a link you share and enquiries from it are counted here.</p></div>` : ''; };
 export function pageLeads(leads, pr, stripeOk, flash = '', founding = null) {
   const open = leads.filter(l => l.status !== 'lost'), lost = leads.filter(l => l.status === 'lost');
   const due = open.filter(l => l.status === 'new' || isDue(l));
@@ -99,6 +101,7 @@ ${due.length ? `<div class="card"><h2>Needs a follow-up</h2><div class="list">${
 ${groups.map(([t, a]) => `<div class="card"><h2>${esc(t)} (${a.length})</h2><div class="list">${a.map(leadRow).join('')}</div></div>`).join('')}
 ${payingLeads.length ? `<div class="card"><h2>Marked as paying (${payingLeads.length})</h2><div class="list">${payingLeads.map(leadRow).join('')}</div><p class="mute">The figures below come from Stripe, not from this list.</p></div>` : ''}
 ${!open.length ? '<div class="card"><p class="mute">No leads yet. Website enquiries appear here the moment they arrive. Nothing is ever sent to them automatically.</p></div>' : ''}
+${sourceCard(leads)}
 ${progressCard(pr, stripeOk)}
 ${lost.length ? `<div class="card"><h2>Lost (${lost.length})</h2><div class="list">${lost.map(leadRow).join('')}</div></div>` : ''}`, '/leads');
 }

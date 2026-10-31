@@ -2181,12 +2181,12 @@ async function enquiry(request, env, store) {
   if (b.website) return reply({ ok: true }); // hidden field only a robot fills in
   const clean = (v, n) => String(v || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, n);
   const name = clean(b.name, 80), business = clean(b.business, 100), message = clean(b.message, 600), phone = clean(b.phone, 40);
-  const product = ENQUIRY_PRODUCTS[b.product] ? b.product : 'unsure';
+  const product = ENQUIRY_PRODUCTS[b.product] ? b.product : 'unsure', source = /^[a-z0-9_-]{1,20}$/.test(String(b.source || '')) ? b.source : 'website';
   if (name.length < 2) return reply({ error: 'Please tell us your name.' }, 400);
   if (phone.replace(/\D/g, '').length < 10) return reply({ error: 'Please give us a phone number we can reach you on.' }, 400);
   if (!(await throttle(store, `enq:${await visitor(request)}`, 5, 3600)) || !(await throttle(store, 'enq:all', 40, 86400))) return reply({ error: 'That is a lot of enquiries at once. Please email hello@localdeskai.co.uk instead.' }, 429);
-  await store.fetch('https://store/enquiry', { method: 'POST', body: JSON.stringify({ name, phone, business, product, message, at: Date.now() }) });
-  if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `New ${ENQUIRY_PRODUCTS[product]} enquiry: ${name}${business ? ` (${business})` : ''}, ${phone}.${message ? ' ' + message.slice(0, 160) : ''}`).catch(() => {});
+  await store.fetch('https://store/enquiry', { method: 'POST', body: JSON.stringify({ name, phone, business, product, message, source, at: Date.now() }) });
+  if (env.OWNER_PHONE && env.TWILIO_ACCOUNT_SID) await sendSms(env, env.OWNER_PHONE, `New ${ENQUIRY_PRODUCTS[product]} enquiry${source !== 'website' ? ` via ${source}` : ''}: ${name}${business ? ` (${business})` : ''}, ${phone}.${message ? ' ' + message.slice(0, 160) : ''}`).catch(() => {});
   return reply({ ok: true });
 }
 
