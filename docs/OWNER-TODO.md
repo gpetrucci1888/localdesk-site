@@ -2,6 +2,9 @@
 
 Everything else is built and waiting. Tick as you go. Anything marked "tell Claude" needs your word in chat first. Never paste a key into chat or GitHub: type it into Cloudflare yourself.
 
+## 0. First: approve one more redeploy of the workers (tell Claude: "approve redeploy")
+The live Books worker still has an old checkout rule that would put the 497 pound setup fee into a Receptionist payment link (against our terms: nothing is charged during the trial). It is harmless today because Stripe is not set up, but **do not do section 3 (Stripe test keys) until the redeploy is done.** The redeploy also brings: do-not-call and TPS protection that lasts forever by number, no duplicate leads when you add one by hand, Stripe ticking the payment step on a lead, Zoom reminders on Home, and the deploy gate. Same method, backup and rollback as before (rollback targets: books `1d50027d`, hq `2b32bcda`).
+
 ## 1. Check what is already live (15 minutes)
 - [ ] HQ smoke test: `docs/SMOKE-TEST.md` (11 lines, your own test lead). Tell Claude any line that fails.
 - [ ] HQ, More, **Stripe check**: it should show red items in plain words (Stripe not set up yet). If it shows an error page instead, tell Claude.
