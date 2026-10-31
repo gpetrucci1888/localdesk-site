@@ -74,3 +74,9 @@ Website enquiries now become leads in the Books connector's Durable Object (`lea
 - Brings: the Books `/thanks` page (payment redirect default), HQ reading the monthly price ids from Books, content planning and the Home reminder for posts due.
 - Smoke checks, no charges: Stripe webhook endpoint still enabled with its three events; no checkout sessions or subscriptions exist; no traffic yet on either worker since the deploy. Live addresses are unreachable from the build environment.
 - Not done: website and main merge, any test charge, live Stripe, Vapi, Twilio, customers.
+
+## Deployed 31 Oct 2026, fifth time (owner said in chat: "deploy and crack on! any problems that u fix deploy")
+- books `4a2673d8` (previous `6c138077`), hq `5c9c1a25` (previous `15d95823`), from `launch-candidate` commit `bcae546`. Gate passed before each upload.
+- **Standing permission, as I apply it:** the owner's words cover deploying fixes to the `books` and `hq` workers, gated by the full test run, with rollback ids recorded here and reported on PR #6. They do NOT cover the website or merging to main, Stripe live mode or any charge, Vapi, Twilio, customers or publishing: those still need fresh explicit approval.
+- Brings: webhook event recorded only after its work succeeds, setup-fee reminder after the trial, failed-payment banners, trial end date from Stripe, thank-you wording without a receipt promise.
+- Rollback targets: books `6c138077`, hq `15d95823`. Bindings and Stripe secrets preserved (books 24 bindings incl. the key, webhook secret and four price variables; hq 5).
