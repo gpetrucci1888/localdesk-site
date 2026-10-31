@@ -270,3 +270,17 @@ test('a link tapped in another app (a cross-site navigation) still arrives logge
   const ok = await call(w, '/', { cookie, headers: { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate' } });
   assert.equal(ok.status, 200, 'with the cookie, a cross-site link lands on Home');
 });
+
+test('payment link: made from a lead, shown only to the owner, never sent; errors are plain; only Stripe links are shown', async () => {
+  const w = world(); const orig = w.env.BOOKS.fetch; let reply = { status: 200, body: { url: 'https://checkout.stripe.com/c/pay/cs_test_1', founding: true, setupFee: false } }; let sentCheckouts = 0;
+  w.env.BOOKS.fetch = async (url, init = {}) => { const path = new URL(url).pathname; if (path === '/checkout') { sentCheckouts++; return Response.json(reply.body, { status: reply.status }); } if (path === '/leads/L1' && !init.method) return Response.json({ id: 'L1', name: 'Dave', phone: '+447700900123', product: 'receptionist', status: 'onboarding', checklist: { founding: true }, history: [], messages: [] }); return orig(url, init); };
+  assert.equal((await call(w, '/leads/L1/checkout', { method: 'POST' })).status, 303, 'login needed');
+  const { cookie } = await enrol(w);
+  const page = await (await call(w, '/leads/L1', { cookie })).text(); assert.match(page, /Make a payment link/); assert.match(page, /founding client: monthly price only/);
+  const ok = await call(w, '/leads/L1/checkout', { method: 'POST', cookie }); assert.equal(ok.status, 200);
+  const html = await ok.text(); assert.match(html, /https:\/\/checkout\.stripe\.com\/c\/pay\/cs_test_1/); assert.match(html, /Nothing was sent/); assert.equal(sentCheckouts, 1);
+  reply = { status: 503, body: { error: 'Stripe is not set up yet. Missing in Cloudflare: STRIPE_SECRET_KEY' } };
+  const bad = await call(w, '/leads/L1/checkout', { method: 'POST', cookie }); assert.equal(bad.status, 400); assert.match(await bad.text(), /Stripe is not set up yet/);
+  reply = { status: 200, body: { url: 'https://evil.example/phish' } };
+  const odd = await call(w, '/leads/L1/checkout', { method: 'POST', cookie }); assert.equal(odd.status, 502); assert.ok(!(await odd.text()).includes('evil.example'));
+});

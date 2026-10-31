@@ -271,6 +271,16 @@ async function leadSave(request, env, id) {
   if (!res.ok) { const msg = String(await res.text().catch(() => '')).replace(/^Error: /, '') || 'That didn\'t work.'; return html(pageLead(cur, { flash: banner('bad', msg) }), 400); }
   return redirect(`/leads/${encodeURIComponent(id)}?done=saved`);
 }
+async function leadCheckout(env, id) {
+  const cur = await getLead(env, id);
+  if (!cur) return html(shell('Lead', banner('warn', 'No such lead', '', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404);
+  const res = await books(env, '/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: id }) }).catch(() => null);
+  const out = res ? await res.json().catch(() => ({})) : {};
+  if (!res || !res.ok || !out.url) return html(pageLead(cur, { flash: banner('bad', out.error || 'That didn\'t work. Stripe may not be set up yet.') }), 400);
+  const link = String(out.url);
+  if (!/^https:\/\/checkout\.stripe\.com\//.test(link)) return html(pageLead(cur, { flash: banner('bad', 'Stripe sent back something unexpected, so no link is shown.') }), 502);
+  return html(pageLead(cur, { flash: banner('ok', `Payment link made${out.founding ? ' (founding client, no setup fee, 7-day trial)' : out.setupFee ? ' (includes the setup fee)' : ''}`, `Copy this and send it yourself. Nothing was sent. <code style="word-break:break-all">${esc(link)}</code>`) }));
+}
 async function leadCreate(request, env) {
   const f = await request.formData(), v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)]));
   const res = await books(env, '/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: v.name, phone: v.phone, business: v.business, product: v.product, source: v.source, message: v.message }) });
@@ -520,6 +530,7 @@ export default {
         }
         if (p === '/books/new') return respond(await createClient(request, env));
         if (p === '/leads/new') return respond(await leadCreate(request, env));
+        { const cm = p.match(/^\/leads\/([\w-]+)\/checkout$/); if (cm) return respond(await leadCheckout(env, cm[1])); }
         const lm = p.match(/^\/leads\/([\w-]+)\/(save|delete)$/);
         if (lm && lm[2] === 'save') return respond(await leadSave(request, env, lm[1]));
         if (lm) {

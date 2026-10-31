@@ -103,6 +103,7 @@
 
 import { ADMIN_PAGE } from './admin.js';
 import { createFreeAgent, faAuthorizeUrl, faExchange, faCreds } from './freeagent.js';
+import { stripeWebhook, createCheckout } from './stripe.js';
 import { createXero, xeroAuthorizeUrl, xeroExchange, xeroCreds, xeroDisconnect } from './xero.js';
 
 const AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
@@ -296,6 +297,9 @@ async function route(request, env) {
         return new Response(await docPage(env, store, link, `${url.origin}/d/${dl[1]}`), { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
       }
 
+      // Stripe webhook (public, but only accepted with a valid Stripe signature). Keeps the founding places honest.
+      if (url.pathname === '/stripe/webhook' && request.method === 'POST') return await stripeWebhook(request, env, { store, foundingOp });
+
       // Website enquiry form (public, called from www.localdeskai.co.uk). Texts the owner and keeps the enquiry for 90 days.
       if (url.pathname === '/enquiry') return await enquiry(request, env, store);
 
@@ -314,6 +318,7 @@ async function route(request, env) {
 
       // Sales pipeline (HQ uses these). Leads hold a name and phone number, so they are admin-only and never logged.
       if (url.pathname === '/leads' && request.method === 'GET') return store.fetch('https://store/leads');
+      if (url.pathname === '/checkout' && request.method === 'POST') { const { lead_id } = await request.json().catch(() => ({})); const r = await createCheckout(env, store, String(lead_id || ''), { foundingOp }); return Response.json(r, { status: r.status }); }
       if (url.pathname === '/founding' && request.method === 'GET') return Response.json({ places: FOUNDING_PLACES, ...(await foundingOp(store, 'list')) });
       if (url.pathname === '/leads' && request.method === 'POST') return Response.json(await addLead(store, await request.json()));
       const ldm = url.pathname.match(/^\/leads\/([\w-]+)$/);
@@ -2118,8 +2123,8 @@ function leadMove(from, to) {
 }
 const FOUNDING_PLACES = 5;
 // Founding places are reserved in the Store, which handles one request at a time and serialises claims. Fail closed: any problem means no place.
-async function foundingOp(store, op, id) {
-  const res = await store.fetch('https://store/founding', { method: 'POST', body: JSON.stringify({ op, id }) });
+async function foundingOp(store, op, id, extra = {}) {
+  const res = await store.fetch('https://store/founding', { method: 'POST', body: JSON.stringify({ op, id, ...extra }) });
   if (!res.ok) throw new Error('Could not check the founding places, so nothing was changed');
   return res.json();
 }
@@ -2506,18 +2511,37 @@ export class Store {
       await this.storage.put(`lead:${id}`, lead);
       return Response.json({ ok: true, id });
     }
-    if (url.pathname === '/founding' && request.method === 'POST') { // reserve, release or list the first-five setup-waiver places (one at a time, so two claims can never both win the last place)
-      const { op, id } = JSON.parse(await request.text() || '{}');
+    if (url.pathname === '/once' && request.method === 'POST') { // true the first time a key is seen (used to ignore repeated Stripe events)
+      const { key } = JSON.parse(await request.text() || '{}');
+      const run = async () => { if (await this.storage.get(`once:${key}`)) return { first: false }; await this.storage.put(`once:${key}`, Date.now()); return { first: true }; };
+      const turn = (this._once || Promise.resolve()).then(run, run); this._once = turn.catch(() => {});
+      return Response.json(await turn);
+    }
+    if (url.pathname === '/founding' && request.method === 'POST') { // reserve, activate, cancel, release or list the first-five setup-waiver places (one request at a time, so two claims can never both win the last place)
+      const { op, id, sub, now: at } = JSON.parse(await request.text() || '{}'), now = Number(at) || Date.now();
       const run = async () => {
-        const ids = [...(await this.storage.list({ prefix: 'founding:' })).keys()].map(k => k.slice(9));
-        if (op === 'list') return { used: ids.length, ids };
+        const recs = new Map([...(await this.storage.list({ prefix: 'founding:' })).entries()].map(([k, v]) => [k.slice(9), v]));
+        const live = (v) => v && (v.state === 'active' || v.exp > now);                // a reserved place that nobody paid for expires and frees itself
+        const usedIds = (except) => [...recs.entries()].filter(([k, v]) => k !== except && live(v)).map(([k]) => k);
+        if (op === 'list') { const ids = usedIds(); return { used: ids.length, ids, active: ids.filter(k => recs.get(k).state === 'active').length, flags: [...(await this.storage.list({ prefix: 'foundingflag:' })).values()] }; }
         if (!/^[\w-]{1,40}$/.test(String(id || ''))) return { ok: false, error: 'Bad id' };
-        if (op === 'release') { await this.storage.delete(`founding:${id}`); return { ok: true, used: ids.filter(x => x !== id).length }; }
+        const cur = recs.get(id), others = usedIds(id).length;
+        if (op === 'release') { await this.storage.delete(`founding:${id}`); return { ok: true, used: others }; }
         if (op === 'claim') {
-          if (ids.includes(id)) return { ok: true, used: ids.length, already: true };
-          if (ids.length >= 5) return { ok: false, used: ids.length };
-          await this.storage.put(`founding:${id}`, { at: Date.now() });
-          return { ok: true, used: ids.length + 1 };
+          if (live(cur)) return { ok: true, used: others + 1, already: true };
+          if (others >= 5) return { ok: false, used: others };
+          await this.storage.put(`founding:${id}`, { at: now, state: 'reserved', exp: now + 7 * 86400000 });
+          return { ok: true, used: others + 1 };
+        }
+        if (op === 'activate') { // a founding client's subscription started: the place is theirs for good (unless they cancel in the first 7 days)
+          if (!live(cur) && others >= 5) { await this.storage.put(`foundingflag:${id}`, { id, at: now, why: 'a founding subscription started but all five places were already used' }); return { ok: false, over: true, used: others }; }
+          await this.storage.put(`founding:${id}`, { ...(live(cur) ? cur : { at: now }), state: 'active', sub: sub || (cur && cur.sub) || '', activated: (cur && cur.activated) || now });
+          await this.storage.delete(`foundingflag:${id}`);
+          return { ok: true, used: others + 1 };
+        }
+        if (op === 'cancel') { // cancelled within 7 days of starting: the place comes back. Later: it stays used.
+          if (cur && cur.state === 'active' && (!sub || cur.sub === sub) && now - cur.activated <= 7 * 86400000) { await this.storage.delete(`founding:${id}`); return { ok: true, released: true, used: others }; }
+          return { ok: true, released: false, used: others + (live(cur) ? 1 : 0) };
         }
         return { ok: false, error: 'Unknown' };
       };
