@@ -12,6 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
+import { pageContent, seedPosts, move as movePost, edit as editPost, STATUSES } from './posts.js';
 import { pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
 
 const enc = new TextEncoder();
@@ -105,6 +106,10 @@ export class Vault {
       if (request.method === 'GET') return Response.json((await s.get('totp')) || null);
       if (request.method === 'PUT') { await s.put('totp', body); return Response.json({ ok: true }); }
       if (request.method === 'DELETE') { await s.delete('totp'); return Response.json({ ok: true }); }
+    }
+    if (url.pathname === '/posts') { // the content approval queue
+      if (body.op === 'save') { await s.put('posts', body.posts); return Response.json({ ok: true }); }
+      return Response.json((await s.get('posts')) || null);
     }
     if (url.pathname === '/reset') {
       if (body.value !== undefined && (await s.get('resetSeen')) !== body.value) { await s.put('resetSeen', body.value); await s.delete('totp'); }
@@ -254,6 +259,17 @@ const putLead = (env, id, patch) => books(env, `/leads/${encodeURIComponent(id)}
 const LEAD_FLASH = { saved: ['ok', 'Saved.'], added: ['ok', 'Lead added. Nothing was sent to them.'], deleted: ['ok', 'Deleted.'] };
 const leadFlash = (url) => { const f = LEAD_FLASH[url.searchParams.get('done')]; return f ? banner(f[0], f[1]) : ''; };
 const leadsDown = () => shell('Leads', `<h1>Leads</h1>${booksError()}`, '/leads');
+const foundingCount = async (env) => { const l = await getLeads(env); return l ? l.filter(x => x.product === 'receptionist' && x.checklist && x.checklist.founding === true && x.status !== 'lost').length : null; };
+const loadPosts = async (vault) => { let p = await vpost(vault, '/posts', {}); if (!Array.isArray(p)) { p = seedPosts(); await vpost(vault, '/posts', { op: 'save', posts: p }); } return p; };
+async function contentAction(request, env, vault, id, action) {
+  const posts = await loadPosts(vault); let r;
+  if (action === 'save') r = editPost(posts, id, String((await request.formData().catch(() => new FormData())).get('text') || ''));
+  else if (STATUSES.includes(action)) r = movePost(posts, id, action, await foundingCount(env));
+  else return html(shell('Not found', banner('warn', 'Nothing here', '', btn('/content', 'Back to Content', 'dark')), '/content'), 404);
+  if (r.error) return html(pageContent(posts, await foundingCount(env), banner('bad', r.error)), 400);
+  await vpost(vault, '/posts', { op: 'save', posts });
+  return redirect(`/content#${encodeURIComponent(id)}`);
+}
 async function pageLeadsList(env, url) {
   const [leads, d] = await Promise.all([getLeads(env), load(env)]);
   return leads ? pageLeads(leads, d.pr, !d.subs.off && !d.subs.error, leadFlash(url)) : leadsDown();
@@ -458,7 +474,7 @@ const pageSettings = () => shell('Settings', `<h1>Settings</h1>
 <div class="card"><h2>Your HQ login</h2><details><summary>I've lost my phone</summary><p>In Cloudflare, open <b>Workers &amp; Pages</b>, then <b>hq</b>, then <b>Settings</b>, then <b>Variables and Secrets</b>. Change the variable <code>RESET_TOTP</code> to any new word. Then log in again and set up the app on your new phone.</p></details><details><summary>I want a new passphrase</summary><p>In the same place in Cloudflare, edit <code>OWNER_PASSWORD</code> and save. Every phone and computer is logged out and you log in with the new one.</p></details></div>
 <div class="card"><h2>Lost or lent a device?</h2><p class="mute">HQ remembers your phone and computer for 3 months so you don't log in every time. If a device is lost, log every device out at once. You then log back in with your passphrase and code.</p><form method="post" action="/logout-all"><button class="btn block danger">Log out every device</button></form></div>
 <form method="post" action="/logout"><button class="btn block line">Log out of this device</button></form>`, '/settings');
-const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/leads', 'Leads', 'Enquiries and follow-ups', 'leads'], ['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
+const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/leads', 'Leads', 'Enquiries and follow-ups', 'leads'], ['/content', 'Content', 'Posts to approve', 'leads'], ['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
 
 // ---------- help ----------
 function md(src) {
@@ -508,6 +524,7 @@ export default {
     if (!authed) return respond(redirect('/login'));
     try {
       const p = url.pathname;
+      { const cm = request.method === 'POST' && p.match(/^\/content\/(p\d+)\/(\w+)$/); if (cm) return respond(await contentAction(request, env, vault, cm[1], cm[2])); }
       if (request.method === 'POST') {
         if (p === '/backups/download') {
           const date = String((await request.formData().catch(() => new FormData())).get('date') || '');
@@ -541,7 +558,7 @@ export default {
       if ((m = p.match(/^\/books\/client\/(\d+)\/monthly$/))) return respond(html(await pageMonthly(env, m[1])));
       if ((m = p.match(/^\/books\/client\/(\d+)\/confirm\/(logout|end)$/))) return respond(html(pageConfirm(m[1], m[2])));
       if ((m = p.match(/^\/docs(?:\/([\w-]+))?$/))) { const pg = pageDocs(m[1]); return respond(pg ? html(pg) : html(shell('Not found', banner('warn', 'No such guide', '', btn('/docs', 'All guides', 'dark')), '/docs'), 404)); }
-      const pages = { '/': () => pageHome(env), '/leads': () => pageLeadsList(env, url), '/customers': () => pageCustomers(env), '/payments': () => pagePayments(env), '/books': () => pageBooks(env, flashOf(url)), '/receptionist': async () => pageReceptionist(await load(env)), '/backups': async () => pageBackups(await load(env)), '/settings': pageSettings, '/more': pageMore };
+      const pages = { '/': () => pageHome(env), '/leads': () => pageLeadsList(env, url), '/content': async () => pageContent(await loadPosts(vault), await foundingCount(env)), '/customers': () => pageCustomers(env), '/payments': () => pagePayments(env), '/books': () => pageBooks(env, flashOf(url)), '/receptionist': async () => pageReceptionist(await load(env)), '/backups': async () => pageBackups(await load(env)), '/settings': pageSettings, '/more': pageMore };
       if (pages[p]) return respond(html(await pages[p]()));
       return respond(html(shell('Not found', banner('warn', 'Nothing here', 'That page doesn\'t exist.', btn('/', 'Back to Home', 'dark')), ''), 404));
     } catch (e) { return respond(friendlyError()); }
