@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Create or update a client's receptionist in Vapi from a client JSON file.
 
-    python3 ops/new_client.py ops/example-client.json
+    python3 ops/new_client.py ops/example-client.json          (changes Vapi: needs the owner's approval each time)
+    python3 ops/new_client.py ops/example-client.json --check  (offline: checks the facts and the finished assistant, calls nothing)
 
 The JSON holds the business facts (see example-client.json). If it has an
 "assistantId", that assistant is updated; otherwise a new one is created and
@@ -74,9 +75,60 @@ def build(client):
     }
 
 
-def main(path):
+REQUIRED = ['business', 'trade', 'owner', 'services', 'areas', 'hours']
+PHONE = __import__('re').compile(r'(?:\+?44|\b0)[\d\s()-]{9,}')
+
+
+def validate(client, config=None):
+    """Everything that can be checked without touching Vapi. Returns a list of plain-English problems (empty means fine)."""
+    problems = []
+    for f in REQUIRED:
+        v = str(client.get(f, '') or '').strip()
+        if len(v) < 2:
+            problems.append(f"'{f}' is missing")
+        elif len(v) > 400:
+            problems.append(f"'{f}' is too long (400 characters at most)")
+    for f in ('quotes', 'emergencies', 'extra'):
+        if len(str(client.get(f, '') or '')) > 400:
+            problems.append(f"'{f}' is too long (400 characters at most)")
+    for f, v in client.items():
+        if f != 'assistantId' and PHONE.search(str(v)):
+            problems.append(f"'{f}' looks like it contains a phone number. Keep real numbers out of the file: this repository is public")
+    if problems:
+        return problems
+    config = config or build(client)
+    system = config['model']['messages'][0]['content']
+    for token in ('[BUSINESS]', '[TRADE]', '[OWNER]', '[SERVICES]', '[AREAS]', '[HOURS]', '[QUOTES]', '[EMERGENCIES]', '[EXTRA]', '[LOCAL]'):
+        if token in system:
+            problems.append(f'the prompt still contains {token}')
+    for must, why in (('NEVER promise', 'the no-promises rule'), ('999', 'the emergency rule'), ('virtual receptionist (an AI)', 'the AI disclosure'), ('Never claim to be human', 'the AI disclosure')):
+        if must not in system:
+            problems.append(f'the prompt is missing {why}')
+    if 'may be recorded' not in config['firstMessage']:
+        problems.append('the greeting does not tell callers the call may be recorded')
+    if client['business'] not in config['firstMessage']:
+        problems.append('the greeting does not name the business')
+    if config.get('maxDurationSeconds', 0) <= 0 or config['maxDurationSeconds'] > 1800:
+        problems.append('the maximum call length is missing or over 30 minutes')
+    if not config['model'].get('toolIds'):
+        problems.append('the end-call tool is missing')
+    if len(config['transcriber'].get('keyterm', [])) > 100:
+        problems.append('more than 100 key terms')
+    if not config['analysisPlan']['summaryPlan']['enabled']:
+        problems.append('the call summary text is switched off')
+    return problems
+
+
+def main(path, check=False):
     client = json.loads(pathlib.Path(path).read_text())
     config = build(client)
+    problems = validate(client, config)
+    if check:
+        print('OK: nothing to fix' if not problems else 'Fix these first:\n- ' + '\n- '.join(problems))
+        print(f"Greeting: {config['firstMessage']}\nMax call length: {config['maxDurationSeconds']}s, silence timeout {config['silenceTimeoutSeconds']}s, key terms: {len(config['transcriber']['keyterm'])}")
+        sys.exit(1 if problems else 0)
+    if problems:
+        sys.exit('Not sent to Vapi. Fix these first:\n- ' + '\n- '.join(problems))
     if client.get('assistantId'):
         res = call('PATCH', f"/assistant/{client['assistantId']}", config)
     else:
@@ -85,4 +137,4 @@ def main(path):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1], check='--check' in sys.argv[2:])
