@@ -81,3 +81,9 @@ test('no absolute claims about answering: the pages say the receptionist answers
   const walk = (d) => readdirSync(d).flatMap(f => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.html') ? [p] : []; });
   for (const f of walk('public')) { const t = readFileSync(f, 'utf8'); for (const bad of [/answers every call/i, /every call answered/i, /never clocks off/i, /never miss/i, /every enquiry captured/i]) assert.ok(!bad.test(t), `${f} still says ${bad}`); }
 });
+
+test('privacy page explains sales calls and still has its owner-only placeholders as comments (so nothing false is shown)', async () => {
+  const { readFileSync } = await import('node:fs'); const t = readFileSync('public/privacy.html', 'utf8');
+  assert.match(t, /Business contacts and sales calls/); assert.match(t, /Telephone Preference Service/); assert.match(t, /Corporate Telephone Preference Service/); assert.match(t, /respect what they tell us|asked us not to/);
+  assert.ok(!t.includes('—'));
+});

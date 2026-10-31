@@ -27,3 +27,20 @@
 
 ## Not built
 - Customer portal (card updates, invoices), proration rules, refunds, and any automatic provisioning of the Vapi assistant or Twilio number after payment. Each of those needs a separate owner decision, and Vapi and Twilio changes need approval one at a time.
+
+## Owner action list: Stripe TEST mode in about 15 minutes
+Do these in Stripe with the **Test mode** switch on. Never paste a key into GitHub or chat: type each into Cloudflare yourself.
+1. **Products and prices** (Product catalogue, Add product). Four prices, all GBP:
+   - Localdesk Receptionist: **£397**, recurring, **monthly**.
+   - Receptionist setup: **£497**, **one-off**.
+   - Books by Localdesk: **£150**, recurring, **monthly**.
+   - Books setup: **£395**, **one-off**.
+   Copy each price id (starts `price_`).
+2. **Checkout key** (Developers, API keys, Create restricted key): only **Checkout Sessions: Write**. Copy it.
+3. **Read-only key for HQ** (restricted key): **read** on Customers, Subscriptions, Invoices, Charges, **Prices**. Copy it.
+4. **Webhook** (Developers, Webhooks, Add endpoint): `https://books.localdeskai.co.uk/stripe/webhook`, events `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Copy its signing secret.
+5. **Cloudflare, worker `books`, Variables and Secrets:** secrets `STRIPE_SECRET_KEY` (step 2), `STRIPE_WEBHOOK_SECRET` (step 4). Variables `STRIPE_PRICE_RECEPTIONIST`, `STRIPE_PRICE_RECEPTIONIST_SETUP`, `STRIPE_PRICE_BOOKS`, `STRIPE_PRICE_BOOKS_SETUP` (step 1).
+6. **Cloudflare, worker `hq`:** secret `STRIPE_KEY` (step 3). Variables `STRIPE_PRICES_RECEPTIONIST` = the Receptionist monthly price id, `STRIPE_PRICES_BOOKS` = the Books monthly price id.
+7. Open **HQ, More, Stripe check**. Every line should be green. It tells you what to fix in plain words.
+8. Run `docs/JOURNEY-TEST-PLAN.md` steps 1 to 6 with Stripe's test card 4242 4242 4242 4242.
+Rules built in: Receptionist £397 a month with a 7-day free trial, £497 setup waived only for the first five founding clients; Books £150 a month plus £395 setup, no trial, never waived.

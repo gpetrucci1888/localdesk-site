@@ -28,7 +28,7 @@ def deploy_hq(dry=False):
     s=settings('hq'); binds=[b for b in s['bindings'] if b['type']!='secret_text']
     meta={'main_module':'worker.js','compatibility_date':'2025-09-01','bindings':binds,'keep_bindings':['secret_text']}
     cmd=['curl','-s','-m','120',*AUTH,'-X','PUT',f'{API}/hq','-F','metadata='+json.dumps(meta)+';type=application/json']
-    for f in ('worker.js','content.js','ui.js','font.js','leads.js','passkey.js','posts.js','posts-seed.js'): cmd+=['-F',f'{f}=@{R}/hq/{f};type=application/javascript+module;filename={f}']
+    for f in ('worker.js','content.js','ui.js','font.js','leads.js','passkey.js','posts.js','posts-seed.js','stripecheck.js'): cmd+=['-F',f'{f}=@{R}/hq/{f};type=application/javascript+module;filename={f}']
     if dry: print('hq bindings',[(b['name'],b['type']) for b in binds]); return
     r=json.loads(subprocess.run(cmd,capture_output=True,text=True).stdout); print('hq','success' if r.get('success') else r.get('errors'))
 which=sys.argv[1]; dry=len(sys.argv)>2 and sys.argv[2]=='dry'

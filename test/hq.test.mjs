@@ -465,3 +465,14 @@ test('cold-call lead page: stages, call plan, TPS and do-not-call hide the Call 
   assert.equal(res.status, 303); assert.deepEqual(saved, { next_action: 'Ring Tuesday', meeting_at: '2026-11-05T14:30', meeting_link: 'https://zoom.us/j/9', tps: 'clear', dnc: false });
   await look(base, { plan_form: '1', dnc: '1', tps: 'registered' }); assert.equal(saved.dnc, true); assert.equal(saved.tps, 'registered');
 });
+
+test('Stripe check page: login needed, shows the four prices and what to fix, never a secret', async (t) => {
+  const w = world(); w.env.STRIPE_KEY = 'rk_test_HQSECRETKEY'; const orig = w.env.BOOKS.fetch;
+  const prices = { price_rec: { id: 'price_rec', currency: 'gbp', unit_amount: 39700, recurring: { interval: 'month' }, livemode: false, active: true }, price_recs: { id: 'price_recs', currency: 'gbp', unit_amount: 49700, livemode: false, active: true }, price_bk: { id: 'price_bk', currency: 'gbp', unit_amount: 14000, recurring: { interval: 'month' }, livemode: false, active: true } };
+  w.env.BOOKS.fetch = async (url, init = {}) => new URL(url).pathname === '/stripe/status' ? Response.json({ secretKey: true, webhookSecret: false, prices: { receptionist: 'price_rec', receptionist_setup: 'price_recs', books: 'price_bk', books_setup: null } }) : orig(url, init);
+  t.mock.method(globalThis, 'fetch', async (u) => { const m = /\/v1\/prices\/(\w+)/.exec(String(u)); return m && prices[m[1]] ? Response.json(prices[m[1]]) : m ? new Response(JSON.stringify({ error: { message: 'No such price' } }), { status: 404 }) : Response.json({ data: [] }); });
+  assert.equal((await call(w, '/stripe-check')).status, 303);
+  const { cookie } = await enrol(w); const res = await call(w, '/stripe-check', { cookie }); assert.equal(res.status, 200); const page = await res.text();
+  assert.match(page, /TEST mode/); assert.match(page, /Amount is £140, it should be £150/); assert.match(page, /STRIPE_WEBHOOK_SECRET/); assert.match(page, /STRIPE_PRICE_BOOKS_SETUP/); assert.match(page, /Fix the red items/);
+  assert.ok(!page.includes('HQSECRETKEY')); assert.match(await (await call(w, '/more', { cookie })).text(), /Stripe check/);
+});

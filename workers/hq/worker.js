@@ -14,6 +14,7 @@ import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
 import { pageContent, seedPosts, move as movePost, edit as editPost, STATUSES } from './posts.js';
 import { b64u, newChallenge, verifyRegistration, verifyAssertion, loginScript } from './passkey.js';
+import { evaluate as stripeEval, EXPECTED as STRIPE_EXPECTED } from './stripecheck.js';
 import { appFor, pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
 
 const enc = new TextEncoder();
@@ -301,6 +302,16 @@ async function leadSave(request, env, id) {
   if (!res.ok) { const msg = String(await res.text().catch(() => '')).replace(/^Error: /, '') || 'That didn\'t work.'; return html(pageLead(cur, { flash: banner('bad', msg) }), 400); }
   return redirect(`/leads/${encodeURIComponent(id)}?done=saved`);
 }
+async function pageStripeCheck(env) {
+  const status = await books(env, '/stripe/status').then(r => r.ok ? r.json() : null).catch(() => null), cfg = priceConfig(env), fetched = {};
+  if (status && env.STRIPE_KEY) await Promise.all(Object.keys(STRIPE_EXPECTED).map(async (k) => { const id = status.prices && status.prices[k]; if (id && /^price_[\w]+$/.test(id)) fetched[k] = await stripeFetch(env, `/prices/${id}`); }));
+  const r = stripeEval({ status, fetched, hqKey: env.STRIPE_KEY, hqMonthlyIds: new Set([...cfg.books, ...cfg.receptionist]) });
+  const line = (g) => `<div class="banner ${g.bad ? 'bad' : g.warn ? 'warn' : 'ok'}">${g.bad || g.warn ? ICON.alert : ICON.check}<div><p>${esc(g.text)}</p></div></div>`;
+  return shell('Stripe check', `${crumb('/more', 'More')}<h1>Is Stripe set up right?</h1><p class="lead">${r.ready ? 'Everything here checks out.' : 'Fix the red items, then reload this page.'} It shows no secrets. Nothing here changes anything in Stripe.</p>
+${r.general.map(line).join('')}
+<div class="card"><h2>The four prices</h2><div class="list">${r.rows.map(x => `<div class="item"><span class="body"><b>${esc(x.label)}</b><small>Should be ${esc(x.expected)}${x.id ? ` · ${esc(x.id)}` : ''}</small>${x.problems.map(p => `<small class="bad">${esc(p)}</small>`).join('')}${x.unchecked ? '<small class="mute">Not checked: HQ needs its Stripe key first.</small>' : ''}</span>${x.problems.length ? pill('bad', 'Fix') : x.unchecked ? pill('mute', 'Not checked') : pill('ok', 'OK')}</div>`).join('')}</div></div>
+<div class="card"><h2>Still checked by hand</h2><p class="mute">In the Stripe dashboard, Developers, Webhooks: one endpoint for <b>books.localdeskai.co.uk/stripe/webhook</b> listening to <b>customer.subscription.created</b>, <b>updated</b> and <b>deleted</b>. HQ cannot see this with a read-only key. Then run the test steps in docs/JOURNEY-TEST-PLAN.md.</p></div>`, '/more');
+}
 async function leadCheckout(env, id) {
   const cur = await getLead(env, id);
   if (!cur) return html(shell('Lead', banner('warn', 'No such lead', '', btn('/leads', 'Back to Leads', 'dark')), '/leads'), 404);
@@ -510,7 +521,7 @@ ${added ? banner('ok', 'Added', 'Next time, tap "Log in with Face ID or fingerpr
 <div class="card"><h2>Your devices</h2>${keys.length ? `<div class="list">${keys.map(k => `<div class="item"><span class="body"><b>${esc(k.name)}</b><small>Added ${esc(k.added || '')}</small></span><form method="post" action="/passkey/delete"><input type="hidden" name="id" value="${esc(k.id)}"><button class="btn line">Remove</button></form></div>`).join('')}</div>` : '<p class="mute">None yet. Your passphrase and code still work either way.</p>'}</div>
 ${loginScript(nonce)}`, '/more');
 }
-const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/leads', 'Leads', 'Enquiries and follow-ups', 'leads'], ['/content', 'Content', 'Posts to approve', 'leads'], ['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/passkey', 'Face ID login', 'Log in with a touch', 'settings'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
+const pageMore = () => shell('More', `<h1>More</h1><div class="card"><div class="list">${[['/leads', 'Leads', 'Enquiries and follow-ups', 'leads'], ['/content', 'Content', 'Posts to approve', 'leads'], ['/receptionist', 'Receptionist', 'Mia, calls and texts', 'receptionist'], ['/backups', 'Backups', 'Your data, kept safe', 'backups'], ['/passkey', 'Face ID login', 'Log in with a touch', 'settings'], ['/stripe-check', 'Stripe check', 'Is payment setup right?', 'settings'], ['/settings', 'Settings', 'Accounts and security', 'settings'], ['/docs', 'Help', 'Step-by-step guides', 'help']].map(([h, t, s, ic]) => `<a class="item" href="${h}"><span class="av" style="border-radius:12px">${ICON[ic]}</span><span class="body"><b>${t}</b><small>${s}</small></span>${ICON.chevron}</a>`).join('')}</div></div><form method="post" action="/logout"><button class="btn block line">Log out of HQ</button></form>`, '/more');
 
 // ---------- help ----------
 function md(src) {
@@ -636,7 +647,7 @@ export default {
       if ((m = p.match(/^\/books\/client\/(\d+)\/monthly$/))) return respond(html(await pageMonthly(env, m[1])));
       if ((m = p.match(/^\/books\/client\/(\d+)\/confirm\/(logout|end)$/))) return respond(html(pageConfirm(m[1], m[2])));
       if ((m = p.match(/^\/docs(?:\/([\w-]+))?$/))) { const pg = pageDocs(m[1]); return respond(pg ? html(pg) : html(shell('Not found', banner('warn', 'No such guide', '', btn('/docs', 'All guides', 'dark')), '/docs'), 404)); }
-      const pages = { '/': () => pageHome(env), '/leads': () => pageLeadsList(env, url), '/content': async () => pageContent(await loadPosts(vault), await foundingCount(env)), '/customers': () => pageCustomers(env), '/payments': () => pagePayments(env), '/books': () => pageBooks(env, flashOf(url)), '/receptionist': async () => pageReceptionist(await load(env)), '/backups': async () => pageBackups(await load(env)), '/settings': pageSettings, '/more': pageMore };
+      const pages = { '/': () => pageHome(env), '/leads': () => pageLeadsList(env, url), '/content': async () => pageContent(await loadPosts(vault), await foundingCount(env)), '/customers': () => pageCustomers(env), '/payments': () => pagePayments(env), '/books': () => pageBooks(env, flashOf(url)), '/receptionist': async () => pageReceptionist(await load(env)), '/backups': async () => pageBackups(await load(env)), '/settings': pageSettings, '/stripe-check': () => pageStripeCheck(env), '/more': pageMore };
       if (pages[p]) return respond(html(await pages[p]()));
       return respond(html(shell('Not found', banner('warn', 'Nothing here', 'That page doesn\'t exist.', btn('/', 'Back to Home', 'dark')), ''), 404));
     } catch (e) { return respond(friendlyError()); }

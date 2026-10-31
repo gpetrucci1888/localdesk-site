@@ -318,6 +318,7 @@ async function route(request, env) {
 
       // Sales pipeline (HQ uses these). Leads hold a name and phone number, so they are admin-only and never logged.
       if (url.pathname === '/leads' && request.method === 'GET') return store.fetch('https://store/leads');
+      if (url.pathname === '/stripe/status' && request.method === 'GET') return Response.json({ secretKey: Boolean(env.STRIPE_SECRET_KEY), webhookSecret: Boolean(env.STRIPE_WEBHOOK_SECRET), prices: { receptionist: env.STRIPE_PRICE_RECEPTIONIST || null, receptionist_setup: env.STRIPE_PRICE_RECEPTIONIST_SETUP || null, books: env.STRIPE_PRICE_BOOKS || null, books_setup: env.STRIPE_PRICE_BOOKS_SETUP || null } }); // names and price ids only, never a secret
       if (url.pathname === '/checkout' && request.method === 'POST') { const { lead_id } = await request.json().catch(() => ({})); const r = await createCheckout(env, store, String(lead_id || ''), { foundingOp }); return Response.json(r, { status: r.status }); }
       if (url.pathname === '/founding' && request.method === 'GET') return Response.json({ places: FOUNDING_PLACES, ...(await foundingOp(store, 'list')) });
       if (url.pathname === '/leads' && request.method === 'POST') return Response.json(await addLead(store, await request.json()));
