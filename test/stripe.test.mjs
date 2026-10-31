@@ -123,7 +123,7 @@ test('checkout: a sixth founding link is refused, missing setup is explained, no
   const l6 = await (await w.store.fetch(`https://store/lead/${ids[5]}`)).json(); l6.checklist.founding = true; await w.store.fetch(`https://store/lead/${ids[5]}`, { method: 'PUT', body: JSON.stringify(l6) });
   const r6 = await checkout(w, ids[5]); assert.equal(r6.status, 409); assert.equal(calls.length, 0);
   assert.equal((await checkout(w, 'nosuchlead')).status, 404);
-  const unsure = await books.fetch(new Request('https://books.test/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://www.localdeskai.co.uk', 'CF-Connecting-IP': '203.0.113.200' }, body: JSON.stringify({ name: 'Pay 9', phone: '07700 939999', product: 'unsure' }) }), w.booksEnv);
+  const unsure = await books.fetch(new Request('https://books.test/enquiry', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://www.localdeskai.co.uk', 'CF-Connecting-IP': '203.0.113.200' }, body: JSON.stringify({ name: 'Pay 9', phone: '07700 900555', product: 'unsure' }) }), w.booksEnv);
   assert.equal((await checkout(w, await leadId(w, 9))).status, 400);
 });
 
