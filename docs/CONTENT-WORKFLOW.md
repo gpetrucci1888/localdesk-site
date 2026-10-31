@@ -9,6 +9,7 @@ HQ, More, Content. **HQ never posts, schedules or contacts any social service.**
 | Edit a post | **Works**; any edit sends it back to draft; a posted post cannot be edited | HQ test |
 | Review and approve or reject | **Works**; sensible moves only (draft, approved, scheduled, posted, rejected) | HQ test |
 | Founding-offer guard | **Works**; a post that mentions the founding offer cannot be approved, scheduled or posted when all five places are used or the count cannot be checked; applies to your own posts and to edits | HQ tests, fail-closed case included |
+| No-cost rule | **Works**: a post that mentions a price, fee, setup or minimum term cannot be approved, scheduled or marked posted; a card says why | HQ tests |
 | Plan a platform and a day | **Works** | HQ test |
 | "I scheduled it" and "It is posted" | **Works as a tick box only**: it records that you did it, it does not do it | HQ test |
 | Home reminder "N posts to put out today" | **Works** for approved or scheduled posts whose planned day has come, until you tick them posted | HQ test |

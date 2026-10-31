@@ -4,6 +4,9 @@ import { esc, shell, banner, btn, pill } from './ui.js';
 import { SEED_POSTS } from './posts-seed.js';
 import { SEED_MORE } from './posts-seed-30.js';
 
+// The owner rule: no social post may talk about prices or costs. A post that does can still be written and edited, but never approved, scheduled or marked posted.
+export const COST_RE = /£\s?\d|\bpric(e|es|ing)\b|\bcosts?\b|\bfees?\b|per month|\ba month\b|\bsetup\b|minimum term|\bdiscount|\bcheap/i;
+export const mentionsCost = (t) => COST_RE.test(String(t || ''));
 export const FOUNDING_PLACES = 5;
 export const STATUSES = ['draft', 'approved', 'scheduled', 'posted', 'rejected'];
 const LABEL = { draft: 'Draft', approved: 'Approved', scheduled: 'Scheduled', posted: 'Posted', rejected: 'Rejected' };
@@ -41,12 +44,19 @@ export function plan(posts, id, { platform, planned }, now = Date.now()) {
 export const dueToday = (posts, now = Date.now()) => (posts || []).filter(p => p.planned && p.planned <= today(now) && ['approved', 'scheduled'].includes(p.status));
 // The 30-day calendar (content/social-30-day.json). Added to the queue once, as drafts, when HQ next opens Content; posts already there are never touched.
 export const missingSeeds = (posts) => { const have = new Set((posts || []).map(p => p.id)); return SEED_MORE.filter(p => !have.has(p.id)).map(p => ({ ...p })); };
+// Drafts nobody has approved yet follow the latest wording from the repo (for example when a post was reworded). Approved, scheduled, posted and your own posts are never touched.
+export function refreshDrafts(posts) {
+  const latest = new Map([...SEED_POSTS, ...SEED_MORE].map(x => [x.id, x])); let changed = false;
+  for (const p of posts || []) { const n = latest.get(p.id); if (n && !p.custom && p.status === 'draft' && (p.text !== n.text || p.title !== n.title)) { Object.assign(p, { text: n.text, title: n.title, picture: n.picture, note: n.note, founding: n.founding, demo: n.demo }); changed = true; } }
+  return changed;
+}
 export const seedPosts = () => SEED_POSTS.map(p => ({ ...p, status: 'draft', updated: 0 }));
 
 // Why a post may not move to this status right now, or '' if it may.
 // A post that talks about the founding offer cannot be approved, scheduled or posted once all 5 places are taken.
 export function blocked(post, to, foundingUsed) {
   if (!MOVES[post.status] || !MOVES[post.status].includes(to)) return `A ${LABEL[post.status] || post.status} post cannot become ${LABEL[to] || to}`;
+  if (mentionsCost(post.text) && ['approved', 'scheduled', 'posted'].includes(to)) return 'This post mentions a price or a cost, and no social post is to. Edit the wording first.';
   if (post.founding && ['approved', 'scheduled', 'posted'].includes(to)) {
     if (foundingUsed === null || foundingUsed === undefined) return 'I cannot check how many founding places are left right now, so this post stays a draft. Try again in a minute.';
     if (foundingUsed >= FOUNDING_PLACES) return `All ${FOUNDING_PLACES} founding places are taken, so a post offering free setup would be wrong. Edit the post to remove the offer, or reject it.`;
@@ -76,7 +86,7 @@ export function edit(posts, id, text, now = Date.now()) {
 
 const card = (p, left) => `<div class="card" id="${esc(p.id)}"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><small class="mute">${p.custom ? 'Your post' : `Day ${p.day} · ${esc(p.dow)}`}${p.planned ? ` · planned ${esc(p.planned)}` : ''}${p.platform ? ` · ${esc(PLATFORMS[p.platform] || '')}` : ''}</small><h2 style="margin:2px 0 8px">${esc(p.title)}</h2></div>${pill(KIND[p.status], LABEL[p.status])}</div>
 ${p.founding ? `<p class="help"><b>Mentions the founding offer.</b> ${left === null ? 'Founding places could not be checked.' : left > 0 ? `${left} of ${FOUNDING_PLACES} places left. It cannot be approved once they are gone.` : 'No places left, so it cannot be approved.'}</p>` : ''}
-${p.demo ? '<p class="help"><b>Mentions the live demo.</b> Only post it while the demo is on the website.</p>' : ''}
+${mentionsCost(p.text) ? '<p class="help"><b>Mentions a price or cost.</b> No social post is to, so this cannot be approved until you edit it.</p>' : ''}${p.demo ? '<p class="help"><b>Mentions the live demo.</b> Only post it while the demo is on the website.</p>' : ''}
 <form method="post" action="/content/${esc(p.id)}/save"><textarea name="text" rows="7" style="width:100%" ${p.status === 'posted' ? 'readonly' : ''}>${esc(p.text)}</textarea>${p.status === 'posted' ? '' : '<button class="btn line" style="margin-top:8px">Save changes (needs approving again)</button>'}</form>
 ${p.status === 'posted' ? '' : `<form method="post" action="/content/${esc(p.id)}/plan" class="stack"><label for="pf-${esc(p.id)}">Where and when</label><select id="pf-${esc(p.id)}" name="platform">${Object.entries(PLATFORMS).map(([k, v]) => `<option value="${k}"${(p.platform || 'both') === k ? ' selected' : ''}>${v}</option>`).join('')}</select><input name="planned" type="date" value="${esc(p.planned || '')}" aria-label="Planned day"><button class="btn line">Save plan</button></form>`}${p.picture ? `<p class="mute"><b>Picture:</b> ${esc(p.picture)}</p>` : ''}${p.note ? `<p class="mute"><b>Note:</b> ${esc(p.note)}</p>` : ''}
 <div class="qa" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${(MOVES[p.status] || []).map(to => `<form method="post" action="/content/${esc(p.id)}/${to}"><button class="btn ${to === 'approved' ? '' : 'line'}">${{ approved: 'Approve', rejected: 'Reject', draft: 'Back to draft', scheduled: 'I scheduled it', posted: 'It is posted' }[to]}</button></form>`).join('')}</div></div>`;

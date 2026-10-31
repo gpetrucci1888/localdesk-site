@@ -4,8 +4,8 @@ DRAFTS for the owner to approve. Generated from `content/social-30-day.json` by 
 
 ## Rules every post follows
 - Only claims already on the website. No "every call", no "never", no results, savings or customer quotes (there are none yet), no stock photos of fake customers.
-- Founding-offer posts (Days 5, 11, 19) are blocked in HQ once all five founding places are taken, and must not be posted after that.
-- The offer wording is always "while places last". The setup fee is normally 497 pounds; Mia is 397 pounds a month with a 7-day free trial; Books is 150 pounds a month plus 395 pounds setup.
+- Founding-offer posts (Days 5 and 19) are blocked in HQ once all five founding places are taken, and must not be posted after that. The offer wording is always "while places last".
+- **No prices or costs in any post** (owner rule): no pound amounts, no setup fee, no "free setup", no minimum term. Saying there is a 7-day free trial is fine. HQ will not let a post that mentions cost be approved.
 - One call to action per post: book a 15 to 20 minute Zoom, or see the page. Replies and comments are answered by the owner. **Do not message people who have not messaged you first** (the cold-call rules in `docs/COLD-CALLING-COMPLIANCE.md` apply to anything that starts a conversation).
 
 ## How to adapt each caption
@@ -31,7 +31,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 | 8 | Mon 09/11 | Storm weekend | Facebook, Instagram, LinkedIn | problem |
 | 9 | Tue 10/11 | Receipts in your pocket | Facebook, Instagram, LinkedIn | books |
 | 10 | Wed 11/11 | Burst pipe at 9pm | Facebook, Instagram, LinkedIn | problem |
-| 11 | Thu 12/11 | What it costs | Facebook, Instagram, LinkedIn | price |
+| 11 | Thu 12/11 | Set up around your business | Facebook, Instagram, LinkedIn | how |
 | 12 | Fri 13/11 | Hear Mia on a Zoom | Facebook, Instagram, LinkedIn | demo |
 | 13 | Sat 14/11 | Tip: receipt photos | Facebook, Instagram, LinkedIn | value |
 | 14 | Sun 15/11 | Talk to Mia on our website | Facebook, Instagram, LinkedIn | demo |
@@ -73,7 +73,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 - Instagram: put "Link in bio" in the caption; the bio link is https://www.localdeskai.co.uk/receptionist/?utm_source=instagram
 - LinkedIn: https://www.localdeskai.co.uk/receptionist/?utm_source=linkedin
 
-**Image:** `content/social/tiles/day-01.png` (text: "Missed calls cost trades jobs"). **Brief:** Owner photo on site in hi-vis if he is happy to, otherwise this text tile. No stock photos of customers.
+**Image:** `content/social/tiles/day-01.png` (text: "Missed calls lose trades jobs"). **Brief:** Owner photo on site in hi-vis if he is happy to, otherwise this text tile. No stock photos of customers.
 
 ---
 
@@ -131,7 +131,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 > Mia is an AI, and she says so.
 > 
-> She takes details and passes them on. She doesn't quote prices, book your diary or promise times. You call back and win the work.
+> She takes details and passes them on. She doesn't give quotes, book your diary or promise times. You call back and win the work.
 > 
 > We'd rather be upfront than have a customer feel tricked.
 > {LINK}
@@ -152,9 +152,9 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 **Caption (Facebook, LinkedIn, Instagram; change the link line as below):**
 
-> We're opening a small number of founding places for Mia, our AI receptionist. Founding clients get free setup (normally £497) and a 7-day free trial, while places last.
+> We're opening a small number of founding places for Mia, our AI receptionist. Founding clients get a hands-on start and a 7-day free trial, while places last.
 > 
-> Message us or see the details: {LINK}
+> Message us to find out more: {LINK}
 
 **Links to use:**
 - Facebook: https://www.localdeskai.co.uk/receptionist/?utm_source=facebook
@@ -163,7 +163,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 **Image:** `content/social/tiles/day-05.png` (text: "Founding places, while they last"). **Brief:** Text tile. Do NOT use a countdown or a number of places left in the image.
 
-**Google Business Profile version (under 300 characters):** Founding places for Mia, our AI receptionist: free setup (normally £497) and a 7-day free trial, while places last.
+**Google Business Profile version (under 300 characters):** Founding places for Mia, our AI receptionist: a hands-on start and a 7-day free trial, while places last. Message us to find out more.
 
 ---
 
@@ -231,7 +231,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 > Receipts in your pocket. Photograph a receipt on your phone and Books files it into your own accounting software. We work with QuickBooks, and we're adding FreeAgent and Xero.
 > 
-> Books by Localdesk: £150 a month plus a £395 setup.
+> Books by Localdesk.
 > {LINK}
 
 **Links to use:**
@@ -262,14 +262,14 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 ---
 
-### Day 11: What it costs (Thu 2026-11-12)
+### Day 11: Set up around your business (Thu 2026-11-12)
 **Channels:** Facebook, Instagram, LinkedIn
 
 **Caption (Facebook, LinkedIn, Instagram; change the link line as below):**
 
-> What does Mia cost? £397 a month, with 300 minutes of calls included. 7-day free trial first. Setup is normally £497 and free for founding clients while places last.
+> Mia isn't one-size-fits-all. We set her up around your business: the jobs you do, the areas you cover, and what you'd want asked of every caller.
 > 
-> There's a 3-month minimum term after the free trial, and the full terms are on our website.
+> Tell us about your trade and we'll show you how she'd sound.
 > {LINK}
 
 **Links to use:**
@@ -277,9 +277,9 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 - Instagram: put "Link in bio" in the caption; the bio link is https://www.localdeskai.co.uk/receptionist/?utm_source=instagram
 - LinkedIn: https://www.localdeskai.co.uk/receptionist/?utm_source=linkedin
 
-**Image:** `content/social/tiles/day-11.png` (text: "£397 a month. 7-day free trial."). **Brief:** The pricing card from the Receptionist page (screenshot).
+**Image:** `content/social/tiles/day-11.png` (text: "Set up around your business"). **Brief:** Text tile.
 
-**Google Business Profile version (under 300 characters):** Mia: £397 a month, 300 minutes included, 7-day free trial. Setup normally £497, free for founding clients while places last. 3-month minimum term after the trial.
+**Google Business Profile version (under 300 characters):** Mia is set up around your business: the jobs you do, the areas you cover, and what you'd want asked of every caller. Message us to hear how she'd sound.
 
 ---
 
@@ -403,9 +403,9 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 > Five questions to ask any answering service before you sign:
 > 1. Does it say it's an AI or a person?
 > 2. Do I keep my own number?
-> 3. What happens when I go over my minutes?
+> 3. Is it set up around my business?
 > 4. Can I read what was said on a call?
-> 5. What's the minimum term?
+> 5. Can I try it first?
 > 
 > We're happy to answer all five for Mia.
 > {LINK}
@@ -417,7 +417,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 **Image:** `content/social/tiles/day-18.png` (text: "5 questions to ask first"). **Brief:** Numbered list tile.
 
-**Google Business Profile version (under 300 characters):** Five questions to ask any answering service before you sign: is it an AI or a person, do you keep your number, what happens over your minutes, can you read the call, what's the minimum term?
+**Google Business Profile version (under 300 characters):** Five questions to ask any answering service before you sign: is it an AI or a person, do you keep your number, is it set up around your business, can you read the call, can you try it first?
 
 ---
 
@@ -426,7 +426,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 **Caption (Facebook, LinkedIn, Instagram; change the link line as below):**
 
-> Founding places for Mia are still open: free setup (normally £497) and a 7-day free trial, while places last.
+> Founding places for Mia are still open: a hands-on start and a 7-day free trial, while places last.
 > {LINK}
 
 **Links to use:**
@@ -498,7 +498,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 **Caption (Facebook, LinkedIn, Instagram; change the link line as below):**
 
-> Sole trader? Books keeps receipts and invoices in your own accounting software, so the paperwork doesn't pile up. £150 a month plus £395 setup.
+> Sole trader? Books keeps receipts and invoices in your own accounting software, so the paperwork doesn't pile up.
 > {LINK}
 
 **Links to use:**
@@ -626,7 +626,7 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 **Caption (Facebook, LinkedIn, Instagram; change the link line as below):**
 
-> Missed calls cost jobs. Mia can answer when you can't and text you the details. 7-day free trial, £397 a month after. Book a 15 minute demo: {LINK}
+> Missed calls lose jobs. Mia can answer when you can't and text you the details. Try it free for 7 days. Book a 15 minute demo: {LINK}
 
 **Links to use:**
 - Facebook: https://www.localdeskai.co.uk/receptionist/?utm_source=facebook
@@ -635,4 +635,4 @@ Every link ends `?utm_source=<channel>`. When someone fills in the website form 
 
 **Image:** `content/social/tiles/day-30.png` (text: "Book a 15-minute demo"). **Brief:** Text tile with the Localdesk wordmark.
 
-**Google Business Profile version (under 300 characters):** Missed calls cost jobs. Mia can answer when you can't and text you the details. 7-day free trial, then £397 a month. Message us to book a 15 minute demo.
+**Google Business Profile version (under 300 characters):** Missed calls lose jobs. Mia can answer when you can't and text you the details. Try it free for 7 days. Message us to book a 15 minute demo.

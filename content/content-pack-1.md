@@ -5,7 +5,7 @@ DRAFT for the owner to approve. Public repo: marketing copy only, no secrets. No
 **Aimed at:** roofers, plumbers, electricians and other trades.
 **Link to use:** https://localdeskai.co.uk/receptionist/ (Receptionist) and https://localdeskai.co.uk/books/ (Books).
 **Phone number:** left out of every post by default. Add 01752 741686 yourself where you see [optional number].
-**Rules kept:** no made-up customers, testimonials or statistics, and no absolute claims such as "every call" or "never missed". Prices: Receptionist £397 a month, £497 setup waived for the first 5 founding clients only; Books £150 a month plus £395 setup. See the checklist of claims to verify at the bottom.
+**Rules kept:** no made-up customers, testimonials or statistics, no absolute claims such as "every call" or "never missed", and **no prices or costs in any post** (owner rule). See the checklist of claims to verify at the bottom.
 **Suggested times:** 7:30am or 12:30pm on weekdays (trades check phones at breakfast and lunch). Weekend posts about 9am.
 **Pictures:** use your own website screenshots, a plain text graphic, or your own photo. Do not use invented customer photos.
 
@@ -40,7 +40,7 @@ https://localdeskai.co.uk/receptionist/
 *Picture:* the three-step section from the website.
 
 **Day 5 (Fri) Founding offer**
-We're opening a small number of founding places for Mia, our AI receptionist. Founding clients get free setup (normally £497) and a 7-day free trial, while places last.
+We're opening a small number of founding places for Mia, our AI receptionist. Founding clients get a hands-on start and a 7-day free trial, while places last.
 Message us or see: https://localdeskai.co.uk/receptionist/
 *Picture:* text graphic "5 founding places".
 *Note:* HQ blocks approving this post once all founding places are used. Never post it after that.
@@ -66,13 +66,13 @@ https://localdeskai.co.uk/receptionist/
 
 **Day 9 (Tue) Books: receipts in your pocket**
 Photograph a receipt on your phone and Books files it into your own accounting software. We work with QuickBooks, and we're adding FreeAgent and Xero. You also get a monthly text summary.
-Books by Localdesk: £150 a month plus a £395 setup. https://localdeskai.co.uk/books/
+Books by Localdesk: https://localdeskai.co.uk/books/
 *Picture:* screenshot from the Books page.
 
-**Day 10 (Wed) Plumbers: what it costs**
-Mia is £397 a month, with 300 minutes of calls included. 7-day free trial first, and founding clients get free setup while places last.
-Full details: https://localdeskai.co.uk/receptionist/
-*Picture:* the pricing card.
+**Day 10 (Wed) Plumbers: set up around your business**
+Mia isn't one-size-fits-all. We set her up around your business: the jobs you do, the areas you cover, and what you'd want asked of every caller.
+Tell us about your trade and we'll show you how she'd sound: https://localdeskai.co.uk/receptionist/
+*Picture:* text graphic "Set up around your business".
 
 **Day 11 (Thu) Electricians: keep your number**
 You keep your number and your business cards. When you can't pick up, the call can go to Mia. When you can, you answer as normal.
@@ -100,9 +100,9 @@ https://localdeskai.co.uk/receptionist/
 ## Google Business Profile versions (short)
 Use the same ideas with one line and a "Learn more" button:
 - Day 1: "Missed calls while you're on the job? Mia, our AI receptionist, can answer and text you the details. Try free for 7 days."
-- Day 5: "Founding clients get free setup (normally £497) while places last."
+- Day 5: "Founding clients get a hands-on start and a 7-day free trial while places last."
 - Day 9: "Photograph a receipt and Books files it into your own accounting software."
-- Day 10: "Mia is £397 a month, 300 minutes included, 7-day free trial."
+- Day 10: "Mia is set up around your business: the jobs you do, the areas you cover and what you'd want asked of every caller."
 
 ## Claims to verify against the live product before any post goes out
 Each is true on the website, but I cannot check the live Vapi, Twilio or Stripe settings from here. Soften or remove anything that is not true.

@@ -12,7 +12,7 @@
 import { LINKS, REGISTER, DOCS } from './content.js';
 import { FONT_B64 } from './font.js';
 import { esc, shell, bare, pill, banner, btn, tile, bigLink, item, crumb, todo, ICON } from './ui.js';
-import { pageContent, seedPosts, move as movePost, edit as editPost, add as addPost, plan as planPost, dueToday, missingSeeds, STATUSES } from './posts.js';
+import { pageContent, seedPosts, move as movePost, edit as editPost, add as addPost, plan as planPost, dueToday, missingSeeds, refreshDrafts, STATUSES } from './posts.js';
 import { b64u, newChallenge, verifyRegistration, verifyAssertion, loginScript } from './passkey.js';
 import { evaluate as stripeEval, EXPECTED as STRIPE_EXPECTED } from './stripecheck.js';
 import { setupDue, zoomsSoon, appFor, pageLeads, pageLead, newLeadForm, progress, progressCard, isDue, CHECKLISTS, priceConfig, subscriptionFacts } from './leads.js';
@@ -284,7 +284,7 @@ const putLead = (env, id, patch) => books(env, `/leads/${encodeURIComponent(id)}
 const LEAD_FLASH = { exists: ['info', 'That number was already in HQ, so this is the lead you already had. Nothing was changed.'], saved: ['ok', 'Saved.'], added: ['ok', 'Lead added. Nothing was sent to them.'], deleted: ['ok', 'Deleted.'] };
 const leadFlash = (url) => { const f = LEAD_FLASH[url.searchParams.get('done')]; return f ? banner(f[0], f[1]) : ''; };
 const leadsDown = () => shell('Leads', `<h1>Leads</h1>${booksError()}`, '/leads');
-const loadPosts = async (vault) => { let p = await vpost(vault, '/posts', {}); let changed = false; if (!Array.isArray(p)) { p = seedPosts(); changed = true; } const more = missingSeeds(p); if (more.length) { p = [...p, ...more]; changed = true; } if (changed) await vpost(vault, '/posts', { op: 'save', posts: p }); return p; };
+const loadPosts = async (vault) => { let p = await vpost(vault, '/posts', {}); let changed = false; if (!Array.isArray(p)) { p = seedPosts(); changed = true; } const more = missingSeeds(p); if (more.length) { p = [...p, ...more]; changed = true; } if (refreshDrafts(p)) changed = true; if (changed) await vpost(vault, '/posts', { op: 'save', posts: p }); return p; };
 async function contentAction(request, env, vault, id, action) {
   const posts = await loadPosts(vault); let r;
   const form = async () => Object.fromEntries([...(await request.formData().catch(() => new FormData())).entries()].map(([k, x]) => [k, String(x)]));

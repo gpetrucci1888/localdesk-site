@@ -335,13 +335,13 @@ test('content queue: sensible status moves only, edits need approving again, pos
 
 test('content queue: no absolute or unsupported claims in the drafts', () => {
   const all = seedP().map(p => p.text).join('\n').toLowerCase();
-  for (const bad of ['every call', 'never missed', 'most people', 'honest review', 'first 5 founding clients', 'no vat', 'always']) assert.ok(!all.includes(bad), bad);
+  assert.ok(!/\bevery call\b/.test(all), 'every call'); for (const bad of ['never missed', 'most people', 'honest review', 'first 5 founding clients', 'no vat', 'always']) assert.ok(!all.includes(bad), bad);
 });
 
-test('content queue: seeded posts are the 14 drafts, with correct prices and no stale claims', () => {
+test('content queue: seeded posts are the 14 drafts, with no prices or costs and no stale claims', async () => {
   const posts = seedP(); assert.equal(posts.length, 14); assert.ok(posts.every(p => p.status === 'draft'));
   const all = posts.map(p => p.text).join('\n');
-  assert.ok(!/£\s?(395)\b.*Receptionist/.test(all)); assert.match(all, /£397/); assert.match(all, /£150/); assert.match(all, /£395 setup/);
+  const { mentionsCost } = await import('../workers/hq/posts.js'); assert.ok(posts.every(p => !mentionsCost(p.text + ' ' + p.title)), 'no draft mentions a price or a cost (owner rule)'); assert.ok(!/£/.test(all));
   assert.ok(!all.includes('—'), 'no em dashes');
   assert.ok(posts.every(p => !/\b0175\d? ?74/.test(p.text) || p.demo), 'the demo number only appears in a demo post');
 });
@@ -357,7 +357,7 @@ test('content queue in HQ: login needed, approve works, a founding post is refus
   const refused = await call(w, '/content/p05/approved', { method: 'POST', cookie }); assert.equal(refused.status, 400); assert.match(await refused.text(), /founding places are taken/);
   used = 2;
   const down = w.env.BOOKS.fetch; w.env.BOOKS.fetch = async (url, init) => new URL(url).pathname === '/founding' ? new Response('down', { status: 500 }) : down(url, init);
-  const unsure = await call(w, '/content/p10/approved', { method: 'POST', cookie }); assert.equal(unsure.status, 400); assert.match(await unsure.text(), /cannot check/, 'fails closed when the count is unavailable');
+  const unsure = await call(w, '/content/p05/approved', { method: 'POST', cookie }); assert.equal(unsure.status, 400); assert.match(await unsure.text(), /cannot check/, 'fails closed when the count is unavailable');
   w.env.BOOKS.fetch = down;
   assert.equal((await call(w, '/content/p05/approved', { method: 'POST', cookie })).status, 303);
   const after = await (await call(w, '/content', { cookie })).text(); assert.match(after, /Approved \(2\)/);
@@ -527,7 +527,7 @@ test('content workflow end to end: write, edit, approve, plan, mark scheduled, m
   home = await (await call(w, '/', { cookie })).text(); assert.ok(!/post to put out today/.test(home), 'once posted the reminder goes');
   assert.equal((await post(`/content/${a}/plan`, { planned: today })).status, 400, 'a posted post cannot be re-planned'); assert.equal((await post(`/content/${a}/save`, { text: 'Changed after posting, which is not allowed.' })).status, 400);
   // founding guard applies to your own posts, and fails closed
-  places = 5; assert.equal((await post('/content/new', { title: 'Founding offer', text: 'Founding clients get free setup while places last.', platform: 'both' })).status, 303);
+  places = 5; assert.equal((await post('/content/new', { title: 'Founding offer', text: 'Founding places are open for Mia while places last.', platform: 'both' })).status, 303);
   const f = await idOf('Founding offer'); const refused = await post(`/content/${f}/approved`); assert.equal(refused.status, 400); assert.match(await refused.text(), /founding places are taken/);
   places = 3; assert.equal((await post(`/content/${f}/approved`)).status, 303);
   assert.equal((await post(`/content/${a.replace(/^x/, 'y')}/approved`)).status, 404, 'an id that is not a route is a plain not-found, not a crash'); assert.equal((await post('/content/x0nosuchpost/approved')).status, 400, 'a well-formed id that does not exist is refused');
@@ -557,4 +557,18 @@ test('setup-fee reminder: non-founding Receptionist clients whose trial ends wit
   assert.match(home, /1 setup fee to invoice/); assert.match(home, /Sam Setup \(trial ended\)/); assert.ok(!/Pat Pays \(/.test(home), 'a trial ending in 9 days is not due yet');
   const p1 = await (await call(w, '/leads/S1', { cookie })).text(); assert.match(p1, /Setup fee: invoice the 497 pounds now \(the trial has ended\)/); assert.match(p1, /Setup fee invoiced when the trial ended/);
   const p2 = await (await call(w, '/leads/S2', { cookie })).text(); assert.match(p2, /Their payment failed/); assert.match(p2, /after 14 days, phone them/);
+});
+
+test('no social post may mention a price or a cost: it can be written and edited but never approved, scheduled or posted; unapproved drafts are cleaned up from the repo wording', async () => {
+  const { mentionsCost, add, move, edit, refreshDrafts } = await import('../workers/hq/posts.js');
+  for (const bad of ['Mia is £397 a month', 'What does it cost?', 'No setup fee for founding clients', 'Only 150 pounds per month', 'Great pricing for trades', 'A 3-month minimum term applies', 'Free setup while places last']) assert.ok(mentionsCost(bad), bad);
+  for (const ok of ['Missed calls lose jobs. Try it free for 7 days.', 'Mia is set up around your business', 'A monthly text summary every month', 'Book a 15 minute Zoom']) assert.ok(!mentionsCost(ok), ok);
+  const posts = []; const r = add(posts, { title: 'Price post', text: 'Mia is only £397 a month, book now.', platform: 'facebook' }); assert.equal(r.ok, true);
+  const id = posts[0].id; for (const to of ['approved']) assert.match(move(posts, id, to, 0).error, /price or a cost/); assert.equal(posts[0].status, 'draft');
+  assert.equal(edit(posts, id, 'Mia can answer when you cannot. Book a demo.').ok, true); assert.equal(move(posts, id, 'approved', 0).ok, true);
+  posts[0].status = 'approved'; assert.equal(edit(posts, id, 'Now it costs only £397.').ok, true); assert.equal(posts[0].status, 'draft', 'an edit sends it back to draft, and the cost guard blocks it again'); assert.match(move(posts, id, 'approved', 0).error, /price or a cost/);
+  // an old seeded draft that still has the previous wording is refreshed; an approved one is left alone
+  const stale = [{ id: 'p05', title: 'Founding offer', text: 'Founding clients get free setup (normally £497) while places last.', status: 'draft' }, { id: 'p09', title: 'old', text: 'Books by Localdesk: £150 a month plus a £395 setup.', status: 'approved' }, { id: 'xcustom', custom: true, title: 'mine', text: 'My own £ post', status: 'draft' }];
+  assert.equal(refreshDrafts(stale), true); assert.ok(!mentionsCost(stale[0].text), 'the unapproved seeded draft was cleaned up'); assert.match(stale[1].text, /£150/, 'an approved post is never rewritten'); assert.equal(stale[2].text, 'My own £ post', 'your own posts are never touched');
+  assert.match(move(stale, 'p09', 'scheduled', 0).error, /price or a cost/, 'and the approved one cannot be scheduled until its wording is fixed');
 });

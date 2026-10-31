@@ -14,7 +14,7 @@
    "kind": "story",
    "title": "Why Localdesk exists",
    "caption": "I'm a construction project manager. I've watched good tradespeople lose jobs because the phone rang while they were up a ladder or under a sink.\n\nSo I started Localdesk in Saltash: an AI receptionist called Mia that can answer the calls you can't, take the caller's details and text them to you, plus Books, a simple way to keep receipts and invoices in your own accounting software.\n\nWe're just getting started, and I'd love to hear how you handle missed calls today.\n\nWant to see Mia in action? {LINK}",
-   "tile": "Missed calls cost trades jobs",
+   "tile": "Missed calls lose trades jobs",
    "brief": "Owner photo on site in hi-vis if he is happy to, otherwise this text tile. No stock photos of customers.",
    "link": "receptionist",
    "needs_owner": true
@@ -61,7 +61,7 @@
    ],
    "kind": "honest",
    "title": "She is an AI, and says so",
-   "caption": "Mia is an AI, and she says so.\n\nShe takes details and passes them on. She doesn't quote prices, book your diary or promise times. You call back and win the work.\n\nWe'd rather be upfront than have a customer feel tricked.\n{LINK}",
+   "caption": "Mia is an AI, and she says so.\n\nShe takes details and passes them on. She doesn't give quotes, book your diary or promise times. You call back and win the work.\n\nWe'd rather be upfront than have a customer feel tricked.\n{LINK}",
    "tile": "AI, and upfront about it.",
    "brief": "Text tile.",
    "link": "receptionist",
@@ -77,11 +77,11 @@
    ],
    "kind": "offer",
    "title": "Founding places",
-   "caption": "We're opening a small number of founding places for Mia, our AI receptionist. Founding clients get free setup (normally £497) and a 7-day free trial, while places last.\n\nMessage us or see the details: {LINK}",
+   "caption": "We're opening a small number of founding places for Mia, our AI receptionist. Founding clients get a hands-on start and a 7-day free trial, while places last.\n\nMessage us to find out more: {LINK}",
    "tile": "Founding places, while they last",
    "brief": "Text tile. Do NOT use a countdown or a number of places left in the image.",
    "link": "receptionist",
-   "gbp": "Founding places for Mia, our AI receptionist: free setup (normally £497) and a 7-day free trial, while places last."
+   "gbp": "Founding places for Mia, our AI receptionist: a hands-on start and a 7-day free trial, while places last. Message us to find out more."
   },
   {
    "id": "m06",
@@ -139,7 +139,7 @@
    ],
    "kind": "books",
    "title": "Receipts in your pocket",
-   "caption": "Receipts in your pocket. Photograph a receipt on your phone and Books files it into your own accounting software. We work with QuickBooks, and we're adding FreeAgent and Xero.\n\nBooks by Localdesk: £150 a month plus a £395 setup.\n{LINK}",
+   "caption": "Receipts in your pocket. Photograph a receipt on your phone and Books files it into your own accounting software. We work with QuickBooks, and we're adding FreeAgent and Xero.\n\nBooks by Localdesk.\n{LINK}",
    "tile": "Photograph a receipt. Books files it.",
    "brief": "Screenshot from the Books page.",
    "link": "books"
@@ -167,13 +167,13 @@
     "instagram",
     "linkedin"
    ],
-   "kind": "price",
-   "title": "What it costs",
-   "caption": "What does Mia cost? £397 a month, with 300 minutes of calls included. 7-day free trial first. Setup is normally £497 and free for founding clients while places last.\n\nThere's a 3-month minimum term after the free trial, and the full terms are on our website.\n{LINK}",
-   "tile": "£397 a month. 7-day free trial.",
-   "brief": "The pricing card from the Receptionist page (screenshot).",
+   "kind": "how",
+   "title": "Set up around your business",
+   "caption": "Mia isn't one-size-fits-all. We set her up around your business: the jobs you do, the areas you cover, and what you'd want asked of every caller.\n\nTell us about your trade and we'll show you how she'd sound.\n{LINK}",
+   "tile": "Set up around your business",
+   "brief": "Text tile.",
    "link": "receptionist",
-   "gbp": "Mia: £397 a month, 300 minutes included, 7-day free trial. Setup normally £497, free for founding clients while places last. 3-month minimum term after the trial."
+   "gbp": "Mia is set up around your business: the jobs you do, the areas you cover, and what you'd want asked of every caller. Message us to hear how she'd sound."
   },
   {
    "id": "m12",
@@ -278,11 +278,11 @@
    ],
    "kind": "value",
    "title": "Five questions to ask first",
-   "caption": "Five questions to ask any answering service before you sign:\n1. Does it say it's an AI or a person?\n2. Do I keep my own number?\n3. What happens when I go over my minutes?\n4. Can I read what was said on a call?\n5. What's the minimum term?\n\nWe're happy to answer all five for Mia.\n{LINK}",
+   "caption": "Five questions to ask any answering service before you sign:\n1. Does it say it's an AI or a person?\n2. Do I keep my own number?\n3. Is it set up around my business?\n4. Can I read what was said on a call?\n5. Can I try it first?\n\nWe're happy to answer all five for Mia.\n{LINK}",
    "tile": "5 questions to ask first",
    "brief": "Numbered list tile.",
    "link": "receptionist",
-   "gbp": "Five questions to ask any answering service before you sign: is it an AI or a person, do you keep your number, what happens over your minutes, can you read the call, what's the minimum term?"
+   "gbp": "Five questions to ask any answering service before you sign: is it an AI or a person, do you keep your number, is it set up around your business, can you read the call, can you try it first?"
   },
   {
    "id": "m19",
@@ -294,7 +294,7 @@
    ],
    "kind": "offer",
    "title": "Founding places still open",
-   "caption": "Founding places for Mia are still open: free setup (normally £497) and a 7-day free trial, while places last.\n{LINK}",
+   "caption": "Founding places for Mia are still open: a hands-on start and a 7-day free trial, while places last.\n{LINK}",
    "tile": "Founding places still open",
    "brief": "Text tile. Post only while founding places remain: HQ will not let you approve this once all five are taken.",
    "link": "receptionist"
@@ -355,7 +355,7 @@
    ],
    "kind": "books",
    "title": "Sole traders and paperwork",
-   "caption": "Sole trader? Books keeps receipts and invoices in your own accounting software, so the paperwork doesn't pile up. £150 a month plus £395 setup.\n{LINK}",
+   "caption": "Sole trader? Books keeps receipts and invoices in your own accounting software, so the paperwork doesn't pile up.\n{LINK}",
    "tile": "Less paperwork. Same software.",
    "brief": "Screenshot from the Books page.",
    "link": "books"
@@ -464,11 +464,11 @@
    ],
    "kind": "demo",
    "title": "Book a demo",
-   "caption": "Missed calls cost jobs. Mia can answer when you can't and text you the details. 7-day free trial, £397 a month after. Book a 15 minute demo: {LINK}",
+   "caption": "Missed calls lose jobs. Mia can answer when you can't and text you the details. Try it free for 7 days. Book a 15 minute demo: {LINK}",
    "tile": "Book a 15-minute demo",
    "brief": "Text tile with the Localdesk wordmark.",
    "link": "receptionist",
-   "gbp": "Missed calls cost jobs. Mia can answer when you can't and text you the details. 7-day free trial, then £397 a month. Message us to book a 15 minute demo."
+   "gbp": "Missed calls lose jobs. Mia can answer when you can't and text you the details. Try it free for 7 days. Message us to book a 15 minute demo."
   }
  ]
 }

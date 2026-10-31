@@ -11,7 +11,7 @@ export const NAMES = { facebook: 'Facebook', instagram: 'Instagram', linkedin: '
 const PATH = { receptionist: '/receptionist/', books: '/books/', home: '/' };
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const FOUNDING_RE = /founding|setup waived|free setup/i, DEMO_RE = /talk to her|demo line|talk to mia/i;
-const LABEL = { story: 'OUR STORY', problem: 'MISSED CALLS', how: 'HOW IT WORKS', honest: 'HONEST ANSWER', offer: 'FOUNDING PLACES', value: 'TIP', question: 'QUESTION', books: 'BOOKS', price: 'PRICING', demo: 'SEE IT YOURSELF', faq: 'FAQ' };
+const LABEL = { story: 'OUR STORY', problem: 'MISSED CALLS', how: 'HOW IT WORKS', honest: 'HONEST ANSWER', offer: 'FOUNDING PLACES', value: 'TIP', question: 'QUESTION', books: 'BOOKS', demo: 'SEE IT YOURSELF', faq: 'FAQ' };
 export const linkFor = (data, post, channel) => `${data.base}${PATH[post.link] || '/'}?utm_source=${UTM[channel]}`;
 const platformOf = (ch) => ch.length === 1 ? ch[0] : 'all';
 const dow = (date) => DOW[new Date(date + 'T12:00:00Z').getUTCDay()];
@@ -42,8 +42,8 @@ DRAFTS for the owner to approve. Generated from \`content/social-30-day.json\` b
 
 ## Rules every post follows
 - Only claims already on the website. No "every call", no "never", no results, savings or customer quotes (there are none yet), no stock photos of fake customers.
-- Founding-offer posts (Days 5, 11, 19) are blocked in HQ once all five founding places are taken, and must not be posted after that.
-- The offer wording is always "while places last". The setup fee is normally 497 pounds; Mia is 397 pounds a month with a 7-day free trial; Books is 150 pounds a month plus 395 pounds setup.
+- Founding-offer posts (Days 5 and 19) are blocked in HQ once all five founding places are taken, and must not be posted after that. The offer wording is always "while places last".
+- **No prices or costs in any post** (owner rule): no pound amounts, no setup fee, no "free setup", no minimum term. Saying there is a 7-day free trial is fine. HQ will not let a post that mentions cost be approved.
 - One call to action per post: book a 15 to 20 minute Zoom, or see the page. Replies and comments are answered by the owner. **Do not message people who have not messaged you first** (the cold-call rules in \`docs/COLD-CALLING-COMPLIANCE.md\` apply to anything that starts a conversation).
 
 ## How to adapt each caption

@@ -15,19 +15,20 @@ test('30 posts, one a day from Mon 2 Nov 2026, unique ids, valid channels, one c
   assert.equal(new Date(posts[0].date + 'T12:00:00Z').getUTCDay(), 1, 'starts on a Monday');
 });
 
-test('honest copy: no absolute claims, no results or testimonials, no contact details, canonical prices only, no em dashes', () => {
+test('honest copy: no absolute claims, no results or testimonials, no contact details, and NO prices or costs anywhere (owner rule), no em dashes', async () => {
   const all = posts.map(p => [p.caption, p.tile, p.gbp || '', p.video || '', p.brief].join('\n')).join('\n').toLowerCase();
   assert.ok(!/\bevery call\b/.test(all), 'banned phrase: every call (every caller is fine)');
   for (const bad of ['never miss', 'never clocks', '24/7', '100%', 'guarantee', 'testimonial', 'customers love', 'we saved', 'saved you', 'best in', 'number one', '#1', 'answers every', 'free forever']) assert.ok(!all.includes(bad), `banned phrase: ${bad}`);
   assert.ok(!all.includes('—')); assert.ok(!/\b0\d{3,4} ?\d{6}\b|\b07\d{3} ?\d{6}\b|@[a-z0-9-]+\.(com|co\.uk)/i.test(all.replace(/hello@localdeskai\.co\.uk/g, '')), 'no phone numbers or other email addresses');
-  const money = [...new Set(posts.flatMap(p => (p.caption + (p.gbp || '')).match(/£\d+/g) || []))].sort(); assert.deepEqual(money, ['£150', '£395', '£397', '£497'], 'only the four canonical prices ever appear');
+  const { mentionsCost } = await import('../workers/hq/posts.js');
+  for (const p of posts) for (const f of ['caption', 'tile', 'gbp', 'video', 'brief', 'title']) if (p[f]) { assert.ok(!mentionsCost(p[f]), `${p.id} ${f} mentions a price or cost`); assert.ok(!/£/.test(p[f]), `${p.id} ${f} has a pound sign`); }
   for (const p of posts) { assert.ok(p.tile.length <= 40, `${p.id} tile too long`); if (p.gbp) assert.ok(p.gbp.length <= 300, `${p.id} Google version over 300 characters`); assert.ok((p.caption.match(/\{LINK\}/g) || []).length <= 1, p.id); }
 });
 
-test('founding-offer posts are flagged so HQ blocks them when the five places are used; personal wording is flagged for the owner; the 497 is only ever the "normally" price', () => {
+test('founding-offer posts are flagged so HQ blocks them when the five places are used; personal wording is flagged for the owner; offer wording never mentions cost', () => {
   const seeds = seedFor(data);
-  for (const p of posts) { const mentions = /founding|free setup/i.test(p.caption + (p.gbp || '')); assert.equal(seeds.find(s => s.id === p.id).founding, mentions, `${p.id} founding flag`); if (/£497/.test(p.caption)) assert.match(p.caption, /normally £497/, `${p.id}: 497 must say "normally"`); if (mentions) assert.match(p.caption, /while places last/, `${p.id}: offer wording`); }
-  assert.deepEqual(seeds.filter(s => s.founding).map(s => s.id), ['m05', 'm11', 'm19']);
+  for (const p of posts) { const mentions = /founding|setup waived|free setup/i.test(p.caption + (p.gbp || '')); assert.equal(seeds.find(s => s.id === p.id).founding, mentions, `${p.id} founding flag`); if (mentions) { assert.match(p.caption, /while places last/, `${p.id}: offer wording`); assert.ok(!/free setup|£|setup/i.test(p.caption + (p.gbp || '')), `${p.id}: no cost in the offer`); } }
+  assert.deepEqual(seeds.filter(s => s.founding).map(s => s.id), ['m05', 'm19']);
   for (const id of ['m01', 'm13', 'm21', 'm29']) assert.ok(posts.find(p => p.id === id).needs_owner, `${id} is personal wording`);
   assert.ok(!posts.some(p => /project manager|I started|I'm a|I've watched/.test(p.caption) && !p.needs_owner), 'every personal-claim post is flagged for the owner');
 });
@@ -56,7 +57,7 @@ test('HQ Content shows the calendar, routes work for the new ids, the founding g
   const call = (path, o = {}) => hq.fetch(new Request('https://hq.test' + path, { method: o.method || 'GET', redirect: 'manual', headers: { ...(o.cookie ? { Cookie: o.cookie } : {}), 'CF-Connecting-IP': '203.0.113.9', ...(o.form ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) }, body: o.form ? new URLSearchParams(o.form).toString() : undefined }), env);
   const first = await (await call('/login', { method: 'POST', form: { password: env.OWNER_PASSWORD } })).text(); const key = /class="key">([A-Z2-7]{32})</.exec(first)[1];
   const cookie = ((await call('/login', { method: 'POST', form: { password: env.OWNER_PASSWORD, code: await totp(key, Math.floor(Date.now() / 30000)) } })).headers.get('set-cookie') || '').split(';')[0];
-  const page = await (await call('/content', { cookie })).text(); assert.match(page, /Why Localdesk exists/); assert.match(page, /Book a demo/); assert.match(page, /planned 2026-11-02/); assert.match(page, /Instagram/);
+  const page = await (await call('/content', { cookie })).text(); assert.match(page, /Why Localdesk exists/); assert.match(page, /Book a demo/); assert.ok(!/£/.test(page.replace(/<style>[\s\S]*?<\/style>/g, '')), 'no pound sign anywhere on the Content page'); assert.match(page, /planned 2026-11-02/); assert.match(page, /Instagram/);
   assert.equal((await call('/content/m02/approved', { method: 'POST', cookie })).status, 303);
   used = 5; const refused = await call('/content/m05/approved', { method: 'POST', cookie }); assert.equal(refused.status, 400); assert.match(await refused.text(), /founding places are taken/);
   assert.equal((await call('/content/m01/plan', { method: 'POST', cookie, form: { platform: 'linkedin', planned: '2026-11-03' } })).status, 303);
