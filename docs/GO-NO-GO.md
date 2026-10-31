@@ -1,5 +1,8 @@
 # Go / no-go for a controlled launch
 
+> **Out of date in places.** Written before the 31 Oct deployments. For what is actually live and the current go / no-go, read `docs/LAUNCH-STATUS.md`.
+
+
 Branch: `launch-candidate` (https://github.com/gpetrucci1888/localdesk-site/compare/main...launch-candidate). **Nothing below has been done.** No deploy, no merge to main, no Stripe activation, no Vapi or Twilio change. Each step needs the owner's explicit approval at the time.
 
 ## Verdict today

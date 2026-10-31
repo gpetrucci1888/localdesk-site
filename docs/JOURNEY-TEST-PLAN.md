@@ -1,5 +1,8 @@
 # Customer journey test plan
 
+> **Out of date in places.** Written before the 31 Oct deployments. For what is actually live and the current go / no-go, read `docs/LAUNCH-STATUS.md`.
+
+
 Journey: website enquiry, qualified lead, correct offer and founding place, Stripe checkout and webhook, thank-you page, HQ status, safe client onboarding.
 
 ## Covered by automated tests today (`test/journey.test.mjs` and others, fake Stripe, fake texts, no network)

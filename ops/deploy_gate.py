@@ -14,7 +14,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 # (a missing module would break the worker on Cloudflare).
 FILES = {
     'books': ['worker.js', 'admin.js', 'freeagent.js', 'xero.js', 'stripe.js'],
-    'hq': ['worker.js', 'content.js', 'ui.js', 'font.js', 'leads.js', 'passkey.js', 'posts.js', 'posts-seed.js', 'stripecheck.js'],
+    'hq': ['worker.js', 'content.js', 'ui.js', 'font.js', 'leads.js', 'passkey.js', 'posts.js', 'posts-seed.js', 'posts-seed-30.js', 'stripecheck.js'],
     'app': ['worker.js', 'page.js', 'brands.js', 'icons.js'],
 }
 FOLDER = {'books': 'books', 'hq': 'hq', 'app': 'receipt-demo'}

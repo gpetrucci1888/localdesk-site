@@ -2,6 +2,7 @@
 // the owner (or Meta Business Suite and Google Business Profile, set up by the owner) does the publishing.
 import { esc, shell, banner, btn, pill } from './ui.js';
 import { SEED_POSTS } from './posts-seed.js';
+import { SEED_MORE } from './posts-seed-30.js';
 
 export const FOUNDING_PLACES = 5;
 export const STATUSES = ['draft', 'approved', 'scheduled', 'posted', 'rejected'];
@@ -10,7 +11,7 @@ const KIND = { draft: 'warn', approved: 'ok', scheduled: 'ok', posted: 'ok', rej
 // where each status may go next
 const MOVES = { draft: ['approved', 'rejected'], approved: ['scheduled', 'posted', 'draft', 'rejected'], scheduled: ['posted', 'approved'], posted: [], rejected: ['draft'] };
 
-const PLATFORMS = { facebook: 'Facebook', google: 'Google Business Profile', both: 'Facebook and Google' };
+const PLATFORMS = { facebook: 'Facebook', instagram: 'Instagram', linkedin: 'LinkedIn', tiktok: 'TikTok', google: 'Google Business Profile', all: 'Several channels (see the note)', both: 'Facebook and Google' };
 const FOUNDING_RE = /founding|setup waived|free setup/i, DEMO_RE = /talk to her|demo line|talk to mia/i;
 const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
 export const today = (now = Date.now()) => new Date(now).toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
@@ -38,6 +39,8 @@ export function plan(posts, id, { platform, planned }, now = Date.now()) {
 }
 // Approved or scheduled posts whose planned day has come and that are not posted yet (London time).
 export const dueToday = (posts, now = Date.now()) => (posts || []).filter(p => p.planned && p.planned <= today(now) && ['approved', 'scheduled'].includes(p.status));
+// The 30-day calendar (content/social-30-day.json). Added to the queue once, as drafts, when HQ next opens Content; posts already there are never touched.
+export const missingSeeds = (posts) => { const have = new Set((posts || []).map(p => p.id)); return SEED_MORE.filter(p => !have.has(p.id)).map(p => ({ ...p })); };
 export const seedPosts = () => SEED_POSTS.map(p => ({ ...p, status: 'draft', updated: 0 }));
 
 // Why a post may not move to this status right now, or '' if it may.

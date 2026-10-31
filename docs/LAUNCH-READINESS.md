@@ -1,5 +1,8 @@
 # Launch readiness: `launch-candidate` branch
 
+> **Out of date in places.** Written before the 31 Oct deployments. For what is actually live and the current go / no-go, read `docs/LAUNCH-STATUS.md`.
+
+
 One branch with everything built so far, merged and tested together: Stripe checkout and webhook, founding places, Books onboarding view, lead sources, HQ content queue, Face ID login, Mia checks, thank-you page, softer website claims, Xero test fix, preview-builds fix, roadmap and plans. **Not deployed. Nothing merged to main.** Compare: https://github.com/gpetrucci1888/localdesk-site/compare/main...launch-candidate
 
 ## What the tests do and do not prove

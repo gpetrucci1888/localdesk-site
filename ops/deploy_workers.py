@@ -16,7 +16,7 @@ def deploy(w,files,main='worker.js',dry=False):
     s=settings(w)
     binds=[b for b in s['bindings'] if b['type']!='secret_text']
     if os.environ.get('BACKUPS_BUCKET') and w=='books' and not any(b['name']=='BACKUPS' for b in binds): binds.append({'type':'r2_bucket','name':'BACKUPS','bucket_name':os.environ['BACKUPS_BUCKET']})
-    meta={'main_module':main,'compatibility_date':s.get('compatibility_date','2025-09-01'),'bindings':binds,'keep_bindings':['secret_text']}
+    meta={'main_module':main,'compatibility_date':s.get('compatibility_date','2025-09-01'),'bindings':binds,'keep_bindings':['secret_text'],'observability':{'enabled':True,'head_sampling_rate':1,'redact_query_string':True}}
     if s.get('compatibility_flags'): meta['compatibility_flags']=s['compatibility_flags']
     cmd=['curl','-s','-m','120',*AUTH,'-X','PUT',f'{API}/{w}','-F','metadata='+json.dumps(meta)+';type=application/json']
     for f,path in files:
@@ -28,7 +28,7 @@ def deploy(w,files,main='worker.js',dry=False):
     return r
 def deploy_hq(dry=False):
     s=settings('hq'); binds=[b for b in s['bindings'] if b['type']!='secret_text']
-    meta={'main_module':'worker.js','compatibility_date':'2025-09-01','bindings':binds,'keep_bindings':['secret_text']}
+    meta={'main_module':'worker.js','compatibility_date':'2025-09-01','bindings':binds,'keep_bindings':['secret_text'],'observability':{'enabled':True,'head_sampling_rate':1,'redact_query_string':True}}
     cmd=['curl','-s','-m','120',*AUTH,'-X','PUT',f'{API}/hq','-F','metadata='+json.dumps(meta)+';type=application/json']
     for f in FILES['hq']: cmd+=['-F',f'{f}=@{R}/hq/{f};type=application/javascript+module;filename={f}']
     if dry: print('hq bindings',[(b['name'],b['type']) for b in binds]); return

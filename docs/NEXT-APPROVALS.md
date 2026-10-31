@@ -1,5 +1,8 @@
 # Smallest next approvals (separate, in this order)
 
+> **Out of date in places.** Written before the 31 Oct deployments. For what is actually live and the current go / no-go, read `docs/LAUNCH-STATUS.md`.
+
+
 ## A2. Redeploy Books then HQ (needed before Stripe test keys are set)
 Brings the Receptionist setup-fee fix (links never include the 497 fee; it is invoiced when the trial ends, matching the terms), permanent do-not-call and TPS bars by number, no duplicate manual leads, Stripe ticking a lead's payment step, Zoom reminders on Home, and the deploy gate. Rollback targets: books `1d50027d`, hq `2b32bcda`. Wording: "Approved: deploy the books worker, then the hq worker from launch-candidate. Do not merge to main, do not deploy the website, do not activate Stripe."
 

@@ -59,3 +59,10 @@ test('the upload lists contain every module in each worker folder (a missing mod
   const { files, folder } = JSON.parse(r.stdout);
   for (const [name, list] of Object.entries(files)) { const onDisk = readdirSync(join('workers', folder[name])).filter(f => f.endsWith('.js')).sort(); assert.deepEqual([...list].sort(), onDisk, `${name}: the upload list must match workers/${folder[name]}`); }
 });
+
+test('every upload keeps request logs on and redacts query strings, so a redeploy cannot silently switch logging off or log one-time link tokens', () => {
+  const dw = readFileSync('ops/deploy_workers.py', 'utf8');
+  const metas = dw.match(/'keep_bindings':\['secret_text'\][^}]*\}/g) || [];
+  assert.ok(metas.length >= 2, 'both upload paths set metadata');
+  for (const m of metas) { assert.match(m, /'observability':\{'enabled':True/); assert.match(m, /'redact_query_string':True/); }
+});

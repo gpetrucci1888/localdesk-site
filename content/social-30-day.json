@@ -1,0 +1,474 @@
+{
+ "version": 1,
+ "start": "2026-11-02",
+ "base": "https://www.localdeskai.co.uk",
+ "posts": [
+  {
+   "id": "m01",
+   "date": "2026-11-02",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "story",
+   "title": "Why Localdesk exists",
+   "caption": "I'm a construction project manager. I've watched good tradespeople lose jobs because the phone rang while they were up a ladder or under a sink.\n\nSo I started Localdesk in Saltash: an AI receptionist called Mia that can answer the calls you can't, take the caller's details and text them to you, plus Books, a simple way to keep receipts and invoices in your own accounting software.\n\nWe're just getting started, and I'd love to hear how you handle missed calls today.\n\nWant to see Mia in action? {LINK}",
+   "tile": "Missed calls cost trades jobs",
+   "brief": "Owner photo on site in hi-vis if he is happy to, otherwise this text tile. No stock photos of customers.",
+   "link": "receptionist",
+   "needs_owner": true
+  },
+  {
+   "id": "m02",
+   "date": "2026-11-03",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "problem",
+   "title": "On the roof, phone ringing",
+   "caption": "You're on a roof. The phone rings. You can't answer.\n\nMia is an AI receptionist that can pick up when you can't, take the caller's name, address and what's wrong, and text you the details so you can ring back already knowing the job.\n\nYou keep your own number. 7-day free trial.\n{LINK}",
+   "tile": "On the roof? Mia can answer.",
+   "brief": "Text tile. Optional: a plain photo of a roofer's ladder (the owner's own photo, no faces needed).",
+   "link": "receptionist",
+   "gbp": "Missed calls while you're on the job? Mia, our AI receptionist, can answer, take the caller's details and text them to you. You keep your number. 7-day free trial."
+  },
+  {
+   "id": "m03",
+   "date": "2026-11-04",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "how",
+   "title": "How Mia works in three steps",
+   "caption": "How it works, in three steps:\n1. We set Mia up around your business, services and area.\n2. You forward your calls when you can't pick up. You keep your number.\n3. A text lands with who called and what they need.\n\nCallers are told the call may be recorded, and calls are transcribed, so anything unclear can be checked.\n{LINK}",
+   "tile": "3 steps. Same number.",
+   "brief": "Text tile with three numbered steps.",
+   "link": "receptionist",
+   "gbp": "How Mia works: we set her up around your business, you forward calls when you can't answer, and a text arrives with who called and what they need. You keep your number."
+  },
+  {
+   "id": "m04",
+   "date": "2026-11-05",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "honest",
+   "title": "She is an AI, and says so",
+   "caption": "Mia is an AI, and she says so.\n\nShe takes details and passes them on. She doesn't quote prices, book your diary or promise times. You call back and win the work.\n\nWe'd rather be upfront than have a customer feel tricked.\n{LINK}",
+   "tile": "AI, and upfront about it.",
+   "brief": "Text tile.",
+   "link": "receptionist",
+   "video": "15 seconds. Screen recording of the Receptionist page sample call. On-screen text: 'She tells callers she's an AI.' / 'She takes details.' / 'You call back.' End card: localdeskai.co.uk."
+  },
+  {
+   "id": "m05",
+   "date": "2026-11-06",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "offer",
+   "title": "Founding places",
+   "caption": "We're opening a small number of founding places for Mia, our AI receptionist. Founding clients get free setup (normally £497) and a 7-day free trial, while places last.\n\nMessage us or see the details: {LINK}",
+   "tile": "Founding places, while they last",
+   "brief": "Text tile. Do NOT use a countdown or a number of places left in the image.",
+   "link": "receptionist",
+   "gbp": "Founding places for Mia, our AI receptionist: free setup (normally £497) and a 7-day free trial, while places last."
+  },
+  {
+   "id": "m06",
+   "date": "2026-11-07",
+   "channels": [
+    "facebook",
+    "instagram",
+    "google"
+   ],
+   "kind": "value",
+   "title": "Tip: Google hours",
+   "caption": "Quick tip for tradespeople: keep your opening hours and service area right on your Google Business Profile. Customers choose the business that looks open and local.\n\nSmall job, big difference.",
+   "tile": "Tip: keep your Google hours right",
+   "brief": "Text tile with a simple clock icon.",
+   "link": "receptionist",
+   "gbp": "Tip for tradespeople: keep your opening hours and service area right on your Google Business Profile. Customers choose the business that looks open and local."
+  },
+  {
+   "id": "m07",
+   "date": "2026-11-08",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "question",
+   "title": "What happens to your calls?",
+   "caption": "Be honest: what happens to your calls when you're on a job? Voicemail, a partner, a mate, or you ring back at night?\n\nCurious what works. Comment below.",
+   "tile": "What happens to your calls on a job?",
+   "brief": "Text tile, question mark motif.",
+   "link": "receptionist"
+  },
+  {
+   "id": "m08",
+   "date": "2026-11-09",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "problem",
+   "title": "Storm weekend",
+   "caption": "Storm weekend: roofs leak, phones ring.\n\nMia can answer the calls you can't get to, take the address and what's wrong, and text you the details.\n{LINK}",
+   "tile": "Storm weekend. Phone ringing.",
+   "brief": "Text tile with rain-streak background (simple CSS lines).",
+   "link": "receptionist"
+  },
+  {
+   "id": "m09",
+   "date": "2026-11-10",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "books",
+   "title": "Receipts in your pocket",
+   "caption": "Receipts in your pocket. Photograph a receipt on your phone and Books files it into your own accounting software. We work with QuickBooks, and we're adding FreeAgent and Xero.\n\nBooks by Localdesk: £150 a month plus a £395 setup.\n{LINK}",
+   "tile": "Photograph a receipt. Books files it.",
+   "brief": "Screenshot from the Books page.",
+   "link": "books"
+  },
+  {
+   "id": "m10",
+   "date": "2026-11-11",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "problem",
+   "title": "Burst pipe at 9pm",
+   "caption": "A burst pipe at 9pm doesn't wait for morning.\n\nMia is set up to flag urgent jobs and text you who called and what they need, so you can decide what to do first.\n{LINK}",
+   "tile": "Urgent jobs get flagged.",
+   "brief": "Text tile.",
+   "link": "receptionist"
+  },
+  {
+   "id": "m11",
+   "date": "2026-11-12",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "price",
+   "title": "What it costs",
+   "caption": "What does Mia cost? £397 a month, with 300 minutes of calls included. 7-day free trial first. Setup is normally £497 and free for founding clients while places last.\n\nThere's a 3-month minimum term after the free trial, and the full terms are on our website.\n{LINK}",
+   "tile": "£397 a month. 7-day free trial.",
+   "brief": "The pricing card from the Receptionist page (screenshot).",
+   "link": "receptionist",
+   "gbp": "Mia: £397 a month, 300 minutes included, 7-day free trial. Setup normally £497, free for founding clients while places last. 3-month minimum term after the trial."
+  },
+  {
+   "id": "m12",
+   "date": "2026-11-13",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "demo",
+   "title": "Hear Mia on a Zoom",
+   "caption": "See it before you decide. In a 15 to 20 minute Zoom you'll hear Mia take a call as one of your own customers.\n\nMessage us or fill in the form and we'll find a time: {LINK}",
+   "tile": "Hear Mia take a call.",
+   "brief": "Text tile with a phone icon.",
+   "link": "receptionist",
+   "gbp": "See it before you decide: a 15 to 20 minute Zoom where you hear Mia take a call as one of your customers. Message us to book."
+  },
+  {
+   "id": "m13",
+   "date": "2026-11-14",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "value",
+   "title": "Tip: receipt photos",
+   "caption": "Photograph receipts flat, in daylight, with all four corners in the shot. It's the difference between a clean record and a headache at year end.\n\nTop tip from a project manager who's seen a lot of crumpled receipts.",
+   "tile": "Tip: flat receipt, all four corners",
+   "brief": "Owner's own photo of a flat receipt on a van dashboard, or a text tile.",
+   "link": "receptionist",
+   "needs_owner": true
+  },
+  {
+   "id": "m14",
+   "date": "2026-11-15",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "demo",
+   "title": "Talk to Mia on our website",
+   "caption": "Want to hear Mia? You can talk to her on our website: tell her what your business does, then ring in as one of your own customers.\n{LINK}",
+   "tile": "Talk to Mia on our website",
+   "brief": "Screen recording of the Talk to Mia button (only while the live demo is on the site).",
+   "link": "receptionist",
+   "video": "20 seconds. Screen recording: open the Receptionist page, press 'Talk to Mia', say 'I'm a roofer in Plymouth', let her reply. On-screen text: 'Talk to Mia, free, on our website.' End card: localdeskai.co.uk. Only record this while the live demo is on the page."
+  },
+  {
+   "id": "m15",
+   "date": "2026-11-16",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "problem",
+   "title": "Keep your number",
+   "caption": "Keep your number. When you can't pick up, the call can go to Mia. When you can, you answer as normal.\n\nNo new business cards.\n{LINK}",
+   "tile": "Same number. Fewer missed calls.",
+   "brief": "Text tile with a van-side phone number motif (no real number).",
+   "link": "receptionist"
+  },
+  {
+   "id": "m16",
+   "date": "2026-11-17",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "honest",
+   "title": "Myth versus fact",
+   "caption": "Myth: an AI receptionist will annoy your customers.\nFact: it depends how it's done. Ours tells callers it's an AI, keeps it short, takes the details, and you ring back. If you'd rather judge for yourself, hear it on a Zoom.\n{LINK}",
+   "tile": "Myth vs fact: AI receptionists",
+   "brief": "Two-column text tile: Myth / Fact.",
+   "link": "receptionist"
+  },
+  {
+   "id": "m17",
+   "date": "2026-11-18",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "books",
+   "title": "Monthly text summary",
+   "caption": "Books helps keep your receipts filed and texts you a summary every month. Less Sunday-night paperwork.\n{LINK}",
+   "tile": "Monthly summary by text",
+   "brief": "Text tile.",
+   "link": "books"
+  },
+  {
+   "id": "m18",
+   "date": "2026-11-19",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "value",
+   "title": "Five questions to ask first",
+   "caption": "Five questions to ask any answering service before you sign:\n1. Does it say it's an AI or a person?\n2. Do I keep my own number?\n3. What happens when I go over my minutes?\n4. Can I read what was said on a call?\n5. What's the minimum term?\n\nWe're happy to answer all five for Mia.\n{LINK}",
+   "tile": "5 questions to ask first",
+   "brief": "Numbered list tile.",
+   "link": "receptionist",
+   "gbp": "Five questions to ask any answering service before you sign: is it an AI or a person, do you keep your number, what happens over your minutes, can you read the call, what's the minimum term?"
+  },
+  {
+   "id": "m19",
+   "date": "2026-11-20",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "offer",
+   "title": "Founding places still open",
+   "caption": "Founding places for Mia are still open: free setup (normally £497) and a 7-day free trial, while places last.\n{LINK}",
+   "tile": "Founding places still open",
+   "brief": "Text tile. Post only while founding places remain: HQ will not let you approve this once all five are taken.",
+   "link": "receptionist"
+  },
+  {
+   "id": "m20",
+   "date": "2026-11-21",
+   "channels": [
+    "facebook",
+    "instagram",
+    "google"
+   ],
+   "kind": "value",
+   "title": "Tip: voicemail greeting",
+   "caption": "Voicemail greeting tip: say your name, your trade, and what to leave: name, number, address, job. It saves you ringing people back to ask the basics.\n\nOr let Mia ask for you.",
+   "tile": "Tip: a better voicemail",
+   "brief": "Text tile with a microphone icon.",
+   "link": "receptionist"
+  },
+  {
+   "id": "m21",
+   "date": "2026-11-22",
+   "channels": [
+    "facebook",
+    "linkedin"
+   ],
+   "kind": "story",
+   "title": "Building in the open",
+   "caption": "We've spent the last few weeks building Localdesk: Mia, Books, and a control room that tells us what needs attention. It's still early, and we're learning from every tradesperson we speak to.\n\nWhat would make this useful for you?",
+   "tile": "Building Localdesk in the open",
+   "brief": "Owner's own photo at his desk, or a text tile.",
+   "link": "receptionist",
+   "needs_owner": true
+  },
+  {
+   "id": "m22",
+   "date": "2026-11-23",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "problem",
+   "title": "Builders and heating engineers",
+   "caption": "Builders, heating engineers, plasterers: the phone doesn't stop when you're on site. Mia can answer when you can't, take the details, and text you.\n{LINK}",
+   "tile": "On site? Mia can answer.",
+   "brief": "Text tile.",
+   "link": "receptionist",
+   "gbp": "On site and can't answer? Mia, our AI receptionist, can take the caller's details and text them to you. You keep your number. 7-day free trial."
+  },
+  {
+   "id": "m23",
+   "date": "2026-11-24",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "books",
+   "title": "Sole traders and paperwork",
+   "caption": "Sole trader? Books keeps receipts and invoices in your own accounting software, so the paperwork doesn't pile up. £150 a month plus £395 setup.\n{LINK}",
+   "tile": "Less paperwork. Same software.",
+   "brief": "Screenshot from the Books page.",
+   "link": "books"
+  },
+  {
+   "id": "m24",
+   "date": "2026-11-25",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "how",
+   "title": "What the text looks like",
+   "caption": "This is the kind of text you'd get after a call (an example, with made-up names):\n\n\"Sarah Patel, 14 Elm Road, Saltash. Leak through flat roof at the back, still dripping. Urgent. Ring back please.\"\n\nMia writes it, you ring back.\n{LINK}",
+   "tile": "Example text after a call",
+   "brief": "Phone-screen mock-up of the text (clearly labelled 'example').",
+   "link": "receptionist",
+   "video": "15 seconds. A phone screen mock-up of the text arriving, labelled 'Example'. On-screen text: 'Mia writes it.' / 'You ring back.'"
+  },
+  {
+   "id": "m25",
+   "date": "2026-11-26",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "faq",
+   "title": "Do I change my number?",
+   "caption": "Do I have to change my phone number? No. You keep your own number. When you can't pick up, the call can go to Mia.\n{LINK}",
+   "tile": "FAQ: do I change my number?",
+   "brief": "Text tile.",
+   "link": "receptionist",
+   "gbp": "Do you have to change your phone number to use Mia? No. You keep your own number, and calls can go to Mia when you can't pick up."
+  },
+  {
+   "id": "m26",
+   "date": "2026-11-27",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "demo",
+   "title": "15 minutes, no pressure",
+   "caption": "15 minutes. A Zoom. You hear Mia take a call. That's it, no pressure.\nMessage us to book: {LINK}",
+   "tile": "15 minutes. No pressure.",
+   "brief": "Text tile.",
+   "link": "receptionist",
+   "gbp": "15 minutes on Zoom: hear Mia take a call, no pressure. Message us to book a time."
+  },
+  {
+   "id": "m27",
+   "date": "2026-11-28",
+   "channels": [
+    "facebook",
+    "instagram",
+    "google"
+   ],
+   "kind": "value",
+   "title": "Tip: ring back quickly",
+   "caption": "Ring enquiries back quickly. A friendly call back while the job is fresh in their mind beats a perfect quote that arrives late.",
+   "tile": "Tip: ring back quickly",
+   "brief": "Text tile.",
+   "link": "receptionist"
+  },
+  {
+   "id": "m28",
+   "date": "2026-11-29",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "question",
+   "title": "What should Mia ask callers?",
+   "caption": "If Mia answered your calls, what would you want her to ask every caller? Postcode? Is it urgent? Is it a repeat customer? Tell us.",
+   "tile": "What should Mia ask callers?",
+   "brief": "Text tile.",
+   "link": "receptionist"
+  },
+  {
+   "id": "m29",
+   "date": "2026-11-30",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "story",
+   "title": "Thirty days, one question",
+   "caption": "Thirty days of posts, and one question for every tradesperson we speak to: how do you handle missed calls? If you're still working it out, we'd love to show you Mia on a quick Zoom.\n{LINK}",
+   "tile": "30 days. One question.",
+   "brief": "Text tile.",
+   "link": "receptionist",
+   "needs_owner": true
+  },
+  {
+   "id": "m30",
+   "date": "2026-12-01",
+   "channels": [
+    "facebook",
+    "instagram",
+    "linkedin"
+   ],
+   "kind": "demo",
+   "title": "Book a demo",
+   "caption": "Missed calls cost jobs. Mia can answer when you can't and text you the details. 7-day free trial, £397 a month after. Book a 15 minute demo: {LINK}",
+   "tile": "Book a 15-minute demo",
+   "brief": "Text tile with the Localdesk wordmark.",
+   "link": "receptionist",
+   "gbp": "Missed calls cost jobs. Mia can answer when you can't and text you the details. 7-day free trial, then £397 a month. Message us to book a 15 minute demo."
+  }
+ ]
+}
