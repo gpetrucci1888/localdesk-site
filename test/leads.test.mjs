@@ -96,3 +96,38 @@ test('founding waiver: five Receptionist clients can have it, a sixth cannot, a 
   const book = await mk(7, 'books'); const r = await flag(book); assert.equal(r.status, 500); assert.match(await r.text(), /only for Receptionist/);
   assert.equal((await flag(ids[2], false)).status, 200, 'it can be unticked');
 });
+
+test('founding places: eight simultaneous claims for five places give exactly five, even with other changes in flight', async (t) => {
+  const w = world(); network(t);
+  const ids = [];
+  for (let i = 1; i <= 8; i++) { await enquire(w, { ...good, name: `Race ${i}`, phone: `07700 91${String(1000 + i).slice(-4)}`, product: 'receptionist' }, `203.0.113.${60 + i}`); }
+  for (const l of await leads(w)) ids.push(l.id);
+  const results = await Promise.all(ids.map(id => asAdmin(w, 'PUT', `/leads/${id}`, { checklist: { founding: true } })));
+  assert.equal(results.filter(r => r.status === 200).length, 5);
+  assert.equal(results.filter(r => r.status === 500).length, 3);
+  const reg = await (await asAdmin(w, 'GET', '/founding')).json();
+  assert.equal(reg.used, 5); assert.equal(reg.places, 5);
+  const ticked = (await leads(w)).filter(l => l.checklist.founding === true).map(l => l.id).sort();
+  assert.deepEqual(ticked, [...reg.ids].sort(), 'the ticks on the leads and the reserved places always agree');
+});
+
+test('founding places: claiming twice is harmless, losing, unticking or deleting a lead releases its place, and a bad store answer fails closed', async (t) => {
+  const w = world(); network(t);
+  const mk = async (i) => { await enquire(w, { ...good, name: `Rel ${i}`, phone: `07700 92${String(1000 + i).slice(-4)}`, product: 'receptionist' }, `203.0.113.${90 + i}`); return (await leads(w)).find(l => l.name === `Rel ${i}`).id; };
+  const a = await mk(1), b = await mk(2), c = await mk(3);
+  const tick = (id, v = true) => asAdmin(w, 'PUT', `/leads/${id}`, { checklist: { founding: v } });
+  await tick(a); await tick(a); await tick(b);
+  assert.equal((await (await asAdmin(w, 'GET', '/founding')).json()).used, 2, 'idempotent');
+  await move(w, a, 'lost');
+  assert.equal((await (await asAdmin(w, 'GET', '/founding')).json()).used, 1, 'lost releases');
+  assert.equal((await leads(w)).find(l => l.id === a).checklist.founding, false);
+  await tick(b, false); assert.equal((await (await asAdmin(w, 'GET', '/founding')).json()).used, 0, 'untick releases');
+  await tick(c); await asAdmin(w, 'DELETE', `/leads/${c}`);
+  assert.equal((await (await asAdmin(w, 'GET', '/founding')).json()).used, 0, 'delete releases');
+  // fail closed: the Store cannot answer, so no tick is saved
+  const d = await mk(4); const realGet = w.booksEnv.STORE.get;
+  w.booksEnv.STORE.get = () => { const st = realGet(); return { fetch: (u, init) => String(u).endsWith('/founding') && init && init.method === 'POST' ? Promise.resolve(new Response('down', { status: 500 })) : st.fetch(u, init) }; };
+  assert.equal((await tick(d)).status, 500);
+  w.booksEnv.STORE.get = realGet;
+  assert.equal((await leads(w)).find(l => l.id === d).checklist.founding, undefined, 'nothing was ticked');
+});
