@@ -20,3 +20,10 @@ The 30-day social calendar in HQ (drafts), the 30 images, and the social tooling
 - **Owner only:** ICO registration, address on the privacy page, a TPS and CTPS check method, Stripe live mode and live prices, the Mia ten calls, and approving any social connection.
 
 **Verdict:** GO for cold calling and Zoom demos once the owner's legal items are in place (they are the owner's, not technical). GO for taking a first real customer in test mode today. NO-GO for taking real money until Stripe live mode is switched on by the owner and the live prices and keys are in Cloudflare.
+
+## Journey check (31 Oct, after owner parked social)
+Social integrations are parked. Re-verified lead, demo, signup and HQ follow-up with the safe tests only:
+- 240 unit and journey tests pass; HQ (112), website (61), admin (12) and agree (8) browser suites pass. These use mocked Stripe, Vapi and Twilio.
+- Not verified from this session: the live sites (the session network blocks the live hostnames), a real founding checkout, cancel inside 7 days, a failed card, and the ten Mia test calls.
+- No defects found in this pass. The HQ platform trim is committed but not deployed (needs an explicit "deploy" in chat).
+- Operating workflow: SALES-WORKFLOW.md (call to Zoom to signup), ZOOM-DEMO-FLOW.md (15 to 20 minute demo), COLD-CALLING-COMPLIANCE.md.
