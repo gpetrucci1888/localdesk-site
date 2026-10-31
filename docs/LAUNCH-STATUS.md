@@ -6,13 +6,15 @@ This replaces the "not deployed" wording in older launch documents. Where they d
 | Piece | Version | State |
 |---|---|---|
 | Books worker | `777e3fd3` | Stripe checkout and webhook, founding places, leads, Books onboarding view, thank-you page at `/thanks`, request logs on. |
-| HQ worker | `5c9c1a25` | Leads with call plan and cold-call safeguards, content queue, Stripe check, Face ID login, Zoom and setup-fee reminders, request logs on. |
+| HQ worker | deployed 31 Oct from commit bfd4de6 (content queue, cost guard, Facebook and Google only) | Leads with call plan and cold-call safeguards, content queue, Stripe check, Face ID login, Zoom and setup-fee reminders, request logs on. |
 | Website | `6545b782` | Redesigned pages, softer wording, lead-source links, privacy page with sales-calls paragraph, thank-you page. |
 | Stripe | test mode | Four prices, webhook with three events, and one real test sign-up verified end to end (7-day trial, no setup fee, webhook delivered). |
 | Logs | on | Workers Logs on books and hq with query strings redacted (one-time link tokens are not logged). |
 
 ## On the branch, not live yet
-The 30-day social calendar in HQ (drafts), the 30 images, and the social tooling. Say "deploy" to put the HQ part live.
+Only documents. The 30-day calendar and the images are in HQ and the repo. Posting is parked.
+
+First-customer checklist and launch routine: `docs/FIRST-CUSTOMER.md`.
 
 ## Go / no-go
 - **Technical, ready:** Books, HQ, website, Stripe test flow, deploy gate, tests (237 pass), logs.
